@@ -19,6 +19,8 @@ import PublicFormAnmeldungen from '@/pages/public/PublicForm_Anmeldungen';
 // <public:imports>
 // </public:imports>
 // <custom:imports>
+const EventErstellenPage = lazy(() => import('@/pages/intents/EventErstellenPage'));
+const TeilnehmerAnmeldenPage = lazy(() => import('@/pages/intents/TeilnehmerAnmeldenPage'));
 // </custom:imports>
 
 export default function App() {
@@ -43,6 +45,8 @@ export default function App() {
                 <Route path="anmeldungen/:id" element={<AnmeldungenDetailPage />} />
                 <Route path="admin" element={<AdminPage />} />
                 {/* <custom:routes> */}
+                <Route path="intents/event-erstellen" element={<Suspense fallback={null}><EventErstellenPage /></Suspense>} />
+                <Route path="intents/teilnehmer-anmelden" element={<Suspense fallback={null}><TeilnehmerAnmeldenPage /></Suspense>} />
                 {/* </custom:routes> */}
               </Route>
             </Routes>
