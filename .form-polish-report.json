@@ -1,0 +1,22 @@
+{
+  "entities": {
+    "SkateparksSpots": {
+      "placeholders_set": 8,
+      "defaults_keys": ["untergrundtyp"],
+      "computed_keys": [],
+      "reason": "Reine Stammdaten-Entity für Skateparks/POI (Adresse, Beschreibung, Untergrund-Typ). Keine numerischen Felder, keine applookup-Ketten, keine Berechnungslogik. Untergrundtyp hat sinnvollen Lookup-Default (Beton)."
+    },
+    "EventVerwaltung": {
+      "placeholders_set": 10,
+      "defaults_keys": ["datum_uhrzeit", "skill_level"],
+      "computed_keys": [],
+      "reason": "Event-Stammdaten mit Datum, Anzahl Teilnehmer, Startgebühr und applookup auf Skatepark (kein Preis im Target). Keine berechenbaren Beziehungen — max_teilnehmer und startgebuehr sind unabhängige Eingabefelder, nicht durch Dauer oder Anzahl verbunden. Datum bekommt Today-Default, Skill-Level Vorauswahl auf 'Alle Levels'."
+    },
+    "Anmeldungen": {
+      "placeholders_set": 9,
+      "defaults_keys": ["skill_level", "teilnahmebedingungen"],
+      "computed_keys": [],
+      "reason": "Personen-Registrierung mit applookup auf Event. Die Event-Gebühr ist ein Informationsfeld (nicht zu berechnen), keineswege ein Produkt mit lokaler Anzahl. Keine Berechnung möglich. Defaults: Skill-Level Vorauswahl (Anfänger), Teilnahmebedingungen auf false (User muss aktiv abhaken)."
+    }
+  }
+}

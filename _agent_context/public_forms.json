@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "forms": [
+    {
+      "entity": "skateparks_&_spots",
+      "app_id": "6a56741a9ef9a79ac692ad70",
+      "path": "/rest/apps/6a56741a9ef9a79ac692ad70/records",
+      "allowed_fields": [
+        "name",
+        "strasse",
+        "hausnummer",
+        "postleitzahl",
+        "stadt",
+        "beschreibung",
+        "untergrundtyp",
+        "standort",
+        "website"
+      ],
+      "pow": true,
+      "pow_difficulty": 50000,
+      "title": "Skateparks & Spots — Formular"
+    },
+    {
+      "entity": "event_verwaltung",
+      "app_id": "6a56741f84d8dce105858830",
+      "path": "/rest/apps/6a56741f84d8dce105858830/records",
+      "allowed_fields": [
+        "titel",
+        "kategorie",
+        "datum_uhrzeit",
+        "beschreibung",
+        "skill_level",
+        "max_teilnehmer",
+        "startgebuehr",
+        "kontakt_email",
+        "event_website"
+      ],
+      "pow": true,
+      "pow_difficulty": 50000,
+      "title": "Event-Verwaltung — Formular"
+    },
+    {
+      "entity": "anmeldungen",
+      "app_id": "6a5674227925510842ea49d7",
+      "path": "/rest/apps/6a5674227925510842ea49d7/records",
+      "allowed_fields": [
+        "vorname",
+        "nachname",
+        "geburtsdatum",
+        "email",
+        "telefon",
+        "skill_level",
+        "board_stil",
+        "anmerkungen",
+        "teilnahmebedingungen"
+      ],
+      "pow": true,
+      "pow_difficulty": 50000,
+      "title": "Anmeldungen — Formular"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+- Skateparks & Spots (skateparks_&_spots): name[string/text], strasse[string/text], hausnummer[string/text], postleitzahl[string/text], stadt[string/text], beschreibung[string/textarea], untergrundtyp[lookup/select], standort[geo], website[string/url]
+- Event-Verwaltung (event_verwaltung): titel[string/text], kategorie[lookup/select], datum_uhrzeit[date/datetimeminute], beschreibung[string/textarea], skill_level[lookup/select], max_teilnehmer[number], startgebuehr[number], ort[applookup/select], kontakt_email[string/email], event_website[string/url], flyer[file]
+  → ort links to app_id 6a56741a9ef9a79ac692ad70
+- Anmeldungen (anmeldungen): event[applookup/select], vorname[string/text], nachname[string/text], geburtsdatum[date/date], email[string/email], telefon[string/tel], skill_level[lookup/select], board_stil[multiplelookup/checkbox], anmerkungen[string/textarea], teilnahmebedingungen[bool]
+  → event links to app_id 6a56741f84d8dce105858830
