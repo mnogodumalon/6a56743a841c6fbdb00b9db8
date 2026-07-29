@@ -1,3 +1,17 @@
+/**
+ * SkateparksSpotsDialog — pre-generated create/edit dialog for SkateparksSpots.
+ *
+ * Props: open, onClose, onSubmit(fields) => Promise<void>, defaultValues?,
+ * recordId? (pass when EDITING — enables the attachments section),
+ * enablePhotoScan?, enablePhotoLocation?.
+ *
+ * defaultValues is SHAPE-TOLERANT and its prop type is the EXPORTED
+ * SkateparksSpotsDialogDefaults — NOT the entity field type: lookup fields accept
+ * the bare KEY string (or LookupValue), applookup fields the bare record id
+ * (or record URL); the dialog normalizes. Type prefill STATE with the export:
+ *  ❌ useState<Partial<SkateparksSpots['fields']>>({ … })   // LookupValue fields reject string prefills (TS2322)
+ *  ✓ useState<SkateparksSpotsDialogDefaults | undefined>(undefined)
+ */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { SkateparksSpots, LookupValue } from '@/types/app';
 import { APP_IDS, LOOKUP_OPTIONS } from '@/types/app';
@@ -21,6 +35,11 @@ import { GeoMapPicker } from '@/components/GeoMapPicker';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { lookupKey } from '@/lib/formatters';
 
+/** Widened prefill type for SkateparksSpotsDialog.defaultValues — see file header. */
+export type SkateparksSpotsDialogDefaults = Omit<SkateparksSpots['fields'], 'untergrundtyp'> & {
+    untergrundtyp?: LookupValue | string;
+  };
+
 interface SkateparksSpotsDialogProps {
   open: boolean;
   onClose: () => void;
@@ -28,9 +47,7 @@ interface SkateparksSpotsDialogProps {
   /** SHAPE-TOLERANT: lookup fields accept the bare key (string) or the
    *  LookupValue object; applookup fields the bare record id or the full
    *  record URL — the dialog normalizes both. */
-  defaultValues?: Omit<SkateparksSpots['fields'], 'untergrundtyp'> & {
-    untergrundtyp?: LookupValue | string;
-  };
+  defaultValues?: SkateparksSpotsDialogDefaults;
   /** Record id when editing — enables the attachments section. Omit on create. */
   recordId?: string;
   enablePhotoScan?: boolean;
@@ -41,7 +58,7 @@ interface SkateparksSpotsDialogProps {
 // its own options and bare record ids via the field's target app — consumers
 // never carry the LookupValue/record-URL shape in their head.
 const NORMALIZE_LOOKUPS: Record<string, readonly { key: string; label: string }[]> = {
-  untergrundtyp: LOOKUP_OPTIONS['skateparks_&_spots']?.['untergrundtyp'] ?? [],
+  untergrundtyp: LOOKUP_OPTIONS['skateparks_spots']?.['untergrundtyp'] ?? [],
 };
 function normalizeDefaults(values: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = { ...values };
@@ -180,7 +197,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
           (merged as Record<string, unknown>)[key] = val;
         }
       }
-      const clean = cleanFieldsForApi(merged, 'skateparks_&_spots');
+      const clean = cleanFieldsForApi(merged, 'skateparks_spots');
       await onSubmit(clean as SkateparksSpots['fields']);
       onClose();
     } catch (err) {
@@ -382,7 +399,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="name">Name des Ortes <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="name"
-          placeholder="z. B. Hauptpark West"
+          placeholder=""
           value={fields.name ?? ''}
           onChange={e => setFields(f => ({ ...f, name: e.target.value }))}
           required
@@ -397,7 +414,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="strasse">Straße <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="strasse"
-          placeholder="z. B. Müller"
+          placeholder=""
           value={fields.strasse ?? ''}
           onChange={e => onAddressFieldChange("strasse", e.target.value)}
           required
@@ -412,7 +429,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="hausnummer">Hausnummer <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="hausnummer"
-          placeholder="z. B. 42a"
+          placeholder=""
           value={fields.hausnummer ?? ''}
           onChange={e => onAddressFieldChange("hausnummer", e.target.value)}
           required
@@ -427,7 +444,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="postleitzahl">Postleitzahl <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="postleitzahl"
-          placeholder="z. B. 10115"
+          placeholder=""
           value={fields.postleitzahl ?? ''}
           onChange={e => onAddressFieldChange("postleitzahl", e.target.value)}
           required
@@ -442,7 +459,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="stadt">Stadt <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="stadt"
-          placeholder="z. B. Berlin"
+          placeholder=""
           value={fields.stadt ?? ''}
           onChange={e => onAddressFieldChange("stadt", e.target.value)}
           required
@@ -457,7 +474,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="beschreibung">Beschreibung</Label>
         <Textarea
           id="beschreibung"
-          placeholder="Ausstattung, Größe, Besonderheiten, Öffnungszeiten..."
+          placeholder=""
           value={fields.beschreibung ?? ''}
           onChange={e => setFields(f => ({ ...f, beschreibung: e.target.value }))}
           rows={3}

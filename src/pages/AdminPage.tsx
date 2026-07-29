@@ -53,7 +53,7 @@ const EVENTVERWALTUNG_FIELDS = [
   { key: 'skill_level', label: 'Skill-Level', type: 'lookup/select', options: [{ key: 'anfaenger', label: 'Anfänger' }, { key: 'fortgeschritten', label: 'Fortgeschritten' }, { key: 'profi', label: 'Profi' }, { key: 'alle_levels', label: 'Alle Levels' }] },
   { key: 'max_teilnehmer', label: 'Maximale Teilnehmerzahl', type: 'number' },
   { key: 'startgebuehr', label: 'Startgebühr (€)', type: 'number' },
-  { key: 'ort', label: 'Ort', type: 'applookup/select', targetEntity: 'skateparks_&_spots', targetAppId: 'SKATEPARKS_SPOTS', displayField: 'name' },
+  { key: 'ort', label: 'Ort', type: 'applookup/select', targetEntity: 'skateparks_spots', targetAppId: 'SKATEPARKS_SPOTS', displayField: 'name' },
   { key: 'kontakt_email', label: 'Kontakt-E-Mail', type: 'string/email' },
   { key: 'event_website', label: 'Website des Events', type: 'string/url' },
   { key: 'flyer', label: 'Flyer / Bild', type: 'file' },
@@ -72,7 +72,7 @@ const ANMELDUNGEN_FIELDS = [
 ];
 
 const ENTITY_TABS = [
-  { key: 'skateparks_&_spots', label: 'Skateparks & Spots', pascal: 'SkateparksSpots' },
+  { key: 'skateparks_spots', label: 'Skateparks & Spots', pascal: 'SkateparksSpots' },
   { key: 'event_verwaltung', label: 'Event-Verwaltung', pascal: 'EventVerwaltung' },
   { key: 'anmeldungen', label: 'Anmeldungen', pascal: 'Anmeldungen' },
 ] as const;
@@ -83,14 +83,14 @@ export default function AdminPage() {
   const data = useDashboardData();
   const { loading, error, fetchAll } = data;
 
-  const [activeTab, setActiveTab] = useState<EntityKey>('skateparks_&_spots');
+  const [activeTab, setActiveTab] = useState<EntityKey>('skateparks_spots');
   const [selectedIds, setSelectedIds] = useState<Record<EntityKey, Set<string>>>(() => ({
-    'skateparks_&_spots': new Set(),
+    'skateparks_spots': new Set(),
     'event_verwaltung': new Set(),
     'anmeldungen': new Set(),
   }));
   const [filters, setFilters] = useState<Record<EntityKey, Record<string, string>>>(() => ({
-    'skateparks_&_spots': {},
+    'skateparks_spots': {},
     'event_verwaltung': {},
     'anmeldungen': {},
   }));
@@ -107,7 +107,7 @@ export default function AdminPage() {
 
   const getRecords = useCallback((entity: EntityKey) => {
     switch (entity) {
-      case 'skateparks_&_spots': return (data as any).skateparksSpots as SkateparksSpots[] ?? [];
+      case 'skateparks_spots': return (data as any).skateparksSpots as SkateparksSpots[] ?? [];
       case 'event_verwaltung': return (data as any).eventVerwaltung as EventVerwaltung[] ?? [];
       case 'anmeldungen': return (data as any).anmeldungen as Anmeldungen[] ?? [];
       default: return [];
@@ -146,7 +146,7 @@ export default function AdminPage() {
 
   const getFieldMeta = useCallback((entity: EntityKey) => {
     switch (entity) {
-      case 'skateparks_&_spots': return SKATEPARKSSPOTS_FIELDS;
+      case 'skateparks_spots': return SKATEPARKSSPOTS_FIELDS;
       case 'event_verwaltung': return EVENTVERWALTUNG_FIELDS;
       case 'anmeldungen': return ANMELDUNGEN_FIELDS;
       default: return [];
@@ -243,7 +243,7 @@ export default function AdminPage() {
 
   const getServiceMethods = useCallback((entity: EntityKey) => {
     switch (entity) {
-      case 'skateparks_&_spots': return {
+      case 'skateparks_spots': return {
         create: (fields: any) => LivingAppsService.createSkateparksSpot(fields),
         update: (id: string, fields: any) => LivingAppsService.updateSkateparksSpot(id, fields),
         remove: (id: string) => LivingAppsService.deleteSkateparksSpot(id),
@@ -598,12 +598,12 @@ export default function AdminPage() {
         </Table>
       </div>
 
-      {(createEntity === 'skateparks_&_spots' || dialogState?.entity === 'skateparks_&_spots') && (
+      {(createEntity === 'skateparks_spots' || dialogState?.entity === 'skateparks_spots') && (
         <SkateparksSpotsDialog
-          open={createEntity === 'skateparks_&_spots' || dialogState?.entity === 'skateparks_&_spots'}
+          open={createEntity === 'skateparks_spots' || dialogState?.entity === 'skateparks_spots'}
           onClose={() => { setCreateEntity(null); setDialogState(null); }}
-          onSubmit={dialogState?.entity === 'skateparks_&_spots' ? handleUpdate : (fields: any) => handleCreate('skateparks_&_spots', fields)}
-          defaultValues={dialogState?.entity === 'skateparks_&_spots' ? dialogState.record?.fields : undefined}
+          onSubmit={dialogState?.entity === 'skateparks_spots' ? handleUpdate : (fields: any) => handleCreate('skateparks_spots', fields)}
+          defaultValues={dialogState?.entity === 'skateparks_spots' ? dialogState.record?.fields : undefined}
           enablePhotoScan={AI_PHOTO_SCAN['SkateparksSpots']}
           enablePhotoLocation={AI_PHOTO_LOCATION['SkateparksSpots']}
         />
@@ -630,12 +630,12 @@ export default function AdminPage() {
           enablePhotoLocation={AI_PHOTO_LOCATION['Anmeldungen']}
         />
       )}
-      {viewState?.entity === 'skateparks_&_spots' && (
+      {viewState?.entity === 'skateparks_spots' && (
         <SkateparksSpotsViewDialog
-          open={viewState?.entity === 'skateparks_&_spots'}
+          open={viewState?.entity === 'skateparks_spots'}
           onClose={() => setViewState(null)}
           record={viewState?.record}
-          onEdit={(r: any) => { setViewState(null); setDialogState({ entity: 'skateparks_&_spots', record: r }); }}
+          onEdit={(r: any) => { setViewState(null); setDialogState({ entity: 'skateparks_spots', record: r }); }}
         />
       )}
       {viewState?.entity === 'event_verwaltung' && (

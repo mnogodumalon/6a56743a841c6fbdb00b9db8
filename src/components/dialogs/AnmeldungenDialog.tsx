@@ -1,3 +1,18 @@
+/**
+ * AnmeldungenDialog — pre-generated create/edit dialog for Anmeldungen.
+ *
+ * Props: open, onClose, onSubmit(fields) => Promise<void>, defaultValues?,
+ * recordId? (pass when EDITING — enables the attachments section),
+ * eventVerwaltungList (full hook array — resolves the EventVerwaltung applookup),
+ * enablePhotoScan?, enablePhotoLocation?.
+ *
+ * defaultValues is SHAPE-TOLERANT and its prop type is the EXPORTED
+ * AnmeldungenDialogDefaults — NOT the entity field type: lookup fields accept
+ * the bare KEY string (or LookupValue), applookup fields the bare record id
+ * (or record URL); the dialog normalizes. Type prefill STATE with the export:
+ *  ❌ useState<Partial<Anmeldungen['fields']>>({ … })   // LookupValue fields reject string prefills (TS2322)
+ *  ✓ useState<AnmeldungenDialogDefaults | undefined>(undefined)
+ */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { Anmeldungen, EventVerwaltung, LookupValue } from '@/types/app';
 import { APP_IDS, LOOKUP_OPTIONS } from '@/types/app';
@@ -22,6 +37,12 @@ import { IconAlertCircle, IconCamera, IconChevronDown, IconCircleCheck, IconClip
 import { fileToDataUri, extractFromInput, extractPhotoMeta, reverseGeocode } from '@/lib/ai';
 import { lookupKey, lookupKeys } from '@/lib/formatters';
 
+/** Widened prefill type for AnmeldungenDialog.defaultValues — see file header. */
+export type AnmeldungenDialogDefaults = Omit<Anmeldungen['fields'], 'skill_level' | 'board_stil'> & {
+    skill_level?: LookupValue | string;
+    board_stil?: (LookupValue | string)[];
+  };
+
 interface AnmeldungenDialogProps {
   open: boolean;
   onClose: () => void;
@@ -29,10 +50,7 @@ interface AnmeldungenDialogProps {
   /** SHAPE-TOLERANT: lookup fields accept the bare key (string) or the
    *  LookupValue object; applookup fields the bare record id or the full
    *  record URL — the dialog normalizes both. */
-  defaultValues?: Omit<Anmeldungen['fields'], 'skill_level' | 'board_stil'> & {
-    skill_level?: LookupValue | string;
-    board_stil?: (LookupValue | string)[];
-  };
+  defaultValues?: AnmeldungenDialogDefaults;
   /** Record id when editing — enables the attachments section. Omit on create. */
   recordId?: string;
   eventVerwaltungList: EventVerwaltung[];
@@ -328,7 +346,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
         <Label htmlFor="event">Event <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Combobox
           id="event"
-          placeholder="Zu welchem Event anmelden?"
+          placeholder=""
           items={eventVerwaltungListAll.map(r => ({
             id: r.record_id,
             label: String(r.fields.titel ?? r.record_id),
@@ -350,7 +368,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
         <Label htmlFor="vorname">Vorname <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="vorname"
-          placeholder="z. B. Max"
+          placeholder=""
           value={fields.vorname ?? ''}
           onChange={e => setFields(f => ({ ...f, vorname: e.target.value }))}
           required
@@ -365,7 +383,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
         <Label htmlFor="nachname">Nachname <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="nachname"
-          placeholder="z. B. Müller"
+          placeholder=""
           value={fields.nachname ?? ''}
           onChange={e => setFields(f => ({ ...f, nachname: e.target.value }))}
           required
@@ -380,7 +398,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
         <Label htmlFor="geburtsdatum">Geburtsdatum</Label>
         <DatePicker
           id="geburtsdatum"
-          placeholder="Wann wurdest du geboren?"
+          placeholder=""
           mode="date"
           value={fields.geburtsdatum ?? null}
           onChange={v => setFields(f => ({ ...f, geburtsdatum: v ?? undefined }))}
@@ -393,7 +411,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
         <Input
           id="email"
           type="email"
-          placeholder="z. B. max@example.com"
+          placeholder=""
           value={fields.email ?? ''}
           onChange={e => setFields(f => ({ ...f, email: e.target.value }))}
         />
@@ -543,7 +561,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
         <Label htmlFor="anmerkungen">Anmerkungen</Label>
         <Textarea
           id="anmerkungen"
-          placeholder="Spezielle Wünsche, Allergien, Einschränkungen..."
+          placeholder=""
           value={fields.anmerkungen ?? ''}
           onChange={e => setFields(f => ({ ...f, anmerkungen: e.target.value }))}
           rows={3}

@@ -7,21 +7,21 @@ import { ErrorBusProvider } from '@/components/ErrorBus';
 import { Layout } from '@/components/Layout';
 import DashboardOverview from '@/pages/DashboardOverview';
 import AdminPage from '@/pages/AdminPage';
+import PublicPagesAdmin from '@/pages/PublicPagesAdmin';
 import SkateparksSpotsPage from '@/pages/SkateparksSpotsPage';
 import SkateparksSpotsDetailPage from '@/pages/SkateparksSpotsDetailPage';
 import EventVerwaltungPage from '@/pages/EventVerwaltungPage';
 import EventVerwaltungDetailPage from '@/pages/EventVerwaltungDetailPage';
 import AnmeldungenPage from '@/pages/AnmeldungenPage';
 import AnmeldungenDetailPage from '@/pages/AnmeldungenDetailPage';
-import PublicFormSkateparksSpots from '@/pages/public/PublicForm_SkateparksSpots';
-import PublicFormEventVerwaltung from '@/pages/public/PublicForm_EventVerwaltung';
-import PublicFormAnmeldungen from '@/pages/public/PublicForm_Anmeldungen';
-// <public:imports>
-// </public:imports>
 // <custom:imports>
 const EventErstellenPage = lazy(() => import('@/pages/intents/EventErstellenPage'));
 const TeilnehmerAnmeldenPage = lazy(() => import('@/pages/intents/TeilnehmerAnmeldenPage'));
 // </custom:imports>
+
+// Lazy: public pages live outside <Layout> and only load on /#/public/:slug —
+// dashboard users never pay for them, anonymous visitors skip the dashboard.
+const PublicPage = lazy(() => import('@/pages/public/PublicPage'));
 
 export default function App() {
   return (
@@ -30,20 +30,17 @@ export default function App() {
         <HashRouter>
           <ActionsProvider>
             <Routes>
-              <Route path="public/6a56741a9ef9a79ac692ad70" element={<PublicFormSkateparksSpots />} />
-              <Route path="public/6a56741f84d8dce105858830" element={<PublicFormEventVerwaltung />} />
-              <Route path="public/6a5674227925510842ea49d7" element={<PublicFormAnmeldungen />} />
-              {/* <public:routes> */}
-              {/* </public:routes> */}
+              <Route path="public/:slug" element={<Suspense fallback={null}><PublicPage /></Suspense>} />
               <Route element={<Layout />}>
                 <Route index element={<DashboardOverview />} />
-                <Route path="skateparks-&-spots" element={<SkateparksSpotsPage />} />
-                <Route path="skateparks-&-spots/:id" element={<SkateparksSpotsDetailPage />} />
+                <Route path="skateparks-spots" element={<SkateparksSpotsPage />} />
+                <Route path="skateparks-spots/:id" element={<SkateparksSpotsDetailPage />} />
                 <Route path="event-verwaltung" element={<EventVerwaltungPage />} />
                 <Route path="event-verwaltung/:id" element={<EventVerwaltungDetailPage />} />
                 <Route path="anmeldungen" element={<AnmeldungenPage />} />
                 <Route path="anmeldungen/:id" element={<AnmeldungenDetailPage />} />
                 <Route path="admin" element={<AdminPage />} />
+                <Route path="verwaltung/oeffentliche-seiten" element={<PublicPagesAdmin />} />
                 {/* <custom:routes> */}
                 <Route path="intents/event-erstellen" element={<Suspense fallback={null}><EventErstellenPage /></Suspense>} />
                 <Route path="intents/teilnehmer-anmelden" element={<Suspense fallback={null}><TeilnehmerAnmeldenPage /></Suspense>} />

@@ -1,3 +1,18 @@
+/**
+ * EventVerwaltungDialog — pre-generated create/edit dialog for EventVerwaltung.
+ *
+ * Props: open, onClose, onSubmit(fields) => Promise<void>, defaultValues?,
+ * recordId? (pass when EDITING — enables the attachments section),
+ * skateparksSpotsList (full hook array — resolves the SkateparksSpots applookup),
+ * enablePhotoScan?, enablePhotoLocation?.
+ *
+ * defaultValues is SHAPE-TOLERANT and its prop type is the EXPORTED
+ * EventVerwaltungDialogDefaults — NOT the entity field type: lookup fields accept
+ * the bare KEY string (or LookupValue), applookup fields the bare record id
+ * (or record URL); the dialog normalizes. Type prefill STATE with the export:
+ *  ❌ useState<Partial<EventVerwaltung['fields']>>({ … })   // LookupValue fields reject string prefills (TS2322)
+ *  ✓ useState<EventVerwaltungDialogDefaults | undefined>(undefined)
+ */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { EventVerwaltung, SkateparksSpots, LookupValue } from '@/types/app';
 import { APP_IDS, LOOKUP_OPTIONS } from '@/types/app';
@@ -22,6 +37,12 @@ import { IconAlertCircle, IconCamera, IconChevronDown, IconCircleCheck, IconClip
 import { fileToDataUri, extractFromInput, extractPhotoMeta, reverseGeocode, dataUriToBlob } from '@/lib/ai';
 import { lookupKey } from '@/lib/formatters';
 
+/** Widened prefill type for EventVerwaltungDialog.defaultValues — see file header. */
+export type EventVerwaltungDialogDefaults = Omit<EventVerwaltung['fields'], 'kategorie' | 'skill_level'> & {
+    kategorie?: LookupValue | string;
+    skill_level?: LookupValue | string;
+  };
+
 interface EventVerwaltungDialogProps {
   open: boolean;
   onClose: () => void;
@@ -29,10 +50,7 @@ interface EventVerwaltungDialogProps {
   /** SHAPE-TOLERANT: lookup fields accept the bare key (string) or the
    *  LookupValue object; applookup fields the bare record id or the full
    *  record URL — the dialog normalizes both. */
-  defaultValues?: Omit<EventVerwaltung['fields'], 'kategorie' | 'skill_level'> & {
-    kategorie?: LookupValue | string;
-    skill_level?: LookupValue | string;
-  };
+  defaultValues?: EventVerwaltungDialogDefaults;
   /** Record id when editing — enables the attachments section. Omit on create. */
   recordId?: string;
   skateparksSpotsList: SkateparksSpots[];
@@ -338,7 +356,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="titel">Titel des Events <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="titel"
-          placeholder="z. B. Summer Jam 2026"
+          placeholder=""
           value={fields.titel ?? ''}
           onChange={e => setFields(f => ({ ...f, titel: e.target.value }))}
           required
@@ -428,7 +446,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="datum_uhrzeit">Datum und Uhrzeit <span className="text-destructive" aria-hidden="true">*</span></Label>
         <DatePicker
           id="datum_uhrzeit"
-          placeholder="Wann findet das Event statt?"
+          placeholder=""
           mode="datetime"
           value={fields.datum_uhrzeit ?? null}
           onChange={v => setFields(f => ({ ...f, datum_uhrzeit: v ?? undefined }))}
@@ -444,7 +462,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="beschreibung">Beschreibung</Label>
         <Textarea
           id="beschreibung"
-          placeholder="Detaillierte Infos, Ablauf, Regeln, Besonderheiten..."
+          placeholder=""
           value={fields.beschreibung ?? ''}
           onChange={e => setFields(f => ({ ...f, beschreibung: e.target.value }))}
           rows={3}
@@ -518,7 +536,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
           type="number"
           step="any"
           {...numberInputProps(formEnhancements, 'max_teilnehmer')}
-          placeholder="z. B. 50"
+          placeholder=""
           value={fields.max_teilnehmer !== undefined ? fields.max_teilnehmer : (computedValues['max_teilnehmer'] ?? '')}
           onChange={e => setFields(f => ({ ...f, max_teilnehmer: clampNumberValue(formEnhancements, 'max_teilnehmer', e.target.value) }))}
         />
@@ -532,7 +550,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
           type="number"
           step="any"
           {...numberInputProps(formEnhancements, 'startgebuehr')}
-          placeholder="z. B. 15,00"
+          placeholder=""
           value={fields.startgebuehr !== undefined ? fields.startgebuehr : (computedValues['startgebuehr'] ?? '')}
           onChange={e => setFields(f => ({ ...f, startgebuehr: clampNumberValue(formEnhancements, 'startgebuehr', e.target.value) }))}
         />
@@ -543,7 +561,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="ort">Ort <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Combobox
           id="ort"
-          placeholder="Welcher Skatepark?"
+          placeholder=""
           items={skateparksSpotsListAll.map(r => ({
             id: r.record_id,
             label: String(r.fields.name ?? r.record_id),
@@ -566,7 +584,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         <Input
           id="kontakt_email"
           type="email"
-          placeholder="z. B. info@event.de"
+          placeholder=""
           value={fields.kontakt_email ?? ''}
           onChange={e => setFields(f => ({ ...f, kontakt_email: e.target.value }))}
         />
@@ -1042,7 +1060,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         open={createSkateparksSpotsOpen}
         onClose={() => setCreateSkateparksSpotsOpen(false)}
         onSubmit={async (newFields) => {
-          const result = await LivingAppsService.createSkateparksSpotsEntry(newFields as any) as { id?: string };
+          const result = await LivingAppsService.createSkateparksSpot(newFields as any) as { id?: string };
           if (result?.id) {
             const newRec = { record_id: result.id, fields: newFields } as unknown as SkateparksSpots;
             setExtraSkateparksSpots(prev => [...prev, newRec]);

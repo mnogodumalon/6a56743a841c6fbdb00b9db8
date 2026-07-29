@@ -83,7 +83,7 @@ export const APP_IDS = {
 
 
 export const LOOKUP_OPTIONS: Record<string, Record<string, {key: string, label: string}[]>> = {
-  'skateparks_&_spots': {
+  'skateparks_spots': {
     untergrundtyp: [{ key: "beton", label: "Beton" }, { key: "asphalt", label: "Asphalt" }, { key: "holz", label: "Holz" }, { key: "fliesen", label: "Fliesen" }, { key: "sonstiges", label: "Sonstiges" }],
   },
   'event_verwaltung': {
@@ -97,7 +97,7 @@ export const LOOKUP_OPTIONS: Record<string, Record<string, {key: string, label: 
 };
 
 export const FIELD_TYPES: Record<string, Record<string, string>> = {
-  'skateparks_&_spots': {
+  'skateparks_spots': {
     'name': 'string/text',
     'strasse': 'string/text',
     'hausnummer': 'string/text',

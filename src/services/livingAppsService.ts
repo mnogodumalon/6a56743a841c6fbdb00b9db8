@@ -95,10 +95,12 @@ async function callApi(method: string, endpoint: string, data?: any, options?: C
     throw netErr;
   }
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) window.dispatchEvent(new Event('auth-error'));
+    // 401/403 go to the login screen only — never to the errorbus (repair can't fix auth).
+    const isAuthError = response.status === 401 || response.status === 403;
+    if (isAuthError) window.dispatchEvent(new Event('auth-error'));
     const { message, raw } = await parseErrorBody(response);
     const err = new LivingAppsApiError(message, response.status, raw);
-    if (!silent) {
+    if (!silent && !isAuthError) {
       window.dispatchEvent(new CustomEvent('errorbus:emit', { detail: {
         source: 'api',
         status: err.status,
@@ -313,28 +315,24 @@ export async function getAppGroups(): Promise<AppGroupInfo[]> {
 }
 
 export class LivingAppsService {
-  // --- SKATEPARKS_&_SPOTS ---
+  // --- SKATEPARKS_SPOTS ---
   static async getSkateparksSpots(): Promise<SkateparksSpots[]> {
     const data = await callApi('GET', `/apps/${APP_IDS.SKATEPARKS_SPOTS}/records`);
     const records = Object.entries(data).map(([id, rec]: [string, any]) => ({
       record_id: id, ...rec
     })) as SkateparksSpots[];
-    return enrichLookupFields(records, 'skateparks_&_spots');
+    return enrichLookupFields(records, 'skateparks_spots');
   }
   static async getSkateparksSpot(id: string): Promise<SkateparksSpots | undefined> {
     const data = await callApi('GET', `/apps/${APP_IDS.SKATEPARKS_SPOTS}/records/${id}`);
     const record = { record_id: data.id, ...data } as SkateparksSpots;
-    return enrichLookupFields([record], 'skateparks_&_spots')[0];
+    return enrichLookupFields([record], 'skateparks_spots')[0];
   }
   static async createSkateparksSpot(fields: CreateSkateparksSpots) {
-    return callApi('POST', `/apps/${APP_IDS.SKATEPARKS_SPOTS}/records`, { fields: cleanFieldsForApi(fields as any, 'skateparks_&_spots') });
-  }
-  // Alias used by the generated EventVerwaltungDialog (quick-create inline)
-  static async createSkateparksSpotsEntry(fields: CreateSkateparksSpots) {
-    return LivingAppsService.createSkateparksSpot(fields);
+    return callApi('POST', `/apps/${APP_IDS.SKATEPARKS_SPOTS}/records`, { fields: cleanFieldsForApi(fields as any, 'skateparks_spots') });
   }
   static async updateSkateparksSpot(id: string, fields: Partial<CreateSkateparksSpots>) {
-    return callApi('PATCH', `/apps/${APP_IDS.SKATEPARKS_SPOTS}/records/${id}`, { fields: cleanFieldsForApi(fields as any, 'skateparks_&_spots') });
+    return callApi('PATCH', `/apps/${APP_IDS.SKATEPARKS_SPOTS}/records/${id}`, { fields: cleanFieldsForApi(fields as any, 'skateparks_spots') });
   }
   static async deleteSkateparksSpot(id: string) {
     return callApi('DELETE', `/apps/${APP_IDS.SKATEPARKS_SPOTS}/records/${id}`);

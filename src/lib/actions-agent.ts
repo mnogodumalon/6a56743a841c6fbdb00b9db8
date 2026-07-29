@@ -133,7 +133,7 @@ export async function executeAction(
   // Test-run of a historical version (code from the history param);
   // omitted → the active version runs, exactly as before
   version?: number,
-): Promise<{ stdout: string | null; error: string | null }> {
+): Promise<{ stdout: string | null; error: string | null; runId: string | null }> {
   let resp: Response;
 
   if (inputs || (files && files.length > 0)) {
@@ -162,7 +162,13 @@ export async function executeAction(
   }
 
   const data = await resp.json();
-  return { stdout: data.stdout ?? null, error: data.error ?? null };
+  return {
+    stdout: data.stdout ?? null,
+    error: data.error ?? null,
+    // Trace correlator, present when the backend runs with tracing enabled
+    // (success AND error responses) — absent on older backends
+    runId: typeof data.run_id === 'string' ? data.run_id : null,
+  };
 }
 
 export async function deleteAction(
@@ -243,6 +249,133 @@ export async function revertAction(
   }
 }
 
+// --- Persistent chat history (appgroup params via the agent service) -------
+// Every function degrades gracefully against an old backend: fetch errors and
+// non-OK responses turn into "no history", never into a broken chat.
+
+export interface ChatSessionAction {
+  app_id: string;
+  identifier: string;
+  title?: string;
+}
+
+export interface ChatSessionMeta {
+  id: string;
+  title: string;
+  preview: string;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  origin: string; // 'chat' | 'fix'
+  mine?: boolean;
+  user?: { id?: string; name?: string; initials?: string };
+  action?: ChatSessionAction;
+  // Rolling AI teaser (backend-generated, absent on old backends/entries);
+  // display falls back to the raw title/preview when missing
+  ai?: { title?: string; summary?: string; emoji?: string; msg_count?: number; ts?: string };
+}
+
+// Persisted message — a sanitized projection of the UI Message type.
+// The index signature lets fields from newer app versions round-trip
+// untouched through this one (forward compatibility).
+export interface StoredChatMessage {
+  role: string;
+  content: string;
+  ts?: string;
+  kind?: string;
+  attachment?: { name: string };
+  versionInfo?: {
+    appId: string;
+    actionIdentifier: string;
+    version: number;
+    summary: string;
+    origin: string;
+  };
+  runInfo?: {
+    appId: string;
+    actionIdentifier: string;
+    actionName: string;
+    version?: number | null;
+    status: string;
+  };
+  runId?: string;
+  [key: string]: unknown;
+}
+
+export interface ChatTranscript {
+  id: string;
+  created_at?: string;
+  updated_at?: string;
+  origin?: string;
+  action?: ChatSessionAction;
+  messages: StoredChatMessage[];
+}
+
+export async function fetchChatSessions(): Promise<ChatSessionMeta[]> {
+  try {
+    const resp = await fetch(
+      `${AGENT_ENDPOINT}/chats?appgroup_id=${APPGROUP_ID}`,
+      { credentials: "include" },
+    );
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return ((data.sessions ?? []) as ChatSessionMeta[]).filter(s => s && s.id);
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchChatTranscript(threadId: string): Promise<ChatTranscript | null> {
+  try {
+    const resp = await fetch(
+      `${AGENT_ENDPOINT}/chats/${threadId}?appgroup_id=${APPGROUP_ID}`,
+      { credentials: "include" },
+    );
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (!Array.isArray(data.messages)) return null;
+    return data as ChatTranscript;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveChatTranscript(
+  threadId: string,
+  payload: { messages: StoredChatMessage[]; action?: ChatSessionAction; origin?: string },
+  // keepalive lets a flush on tab-hide finish after the page is gone.
+  // Browsers cap keepalive bodies at ~64 KB — larger transcripts already
+  // had a debounced save moments earlier, so a dropped flush loses little.
+  keepalive = false,
+): Promise<ChatSessionMeta | null> {
+  try {
+    const resp = await fetch(`${AGENT_ENDPOINT}/chats/${threadId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      keepalive,
+      body: JSON.stringify({ appgroup_id: APPGROUP_ID, ...payload }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return (data.session ?? null) as ChatSessionMeta | null;
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteChatSession(threadId: string): Promise<boolean> {
+  try {
+    const resp = await fetch(
+      `${AGENT_ENDPOINT}/chats/${threadId}?appgroup_id=${APPGROUP_ID}`,
+      { method: "DELETE", credentials: "include" },
+    );
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function downloadFile(url: string, filename: string): Promise<void> {
   const resp = await fetch(url, { credentials: "include" });
   const blob = await resp.blob();
@@ -299,8 +432,9 @@ export async function agentChat(
   onFixResult?: (result: FixResultEvent) => void,
   opts?: {
     // Set while the chat is docked to an action's code view — the agent
-    // resolves "the code" / "this action" to it.
-    activeAction?: { app_id: string; identifier: string };
+    // resolves "the code" / "this action" to it. version/current_version
+    // tell it which timeline entry is on screen.
+    activeAction?: { app_id: string; identifier: string; version?: number; current_version?: number };
     onCodeChanged?: (event: ActionCodeChangedEvent) => void;
   },
 ): Promise<void> {
@@ -364,6 +498,8 @@ export async function fixAction(
     stdout?: string;
     inputs?: Record<string, unknown>;
     files?: File[];
+    // Trace id of the failing /execute run — links fix.end to it server-side
+    runId?: string;
   },
   onContent: (content: string) => void,
   onCodeChanged?: (event: ActionCodeChangedEvent) => void,
@@ -376,6 +512,7 @@ export async function fixAction(
   formData.append("lang", LANG);
   formData.append("error", ctx.error);
   if (ctx.stdout) formData.append("stdout", ctx.stdout);
+  if (ctx.runId) formData.append("run_id", ctx.runId);
   if (ctx.inputs) formData.append("inputs", JSON.stringify(ctx.inputs));
   if (ctx.files) {
     // HEIC/HEIF → JPEG before upload (iPhone photos; server 500s on HEIC).

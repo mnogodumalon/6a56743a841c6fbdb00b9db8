@@ -180,7 +180,7 @@ export default function SkateparksSpotsPage() {
           </TableHeader>
           <TableBody>
             {sortRecords(filtered).map(record => (
-              <TableRow key={record.record_id} className="hover:bg-muted/50 transition-colors cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button, [role="checkbox"]')) return; navigate(`/skateparks-&-spots/${record.record_id}`); }}>
+              <TableRow key={record.record_id} className="hover:bg-muted/50 transition-colors cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button, [role="checkbox"]')) return; navigate(`/skateparks-spots/${record.record_id}`); }}>
                 <TableCell className="font-medium">{record.fields.name ?? '—'}</TableCell>
                 <TableCell>{record.fields.strasse ?? '—'}</TableCell>
                 <TableCell>{record.fields.hausnummer ?? '—'}</TableCell>

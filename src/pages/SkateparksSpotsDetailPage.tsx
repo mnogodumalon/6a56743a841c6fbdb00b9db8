@@ -46,7 +46,7 @@ export default function SkateparksSpotsDetailPage() {
     if (!record) return;
     await LivingAppsService.deleteSkateparksSpot(record.record_id);
     setDeleteOpen(false);
-    navigate('/skateparks-&-spots');
+    navigate('/skateparks-spots');
   }
 
   if (loading) {
@@ -58,7 +58,7 @@ export default function SkateparksSpotsDetailPage() {
       <RecordViewEmpty
         title="Eintrag nicht gefunden"
         action={
-          <Button variant="ghost" onClick={() => navigate('/skateparks-&-spots')}>
+          <Button variant="ghost" onClick={() => navigate('/skateparks-spots')}>
             <IconArrowLeft className="h-4 w-4 mr-1.5" />
             Zurück
           </Button>
@@ -69,7 +69,7 @@ export default function SkateparksSpotsDetailPage() {
 
   return (
     <RecordView
-      onBack={() => navigate('/skateparks-&-spots')}
+      onBack={() => navigate('/skateparks-spots')}
       onEdit={() => setEditing(true)}
       backLabel="Zurück"
       editLabel="Bearbeiten"
