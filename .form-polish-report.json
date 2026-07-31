@@ -1,0 +1,22 @@
+{
+  "entities": {
+    "SkateparksSpots": {
+      "placeholders_set": 8,
+      "defaults_keys": [],
+      "computed_keys": [],
+      "reason": "Reine Stammdaten für Orte — Adresse, Untergrund-Beschreibung, Website. Keine Preise, keine Daten, keine berechenbaren Größen. Entity dient als Lookup-Ziel für Events."
+    },
+    "EventVerwaltung": {
+      "placeholders_set": 11,
+      "defaults_keys": ["datum_uhrzeit", "kategorie"],
+      "computed_keys": [],
+      "reason": "Event mit Startdatum und Startgebühr (Flatrate). Keine Multiplikationen (Tage × Preis, Personen × Preis_pro_Person). Startgebühr ist manuelle Eingabe, nicht berechnet. Datetime-Default: heute mit aktueller Uhrzeit. Kategorie-Default: Contest (häufigster Typ)."
+    },
+    "Anmeldungen": {
+      "placeholders_set": 10,
+      "defaults_keys": ["skill_level", "teilnahmebedingungen"],
+      "computed_keys": [],
+      "reason": "Anmeldungen von Teilnehmenden zu Events. Alter könnte aus Geburtsdatum berechnet werden, ist aber kein Backend-Feld und würde isoliert nur im Dialog sichtbar — keine echte Berechnung nötig. Skill-Level wird als Anfänger vorbelegt (häufigste Startposition). Teilnahmebedingungen werden auf true vorgekreuzt (rechtliche/UX-Konvention)."
+    }
+  }
+}
