@@ -14,6 +14,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { AI_PHOTO_SCAN, AI_PHOTO_LOCATION } from '@/config/ai-features';
 import { formEnhancements } from '@/config/form-enhancements/EventVerwaltung';
 import { evalComputed } from '@/config/form-enhancements/types';
+import { t, appLabel, fieldLabel, localeTag, CURRENCY } from '@/i18n';
 
 export default function EventVerwaltungDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -67,11 +68,11 @@ export default function EventVerwaltungDetailPage() {
   if (!record) {
     return (
       <RecordViewEmpty
-        title="Eintrag nicht gefunden"
+        title={t('not_found')}
         action={
           <Button variant="ghost" onClick={() => navigate('/event-verwaltung')}>
             <IconArrowLeft className="h-4 w-4 mr-1.5" />
-            Zurück
+            {t('back')}
           </Button>
         }
       />
@@ -82,10 +83,10 @@ export default function EventVerwaltungDetailPage() {
     <RecordView
       onBack={() => navigate('/event-verwaltung')}
       onEdit={() => setEditing(true)}
-      backLabel="Zurück"
-      editLabel="Bearbeiten"
+      backLabel={t('back')}
+      editLabel={t('edit_button')}
     >
-      <RecordHeader title={record.fields.titel ?? 'Event-Verwaltung'} />
+      <RecordHeader title={record.fields.titel ?? appLabel('event_verwaltung')} />
 
       {(() => {
         const lookupLists: Record<string, unknown> = {
@@ -93,8 +94,8 @@ export default function EventVerwaltungDetailPage() {
         };
         const fmtComputed = (k: string, n: number) =>
           /(?:kosten|preis|betrag|gesamt|netto|brutto|summe|mwst|rabatt|anzahlung|umsatz|saldo)/i.test(k)
-            ? n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 })
-            : n.toLocaleString('de-DE', { maximumFractionDigits: 2 });
+            ? n.toLocaleString(localeTag(), { style: 'currency', currency: CURRENCY, minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : n.toLocaleString(localeTag(), { maximumFractionDigits: 2 });
         const computedFacts = Object.entries(formEnhancements.computed)
           .map(([key, formula]) => {
             const v = evalComputed(formula, record!.fields as Record<string, unknown>, { lookupLists });
@@ -106,18 +107,18 @@ export default function EventVerwaltungDetailPage() {
         return computedFacts.length > 0 ? <RecordKeyFacts items={computedFacts} /> : null;
       })()}
 
-      <RecordSection title="Details" cols={2}>
-        <RecordField label="Titel des Events" value={record.fields.titel} format="text" />
-        <RecordField label="Kategorie" value={record.fields.kategorie} format="pill" />
-        <RecordField label="Datum und Uhrzeit" value={record.fields.datum_uhrzeit} format="datetime" />
-        <RecordField label="Beschreibung" value={record.fields.beschreibung} format="longtext" className="md:col-span-2" />
-        <RecordField label="Skill-Level" value={record.fields.skill_level} format="pill" />
-        <RecordField label="Maximale Teilnehmerzahl" value={record.fields.max_teilnehmer} format="text" />
-        <RecordField label="Startgebühr (€)" value={record.fields.startgebuehr} format="text" />
-        <RecordField label="Ort" value={getSkateparksSpotsDisplayName(record.fields.ort)} format="text" />
-        <RecordField label="Kontakt-E-Mail" value={record.fields.kontakt_email} format="email" />
-        <RecordField label="Website des Events" value={record.fields.event_website} format="url" />
-        <RecordField label="Kontakt-Telefonnummer" value={record.fields.kontakt_telefon} format="text" />
+      <RecordSection title={t('details')} cols={2}>
+        <RecordField label={fieldLabel('event_verwaltung', 'titel')} value={record.fields.titel} format="text" />
+        <RecordField label={fieldLabel('event_verwaltung', 'kategorie')} value={record.fields.kategorie} format="pill" />
+        <RecordField label={fieldLabel('event_verwaltung', 'datum_uhrzeit')} value={record.fields.datum_uhrzeit} format="datetime" />
+        <RecordField label={fieldLabel('event_verwaltung', 'beschreibung')} value={record.fields.beschreibung} format="longtext" className="md:col-span-2" />
+        <RecordField label={fieldLabel('event_verwaltung', 'skill_level')} value={record.fields.skill_level} format="pill" />
+        <RecordField label={fieldLabel('event_verwaltung', 'max_teilnehmer')} value={record.fields.max_teilnehmer} format="text" />
+        <RecordField label={fieldLabel('event_verwaltung', 'startgebuehr')} value={record.fields.startgebuehr} format="text" />
+        <RecordField label={fieldLabel('event_verwaltung', 'ort')} value={getSkateparksSpotsDisplayName(record.fields.ort)} format="text" />
+        <RecordField label={fieldLabel('event_verwaltung', 'kontakt_email')} value={record.fields.kontakt_email} format="email" />
+        <RecordField label={fieldLabel('event_verwaltung', 'event_website')} value={record.fields.event_website} format="url" />
+        <RecordField label={fieldLabel('event_verwaltung', 'kontakt_telefon')} value={record.fields.kontakt_telefon} format="text" />
       </RecordSection>
 
       <RecordAttachments appId={APP_IDS.EVENT_VERWALTUNG} recordId={record.record_id} />
@@ -125,7 +126,7 @@ export default function EventVerwaltungDetailPage() {
       <div className="flex justify-end pt-2">
         <Button variant="ghost" onClick={() => setDeleteOpen(true)} className="text-destructive hover:text-destructive">
           <IconTrash className="h-4 w-4 mr-1.5" />
-          Löschen
+          {t('delete')}
         </Button>
       </div>
 
@@ -144,8 +145,8 @@ export default function EventVerwaltungDetailPage() {
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
         onConfirm={handleDelete}
-        title="Event-Verwaltung löschen"
-        description="Soll dieser Eintrag wirklich gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden."
+        title={t('delete_entity', { entity: appLabel('event_verwaltung') })}
+        description={t('confirm_delete_desc')}
       />
     </RecordView>
   );

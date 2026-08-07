@@ -11,12 +11,12 @@ import { AttachmentsSection } from '@/components/AttachmentsSection';
 import { MediaThumbnail } from '@/components/widgets/MediaViewer';
 import { Badge } from '@/components/ui/badge';
 import { IconPencil, IconFileText } from '@tabler/icons-react';
+import { t, appLabel, fieldLabel, lookupLabel, dateFnsLocale, dateFormat } from '@/i18n';
 import { format, parseISO } from 'date-fns';
-import { de } from 'date-fns/locale';
 
 function formatDate(d?: string) {
   if (!d) return '—';
-  try { return format(parseISO(d), 'dd.MM.yyyy', { locale: de }); } catch { return d; }
+  try { return format(parseISO(d), dateFormat(), { locale: dateFnsLocale() }); } catch { return d; }
 }
 
 interface EventVerwaltungViewDialogProps {
@@ -40,64 +40,64 @@ export function EventVerwaltungViewDialog({ open, onClose, record, onEdit, skate
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Event-Verwaltung anzeigen</DialogTitle>
+          <DialogTitle>{t('view_entity', { entity: appLabel('event_verwaltung') })}</DialogTitle>
         </DialogHeader>
         <div className="flex justify-end">
           <Button size="sm" onClick={() => { onClose(); onEdit(record); }}>
             <IconPencil className="h-3.5 w-3.5 mr-1.5" />
-            Bearbeiten
+            {t('edit_button')}
           </Button>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Titel des Events</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('event_verwaltung', 'titel')}</Label>
             <p className="text-sm">{record.fields.titel ?? '—'}</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Kategorie</Label>
-            <Badge variant="secondary">{record.fields.kategorie?.label ?? '—'}</Badge>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('event_verwaltung', 'kategorie')}</Label>
+            <Badge variant="secondary">{lookupLabel('event_verwaltung', 'kategorie', record.fields.kategorie?.key) ?? record.fields.kategorie?.label ?? '—'}</Badge>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Datum und Uhrzeit</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('event_verwaltung', 'datum_uhrzeit')}</Label>
             <p className="text-sm">{formatDate(record.fields.datum_uhrzeit)}</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Beschreibung</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('event_verwaltung', 'beschreibung')}</Label>
             <p className="text-sm whitespace-pre-wrap">{record.fields.beschreibung ?? '—'}</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Skill-Level</Label>
-            <Badge variant="secondary">{record.fields.skill_level?.label ?? '—'}</Badge>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('event_verwaltung', 'skill_level')}</Label>
+            <Badge variant="secondary">{lookupLabel('event_verwaltung', 'skill_level', record.fields.skill_level?.key) ?? record.fields.skill_level?.label ?? '—'}</Badge>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Maximale Teilnehmerzahl</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('event_verwaltung', 'max_teilnehmer')}</Label>
             <p className="text-sm">{record.fields.max_teilnehmer ?? '—'}</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Startgebühr (€)</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('event_verwaltung', 'startgebuehr')}</Label>
             <p className="text-sm">{record.fields.startgebuehr ?? '—'}</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Ort</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('event_verwaltung', 'ort')}</Label>
             <p className="text-sm">{getSkateparksSpotsDisplayName(record.fields.ort)}</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Kontakt-E-Mail</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('event_verwaltung', 'kontakt_email')}</Label>
             <p className="text-sm">{record.fields.kontakt_email ?? '—'}</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Website des Events</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('event_verwaltung', 'event_website')}</Label>
             <p className="text-sm">{record.fields.event_website ?? '—'}</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Flyer / Bild</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('event_verwaltung', 'flyer')}</Label>
             {record.fields.flyer ? (
               <MediaThumbnail src={record.fields.flyer} fit="contain" className="w-full rounded-lg border" />
             ) : <p className="text-sm text-muted-foreground">—</p>}
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Kontakt-Telefonnummer</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('event_verwaltung', 'kontakt_telefon')}</Label>
             <p className="text-sm">{record.fields.kontakt_telefon ?? '—'}</p>
           </div>
           <div className="pt-2 border-t border-border">

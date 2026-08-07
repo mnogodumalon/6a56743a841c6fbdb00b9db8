@@ -28,6 +28,7 @@ import type { ComputedContext } from '@/config/form-enhancements/types';
 import { applyFieldOrder, flattenFieldOrder, applyDefaults, evalComputed, numberInputProps, clampNumberValue, classifyComputed, extractApplookupRefs, mergeApplookupRefs, resolveApplookupRef } from '@/config/form-enhancements/types';
 import { formEnhancements, computedDeps, computedApplookupRefs } from '@/config/form-enhancements/Anmeldungen';
 import { AttachmentsSection } from '@/components/AttachmentsSection';
+import { t, appLabel, fieldLabel, lookupLabel, localeTag, CURRENCY } from '@/i18n';
 import { Textarea } from '@/components/ui/textarea';
 import { Combobox } from '@/components/Combobox';
 import { EventVerwaltungDialog } from '@/components/dialogs/EventVerwaltungDialog';
@@ -231,7 +232,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
       await onSubmit(clean as Anmeldungen['fields']);
       onClose();
     } catch (err) {
-      setSubmitError(err instanceof Error && err.message ? err.message : 'Speichern fehlgeschlagen.');
+      setSubmitError(err instanceof Error && err.message ? err.message : t('submit_error'));
     } finally {
       setSaving(false);
     }
@@ -303,7 +304,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
       setScanSuccess(true);
       setTimeout(() => setScanSuccess(false), 3000);
     } catch (err) {
-      console.error('Scan fehlgeschlagen:', err);
+      console.error(`${t('scan_error')}:`, err);
       alert(err instanceof Error ? err.message : String(err));
     } finally {
       setScanning(false);
@@ -338,67 +339,67 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
     }
   }, []);
 
-  const DIALOG_INTENT = defaultValues ? 'Anmeldungen bearbeiten' : 'Anmeldungen hinzufügen';
+  const DIALOG_INTENT = defaultValues
+    ? t('edit_entity', { entity: appLabel('anmeldungen') })
+    : t('new_entity', { entity: appLabel('anmeldungen') });
 
   const fieldBlocks: Record<string, React.ReactNode> = {
     'event': (
       <div key="event" className="space-y-1.5">
-        <Label htmlFor="event">Event <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="event">{fieldLabel('anmeldungen', 'event')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Combobox
           id="event"
-          placeholder="Für welches Event?"
+          placeholder=""
           items={eventVerwaltungListAll.map(r => ({
             id: r.record_id,
             label: String(r.fields.titel ?? r.record_id),
           }))}
           value={extractRecordId(fields.event)}
           onChange={id => setFields(f => ({ ...f, event: id ? createRecordUrl(APP_IDS.EVENT_VERWALTUNG, id) : undefined }))}
-          searchPlaceholder="Suchen…"
-          emptyText="Kein Treffer"
           onCreateNew={(q) => openCreateEventVerwaltung("event", q)}
-          createLabel="Neu in Event-Verwaltung"
+          createLabel={t('create_in', { entity: appLabel('event_verwaltung') })}
         />
         {showErrors && !fields.event && (
-          <p className="text-xs text-destructive mt-1">Pflichtfeld</p>
+          <p className="text-xs text-destructive mt-1">{t('required_hint')}</p>
         )}
       </div>
     ),
     'vorname': (
       <div key="vorname" className="space-y-1.5">
-        <Label htmlFor="vorname">Vorname <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="vorname">{fieldLabel('anmeldungen', 'vorname')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="vorname"
-          placeholder="z. B. Anna"
+          placeholder=""
           value={fields.vorname ?? ''}
           onChange={e => setFields(f => ({ ...f, vorname: e.target.value }))}
           required
         />
         {showErrors && !fields.vorname && (
-          <p className="text-xs text-destructive mt-1">Pflichtfeld</p>
+          <p className="text-xs text-destructive mt-1">{t('required_hint')}</p>
         )}
       </div>
     ),
     'nachname': (
       <div key="nachname" className="space-y-1.5">
-        <Label htmlFor="nachname">Nachname <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="nachname">{fieldLabel('anmeldungen', 'nachname')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="nachname"
-          placeholder="z. B. Schmidt"
+          placeholder=""
           value={fields.nachname ?? ''}
           onChange={e => setFields(f => ({ ...f, nachname: e.target.value }))}
           required
         />
         {showErrors && !fields.nachname && (
-          <p className="text-xs text-destructive mt-1">Pflichtfeld</p>
+          <p className="text-xs text-destructive mt-1">{t('required_hint')}</p>
         )}
       </div>
     ),
     'geburtsdatum': (
       <div key="geburtsdatum" className="space-y-1.5">
-        <Label htmlFor="geburtsdatum">Geburtsdatum</Label>
+        <Label htmlFor="geburtsdatum">{fieldLabel('anmeldungen', 'geburtsdatum')}</Label>
         <DatePicker
           id="geburtsdatum"
-          placeholder="Wann bist du geboren?"
+          placeholder=""
           mode="date"
           value={fields.geburtsdatum ?? null}
           onChange={v => setFields(f => ({ ...f, geburtsdatum: v ?? undefined }))}
@@ -407,22 +408,22 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
     ),
     'email': (
       <div key="email" className="space-y-1.5">
-        <Label htmlFor="email">E-Mail-Adresse <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="email">{fieldLabel('anmeldungen', 'email')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="email"
           type="email"
-          placeholder="z. B. anna@example.com"
+          placeholder=""
           value={fields.email ?? ''}
           onChange={e => setFields(f => ({ ...f, email: e.target.value }))}
         />
         {showErrors && !fields.email && (
-          <p className="text-xs text-destructive mt-1">Pflichtfeld</p>
+          <p className="text-xs text-destructive mt-1">{t('required_hint')}</p>
         )}
       </div>
     ),
     'telefon': (
       <div key="telefon" className="space-y-1.5">
-        <Label htmlFor="telefon">Telefonnummer</Label>
+        <Label htmlFor="telefon">{fieldLabel('anmeldungen', 'telefon')}</Label>
         <Input
           id="telefon"
           value={fields.telefon ?? ''}
@@ -432,7 +433,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
     ),
     'skill_level': (
       <div key="skill_level" className="space-y-1.5">
-        <Label htmlFor="skill_level">Skill-Level <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="skill_level">{fieldLabel('anmeldungen', 'skill_level')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <div role="radiogroup" className="flex flex-wrap gap-1.5">
           <button
             type="button"
@@ -445,7 +446,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Fortgeschritten
+            {lookupLabel('anmeldungen', 'skill_level', 'fortgeschritten') ?? 'Fortgeschritten'}
           </button>
           <button
             type="button"
@@ -458,7 +459,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Profi
+            {lookupLabel('anmeldungen', 'skill_level', 'profi') ?? 'Profi'}
           </button>
           <button
             type="button"
@@ -471,17 +472,17 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Anfänger
+            {lookupLabel('anmeldungen', 'skill_level', 'anfaenger') ?? 'Anfänger'}
           </button>
         </div>
         {showErrors && !fields.skill_level && (
-          <p className="text-xs text-destructive mt-1">Pflichtfeld</p>
+          <p className="text-xs text-destructive mt-1">{t('required_hint')}</p>
         )}
       </div>
     ),
     'board_stil': (
       <div key="board_stil" className="space-y-1.5">
-        <Label htmlFor="board_stil">Board-Stil</Label>
+        <Label htmlFor="board_stil">{fieldLabel('anmeldungen', 'board_stil')}</Label>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Checkbox
@@ -495,7 +496,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
                 });
               }}
             />
-            <Label htmlFor="board_stil_street" className="font-normal">Street</Label>
+            <Label htmlFor="board_stil_street" className="font-normal">{lookupLabel('anmeldungen', 'board_stil', 'street') ?? 'Street'}</Label>
           </div>
           <div className="flex items-center gap-2">
             <Checkbox
@@ -509,7 +510,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
                 });
               }}
             />
-            <Label htmlFor="board_stil_park" className="font-normal">Park</Label>
+            <Label htmlFor="board_stil_park" className="font-normal">{lookupLabel('anmeldungen', 'board_stil', 'park') ?? 'Park'}</Label>
           </div>
           <div className="flex items-center gap-2">
             <Checkbox
@@ -523,7 +524,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
                 });
               }}
             />
-            <Label htmlFor="board_stil_vert" className="font-normal">Vert</Label>
+            <Label htmlFor="board_stil_vert" className="font-normal">{lookupLabel('anmeldungen', 'board_stil', 'vert') ?? 'Vert'}</Label>
           </div>
           <div className="flex items-center gap-2">
             <Checkbox
@@ -537,7 +538,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
                 });
               }}
             />
-            <Label htmlFor="board_stil_bowl" className="font-normal">Bowl</Label>
+            <Label htmlFor="board_stil_bowl" className="font-normal">{lookupLabel('anmeldungen', 'board_stil', 'bowl') ?? 'Bowl'}</Label>
           </div>
           <div className="flex items-center gap-2">
             <Checkbox
@@ -551,17 +552,17 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
                 });
               }}
             />
-            <Label htmlFor="board_stil_freestyle" className="font-normal">Freestyle</Label>
+            <Label htmlFor="board_stil_freestyle" className="font-normal">{lookupLabel('anmeldungen', 'board_stil', 'freestyle') ?? 'Freestyle'}</Label>
           </div>
         </div>
       </div>
     ),
     'anmerkungen': (
       <div key="anmerkungen" className="space-y-1.5">
-        <Label htmlFor="anmerkungen">Anmerkungen</Label>
+        <Label htmlFor="anmerkungen">{fieldLabel('anmeldungen', 'anmerkungen')}</Label>
         <Textarea
           id="anmerkungen"
-          placeholder="Spezielle Wünsche, Besonderheiten..."
+          placeholder=""
           value={fields.anmerkungen ?? ''}
           onChange={e => setFields(f => ({ ...f, anmerkungen: e.target.value }))}
           rows={3}
@@ -570,17 +571,17 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
     ),
     'teilnahmebedingungen': (
       <div key="teilnahmebedingungen" className="space-y-1.5">
-        <Label htmlFor="teilnahmebedingungen">Ich stimme den Teilnahmebedingungen zu <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="teilnahmebedingungen">{fieldLabel('anmeldungen', 'teilnahmebedingungen')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <div className="flex items-center gap-2 pt-1">
           <Checkbox
             id="teilnahmebedingungen"
             checked={!!fields.teilnahmebedingungen}
             onCheckedChange={(v) => setFields(f => ({ ...f, teilnahmebedingungen: !!v }))}
           />
-          <Label htmlFor="teilnahmebedingungen" className="font-normal">Ich stimme den Teilnahmebedingungen zu</Label>
+          <Label htmlFor="teilnahmebedingungen" className="font-normal">{fieldLabel('anmeldungen', 'teilnahmebedingungen')}</Label>
         </div>
         {showErrors && !fields.teilnahmebedingungen && (
-          <p className="text-xs text-destructive mt-1">Pflichtfeld</p>
+          <p className="text-xs text-destructive mt-1">{t('required_hint')}</p>
         )}
       </div>
     ),
@@ -653,9 +654,9 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
     // Backend-Feld mit €-Label ODER virtueller Computed-Key, dessen Name nach Geld aussieht.
     const looksLikeCurrency = CURRENCY_KEYS.has(k) || /(?:kosten|preis|betrag|gesamt|netto|brutto|summe|mwst|rabatt|anzahlung|umsatz|saldo)/i.test(k);
     if (looksLikeCurrency) {
-      return n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return n.toLocaleString(localeTag(), { style: 'currency', currency: CURRENCY, minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
-    return n.toLocaleString('de-DE', { maximumFractionDigits: 2 });
+    return n.toLocaleString(localeTag(), { maximumFractionDigits: 2 });
   }
 
   return (
@@ -677,14 +678,14 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
               }`}
             >
               <IconSparkles className={`h-3.5 w-3.5 ${aiOpen ? '' : 'text-primary'}`} />
-              <span className="hidden sm:inline">KI-Ausfüllen</span>
+              <span className="hidden sm:inline">{t('smart_fill')}</span>
               <IconChevronDown className={`h-3 w-3 transition-transform ${aiOpen ? 'rotate-180' : ''}`} />
             </button>
           )}
         </DialogHeader>
         {enablePhotoScan && aiOpen && (
           <div id="ai-fill-panel" className="border-b bg-muted/20 px-6 py-4 space-y-3">
-            <p className="text-xs text-muted-foreground">Versteht Fotos, Dokumente und Text und füllt alles für dich aus</p>
+            <p className="text-xs text-muted-foreground">{t('scan_header_sub')}</p>
             <div className="flex items-start gap-2 pl-0.5">
               <Checkbox
                 id="ai-use-personal-info"
@@ -694,21 +695,21 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
               />
               <span className="text-xs text-muted-foreground leading-snug">
                 <Label htmlFor="ai-use-personal-info" className="text-xs font-normal text-muted-foreground cursor-pointer inline">
-                  KI-Assistent darf zusätzlich Informationen zu meiner Person verwenden
+                  {t('useinfo_label')}
                 </Label>
                 {' '}
                 <button type="button" onClick={handleShowProfileInfo} className="text-xs text-primary hover:underline whitespace-nowrap">
-                  {profileLoading ? 'Lade...' : '(mehr Infos)'}
+                  {profileLoading ? t('useinfo_loading') : `(${t('useinfo_more')})`}
                 </button>
               </span>
             </div>
             {showProfileInfo && (
               <div className="rounded-md border bg-muted/50 p-2 text-xs max-h-40 overflow-y-auto">
-                <p className="font-medium mb-1">Folgende Infos über dich können von der KI genutzt werden:</p>
+                <p className="font-medium mb-1">{t('profile_preamble')}</p>
                 {profileData ? Object.values(profileData).map((v, i) => (
                   <span key={i}>{i > 0 && ", "}{typeof v === "object" ? JSON.stringify(v) : String(v)}</span>
                 )) : (
-                  <span className="text-muted-foreground">Profil konnte nicht geladen werden</span>
+                  <span className="text-muted-foreground">{t('useinfo_error')}</span>
                 )}
               </div>
             )}
@@ -739,8 +740,8 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
                     <IconLoader2 className="h-7 w-7 text-primary animate-spin" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-medium">KI analysiert...</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Felder werden automatisch ausgefüllt</p>
+                    <p className="text-sm font-medium">{t('scan_analyzing')}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t('scan_analyzing_sub')}</p>
                   </div>
                 </div>
               ) : scanSuccess ? (
@@ -749,8 +750,8 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
                     <IconCircleCheck className="h-7 w-7 text-green-600 dark:text-green-400" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-medium text-green-700 dark:text-green-400">Felder ausgefüllt!</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Prüfe die Werte und passe sie ggf. an</p>
+                    <p className="text-sm font-medium text-green-700 dark:text-green-400">{t('scan_success')}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t('scan_success_sub')}</p>
                   </div>
                 </div>
               ) : (
@@ -759,7 +760,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
                     <IconPhotoPlus className="h-7 w-7 text-primary/70" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-medium">Foto oder Dokument hierher ziehen oder auswählen</p>
+                    <p className="text-sm font-medium">{t('scan_upload')}</p>
                   </div>
                 </div>
               )}
@@ -783,11 +784,11 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
             <div className="grid grid-cols-3 gap-2">
               <Button type="button" variant="outline" size="sm" className="h-10 text-xs" disabled={scanning}
                 onClick={e => { e.stopPropagation(); cameraInputRef.current?.click(); }}>
-                <IconCamera className="h-3.5 w-3.5 mr-1" />Kamera
+                <IconCamera className="h-3.5 w-3.5 mr-1" />{t('scan_camera_btn')}
               </Button>
               <Button type="button" variant="outline" size="sm" className="h-10 text-xs" disabled={scanning}
                 onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}>
-                <IconUpload className="h-3.5 w-3.5 mr-1" />Foto wählen
+                <IconUpload className="h-3.5 w-3.5 mr-1" />{t('scan_file_btn')}
               </Button>
               <Button type="button" variant="outline" size="sm" className="h-10 text-xs" disabled={scanning}
                 onClick={e => {
@@ -798,13 +799,13 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
                     setTimeout(() => { if (fileInputRef.current) fileInputRef.current.accept = 'image/*,application/pdf'; }, 100);
                   }
                 }}>
-                <IconFileText className="h-3.5 w-3.5 mr-1" />Dokument
+                <IconFileText className="h-3.5 w-3.5 mr-1" />{t('scan_doc_btn')}
               </Button>
             </div>
 
             <div className="relative">
               <Textarea
-                placeholder="Text eingeben oder einfügen, z.B. Notizen, E-Mails, Beschreibungen..."
+                placeholder={t('scan_text_placeholder')}
                 value={aiText}
                 onChange={e => {
                   setAiText(e.target.value);
@@ -832,7 +833,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
                     if (text) setAiText(prev => prev ? prev + '\n' + text : text);
                   } catch {}
                 }}
-                title="Paste"
+                title={t('paste')}
               >
                 <IconClipboard className="h-4 w-4" />
               </button>
@@ -846,7 +847,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
                 disabled={scanning}
                 onClick={() => handleAiExtract()}
               >
-                <IconSparkles className="h-3.5 w-3.5 mr-1.5" />Analysieren
+                <IconSparkles className="h-3.5 w-3.5 mr-1.5" />{t('scan_text_analyze')}
               </Button>
             )}
           </div>
@@ -941,7 +942,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
             {showErrors && missingRequired.length > 0 && (
               <p className="text-xs text-destructive flex items-center gap-1.5" role="alert">
                 <IconAlertCircle className="h-3.5 w-3.5 shrink-0" />
-                Bitte fülle die markierten Pflichtfelder aus.
+                {t('missing_required')}
               </p>
             )}
             {recordId && (
@@ -957,13 +958,13 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
             </div>
           )}
           <DialogFooter className="sticky bottom-0 border-t bg-background/95 backdrop-blur px-6 py-3 gap-2 max-sm:flex-row">
-            <Button type="button" variant="outline" onClick={onClose} className="max-sm:h-12 max-sm:flex-1 max-sm:text-base">Abbrechen</Button>
+            <Button type="button" variant="outline" onClick={onClose} className="max-sm:h-12 max-sm:flex-1 max-sm:text-base">{t('cancel')}</Button>
             <Button
               type="submit"
               className="max-sm:h-12 max-sm:flex-1 max-sm:text-base"
               disabled={saving || !isDirty || (showErrors && missingRequired.length > 0)}
             >
-              {saving ? 'Speichern...' : defaultValues ? 'Speichern' : 'Erstellen'}
+              {saving ? t('saving') : defaultValues ? t('save') : t('create')}
             </Button>
           </DialogFooter>
         </form>

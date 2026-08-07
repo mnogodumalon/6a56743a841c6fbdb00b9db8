@@ -15,6 +15,7 @@ import { SkateparksSpotsDialog } from '@/components/dialogs/SkateparksSpotsDialo
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { PageShell } from '@/components/PageShell';
 import { AI_PHOTO_SCAN, AI_PHOTO_LOCATION } from '@/config/ai-features';
+import { t, appLabel, fieldLabel, lookupLabel } from '@/i18n';
 
 export default function SkateparksSpotsPage() {
   const navigate = useNavigate();
@@ -100,18 +101,18 @@ export default function SkateparksSpotsPage() {
 
   return (
     <PageShell
-      title="Skateparks & Spots"
-      subtitle={`${records.length} Skateparks & Spots im System`}
+      title={appLabel('skateparks_spots')}
+      subtitle={`${records.length} ${t('in_system', { entity: appLabel('skateparks_spots') })}`}
       action={
         <Button onClick={() => setDialogOpen(true)} className="shrink-0 rounded-full shadow-sm">
-          <IconPlus className="h-4 w-4 mr-2" /> Hinzufügen
+          <IconPlus className="h-4 w-4 mr-2" /> {t('add')}
         </Button>
       }
     >
       <div className="relative w-full max-w-sm">
         <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Skateparks & Spots suchen..."
+          placeholder={t('search_entity', { entity: appLabel('skateparks_spots') })}
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="pl-9"
@@ -123,59 +124,59 @@ export default function SkateparksSpotsPage() {
             <TableRow className="border-b border-input">
               <TableHead className="uppercase text-xs font-semibold text-secondary-foreground tracking-wider px-6 cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort('name')}>
                 <span className="inline-flex items-center gap-1">
-                  Name des Ortes
+                  {fieldLabel('skateparks_spots', 'name')}
                   {sortKey === 'name' ? (sortDir === 'asc' ? <IconArrowUp size={14} /> : <IconArrowDown size={14} />) : <IconArrowsUpDown size={14} className="opacity-30" />}
                 </span>
               </TableHead>
               <TableHead className="uppercase text-xs font-semibold text-secondary-foreground tracking-wider px-6 cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort('strasse')}>
                 <span className="inline-flex items-center gap-1">
-                  Straße
+                  {fieldLabel('skateparks_spots', 'strasse')}
                   {sortKey === 'strasse' ? (sortDir === 'asc' ? <IconArrowUp size={14} /> : <IconArrowDown size={14} />) : <IconArrowsUpDown size={14} className="opacity-30" />}
                 </span>
               </TableHead>
               <TableHead className="uppercase text-xs font-semibold text-secondary-foreground tracking-wider px-6 cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort('hausnummer')}>
                 <span className="inline-flex items-center gap-1">
-                  Hausnummer
+                  {fieldLabel('skateparks_spots', 'hausnummer')}
                   {sortKey === 'hausnummer' ? (sortDir === 'asc' ? <IconArrowUp size={14} /> : <IconArrowDown size={14} />) : <IconArrowsUpDown size={14} className="opacity-30" />}
                 </span>
               </TableHead>
               <TableHead className="uppercase text-xs font-semibold text-secondary-foreground tracking-wider px-6 cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort('postleitzahl')}>
                 <span className="inline-flex items-center gap-1">
-                  Postleitzahl
+                  {fieldLabel('skateparks_spots', 'postleitzahl')}
                   {sortKey === 'postleitzahl' ? (sortDir === 'asc' ? <IconArrowUp size={14} /> : <IconArrowDown size={14} />) : <IconArrowsUpDown size={14} className="opacity-30" />}
                 </span>
               </TableHead>
               <TableHead className="uppercase text-xs font-semibold text-secondary-foreground tracking-wider px-6 cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort('stadt')}>
                 <span className="inline-flex items-center gap-1">
-                  Stadt
+                  {fieldLabel('skateparks_spots', 'stadt')}
                   {sortKey === 'stadt' ? (sortDir === 'asc' ? <IconArrowUp size={14} /> : <IconArrowDown size={14} />) : <IconArrowsUpDown size={14} className="opacity-30" />}
                 </span>
               </TableHead>
               <TableHead className="uppercase text-xs font-semibold text-secondary-foreground tracking-wider px-6 cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort('beschreibung')}>
                 <span className="inline-flex items-center gap-1">
-                  Beschreibung
+                  {fieldLabel('skateparks_spots', 'beschreibung')}
                   {sortKey === 'beschreibung' ? (sortDir === 'asc' ? <IconArrowUp size={14} /> : <IconArrowDown size={14} />) : <IconArrowsUpDown size={14} className="opacity-30" />}
                 </span>
               </TableHead>
               <TableHead className="uppercase text-xs font-semibold text-secondary-foreground tracking-wider px-6 cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort('untergrundtyp')}>
                 <span className="inline-flex items-center gap-1">
-                  Untergrundtyp
+                  {fieldLabel('skateparks_spots', 'untergrundtyp')}
                   {sortKey === 'untergrundtyp' ? (sortDir === 'asc' ? <IconArrowUp size={14} /> : <IconArrowDown size={14} />) : <IconArrowsUpDown size={14} className="opacity-30" />}
                 </span>
               </TableHead>
               <TableHead className="uppercase text-xs font-semibold text-secondary-foreground tracking-wider px-6 cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort('standort')}>
                 <span className="inline-flex items-center gap-1">
-                  Standort auf der Karte
+                  {fieldLabel('skateparks_spots', 'standort')}
                   {sortKey === 'standort' ? (sortDir === 'asc' ? <IconArrowUp size={14} /> : <IconArrowDown size={14} />) : <IconArrowsUpDown size={14} className="opacity-30" />}
                 </span>
               </TableHead>
               <TableHead className="uppercase text-xs font-semibold text-secondary-foreground tracking-wider px-6 cursor-pointer select-none hover:text-foreground transition-colors" onClick={() => toggleSort('website')}>
                 <span className="inline-flex items-center gap-1">
-                  Website
+                  {fieldLabel('skateparks_spots', 'website')}
                   {sortKey === 'website' ? (sortDir === 'asc' ? <IconArrowUp size={14} /> : <IconArrowDown size={14} />) : <IconArrowsUpDown size={14} className="opacity-30" />}
                 </span>
               </TableHead>
-              <TableHead className="w-24 uppercase text-xs font-semibold text-secondary-foreground tracking-wider px-6">Aktionen</TableHead>
+              <TableHead className="w-24 uppercase text-xs font-semibold text-secondary-foreground tracking-wider px-6">{t('actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -187,7 +188,7 @@ export default function SkateparksSpotsPage() {
                 <TableCell>{record.fields.postleitzahl ?? '—'}</TableCell>
                 <TableCell>{record.fields.stadt ?? '—'}</TableCell>
                 <TableCell className="max-w-xs"><span className="truncate block">{record.fields.beschreibung ?? '—'}</span></TableCell>
-                <TableCell><span className="inline-flex items-center bg-secondary border border-[#bfdbfe] text-[#2563eb] rounded-[10px] px-2 py-1 text-sm font-medium">{record.fields.untergrundtyp?.label ?? '—'}</span></TableCell>
+                <TableCell><span className="inline-flex items-center bg-secondary border border-[#bfdbfe] text-[#2563eb] rounded-[10px] px-2 py-1 text-sm font-medium">{lookupLabel('skateparks_spots', 'untergrundtyp', record.fields.untergrundtyp?.key) ?? record.fields.untergrundtyp?.label ?? '—'}</span></TableCell>
                 <TableCell className="max-w-[200px]"><span className="truncate block" title={record.fields.standort ? `${record.fields.standort.lat}, ${record.fields.standort.long}` : undefined}>{record.fields.standort?.info ?? (record.fields.standort ? `${record.fields.standort.lat?.toFixed(4)}, ${record.fields.standort.long?.toFixed(4)}` : '—')}</span></TableCell>
                 <TableCell>{record.fields.website ?? '—'}</TableCell>
                 <TableCell>
@@ -205,7 +206,7 @@ export default function SkateparksSpotsPage() {
             {filtered.length === 0 && (
               <TableRow>
                 <TableCell colSpan={10} className="text-center py-16 text-muted-foreground">
-                  {search ? 'Keine Ergebnisse gefunden.' : 'Noch keine Skateparks & Spots. Jetzt hinzufügen!'}
+                  {search ? t('no_results') : t('no_data_yet', { entity: appLabel('skateparks_spots') })}
                 </TableCell>
               </TableRow>
             )}
@@ -227,8 +228,8 @@ export default function SkateparksSpotsPage() {
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="Skateparks & Spots löschen"
-        description="Soll dieser Eintrag wirklich gelöscht werden? Diese Aktion kann nicht rückgängig gemacht werden."
+        title={t('delete_entity', { entity: appLabel('skateparks_spots') })}
+        description={t('confirm_delete_desc')}
       />
 
     </PageShell>

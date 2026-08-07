@@ -28,6 +28,7 @@ import type { ComputedContext } from '@/config/form-enhancements/types';
 import { applyFieldOrder, flattenFieldOrder, applyDefaults, evalComputed, numberInputProps, clampNumberValue, classifyComputed, extractApplookupRefs, mergeApplookupRefs, resolveApplookupRef } from '@/config/form-enhancements/types';
 import { formEnhancements, computedDeps, computedApplookupRefs } from '@/config/form-enhancements/EventVerwaltung';
 import { AttachmentsSection } from '@/components/AttachmentsSection';
+import { t, appLabel, fieldLabel, lookupLabel, localeTag, CURRENCY } from '@/i18n';
 import { Textarea } from '@/components/ui/textarea';
 import { Combobox } from '@/components/Combobox';
 import { SkateparksSpotsDialog } from '@/components/dialogs/SkateparksSpotsDialog';
@@ -231,7 +232,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
       await onSubmit(clean as EventVerwaltung['fields']);
       onClose();
     } catch (err) {
-      setSubmitError(err instanceof Error && err.message ? err.message : 'Speichern fehlgeschlagen.');
+      setSubmitError(err instanceof Error && err.message ? err.message : t('submit_error'));
     } finally {
       setSaving(false);
     }
@@ -313,7 +314,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
       setScanSuccess(true);
       setTimeout(() => setScanSuccess(false), 3000);
     } catch (err) {
-      console.error('Scan fehlgeschlagen:', err);
+      console.error(`${t('scan_error')}:`, err);
       alert(err instanceof Error ? err.message : String(err));
     } finally {
       setScanning(false);
@@ -348,27 +349,29 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     }
   }, []);
 
-  const DIALOG_INTENT = defaultValues ? 'Event-Verwaltung bearbeiten' : 'Event-Verwaltung hinzufügen';
+  const DIALOG_INTENT = defaultValues
+    ? t('edit_entity', { entity: appLabel('event_verwaltung') })
+    : t('new_entity', { entity: appLabel('event_verwaltung') });
 
   const fieldBlocks: Record<string, React.ReactNode> = {
     'titel': (
       <div key="titel" className="space-y-1.5">
-        <Label htmlFor="titel">Titel des Events <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="titel">{fieldLabel('event_verwaltung', 'titel')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="titel"
-          placeholder="z. B. Berlin Skate Contest 2026"
+          placeholder=""
           value={fields.titel ?? ''}
           onChange={e => setFields(f => ({ ...f, titel: e.target.value }))}
           required
         />
         {showErrors && !fields.titel && (
-          <p className="text-xs text-destructive mt-1">Pflichtfeld</p>
+          <p className="text-xs text-destructive mt-1">{t('required_hint')}</p>
         )}
       </div>
     ),
     'kategorie': (
       <div key="kategorie" className="space-y-1.5">
-        <Label htmlFor="kategorie">Kategorie <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="kategorie">{fieldLabel('event_verwaltung', 'kategorie')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <div role="radiogroup" className="flex flex-wrap gap-1.5">
           <button
             type="button"
@@ -381,7 +384,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Contest
+            {lookupLabel('event_verwaltung', 'kategorie', 'contest') ?? 'Contest'}
           </button>
           <button
             type="button"
@@ -394,7 +397,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Jam Session
+            {lookupLabel('event_verwaltung', 'kategorie', 'jam') ?? 'Jam Session'}
           </button>
           <button
             type="button"
@@ -407,7 +410,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Demo
+            {lookupLabel('event_verwaltung', 'kategorie', 'demo') ?? 'Demo'}
           </button>
           <button
             type="button"
@@ -420,7 +423,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Workshop
+            {lookupLabel('event_verwaltung', 'kategorie', 'workshop') ?? 'Workshop'}
           </button>
           <button
             type="button"
@@ -433,36 +436,36 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Sonstiges
+            {lookupLabel('event_verwaltung', 'kategorie', 'sonstiges') ?? 'Sonstiges'}
           </button>
         </div>
         {showErrors && !fields.kategorie && (
-          <p className="text-xs text-destructive mt-1">Pflichtfeld</p>
+          <p className="text-xs text-destructive mt-1">{t('required_hint')}</p>
         )}
       </div>
     ),
     'datum_uhrzeit': (
       <div key="datum_uhrzeit" className="space-y-1.5">
-        <Label htmlFor="datum_uhrzeit">Datum und Uhrzeit <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="datum_uhrzeit">{fieldLabel('event_verwaltung', 'datum_uhrzeit')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <DatePicker
           id="datum_uhrzeit"
-          placeholder="Wann findet das Event statt?"
+          placeholder=""
           mode="datetime"
           value={fields.datum_uhrzeit ?? null}
           onChange={v => setFields(f => ({ ...f, datum_uhrzeit: v ?? undefined }))}
           required
         />
         {showErrors && !fields.datum_uhrzeit && (
-          <p className="text-xs text-destructive mt-1">Pflichtfeld</p>
+          <p className="text-xs text-destructive mt-1">{t('required_hint')}</p>
         )}
       </div>
     ),
     'beschreibung': (
       <div key="beschreibung" className="space-y-1.5">
-        <Label htmlFor="beschreibung">Beschreibung</Label>
+        <Label htmlFor="beschreibung">{fieldLabel('event_verwaltung', 'beschreibung')}</Label>
         <Textarea
           id="beschreibung"
-          placeholder="Regeln, Ablauf, Besonderheiten..."
+          placeholder=""
           value={fields.beschreibung ?? ''}
           onChange={e => setFields(f => ({ ...f, beschreibung: e.target.value }))}
           rows={3}
@@ -471,7 +474,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'skill_level': (
       <div key="skill_level" className="space-y-1.5">
-        <Label htmlFor="skill_level">Skill-Level</Label>
+        <Label htmlFor="skill_level">{fieldLabel('event_verwaltung', 'skill_level')}</Label>
         <div role="radiogroup" className="flex flex-wrap gap-1.5">
           <button
             type="button"
@@ -484,7 +487,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Fortgeschritten
+            {lookupLabel('event_verwaltung', 'skill_level', 'fortgeschritten') ?? 'Fortgeschritten'}
           </button>
           <button
             type="button"
@@ -497,7 +500,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Profi
+            {lookupLabel('event_verwaltung', 'skill_level', 'profi') ?? 'Profi'}
           </button>
           <button
             type="button"
@@ -510,7 +513,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Alle Levels
+            {lookupLabel('event_verwaltung', 'skill_level', 'alle_levels') ?? 'Alle Levels'}
           </button>
           <button
             type="button"
@@ -523,20 +526,20 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Anfänger
+            {lookupLabel('event_verwaltung', 'skill_level', 'anfaenger') ?? 'Anfänger'}
           </button>
         </div>
       </div>
     ),
     'max_teilnehmer': (
       <div key="max_teilnehmer" className="space-y-1.5">
-        <Label htmlFor="max_teilnehmer">Maximale Teilnehmerzahl</Label>
+        <Label htmlFor="max_teilnehmer">{fieldLabel('event_verwaltung', 'max_teilnehmer')}</Label>
         <Input
           id="max_teilnehmer"
           type="number"
           step="any"
           {...numberInputProps(formEnhancements, 'max_teilnehmer')}
-          placeholder="z. B. 100"
+          placeholder=""
           value={fields.max_teilnehmer !== undefined ? fields.max_teilnehmer : (computedValues['max_teilnehmer'] ?? '')}
           onChange={e => setFields(f => ({ ...f, max_teilnehmer: clampNumberValue(formEnhancements, 'max_teilnehmer', e.target.value) }))}
         />
@@ -544,13 +547,13 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'startgebuehr': (
       <div key="startgebuehr" className="space-y-1.5">
-        <Label htmlFor="startgebuehr">Startgebühr (€)</Label>
+        <Label htmlFor="startgebuehr">{fieldLabel('event_verwaltung', 'startgebuehr')}</Label>
         <Input
           id="startgebuehr"
           type="number"
           step="any"
           {...numberInputProps(formEnhancements, 'startgebuehr')}
-          placeholder="z. B. 15,50"
+          placeholder=""
           value={fields.startgebuehr !== undefined ? fields.startgebuehr : (computedValues['startgebuehr'] ?? '')}
           onChange={e => setFields(f => ({ ...f, startgebuehr: clampNumberValue(formEnhancements, 'startgebuehr', e.target.value) }))}
         />
@@ -558,33 +561,31 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'ort': (
       <div key="ort" className="space-y-1.5">
-        <Label htmlFor="ort">Ort <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="ort">{fieldLabel('event_verwaltung', 'ort')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Combobox
           id="ort"
-          placeholder="Welcher Ort?"
+          placeholder=""
           items={skateparksSpotsListAll.map(r => ({
             id: r.record_id,
             label: String(r.fields.name ?? r.record_id),
           }))}
           value={extractRecordId(fields.ort)}
           onChange={id => setFields(f => ({ ...f, ort: id ? createRecordUrl(APP_IDS.SKATEPARKS_SPOTS, id) : undefined }))}
-          searchPlaceholder="Suchen…"
-          emptyText="Kein Treffer"
           onCreateNew={(q) => openCreateSkateparksSpots("ort", q)}
-          createLabel="Neu in Skateparks & Spots"
+          createLabel={t('create_in', { entity: appLabel('skateparks_spots') })}
         />
         {showErrors && !fields.ort && (
-          <p className="text-xs text-destructive mt-1">Pflichtfeld</p>
+          <p className="text-xs text-destructive mt-1">{t('required_hint')}</p>
         )}
       </div>
     ),
     'kontakt_email': (
       <div key="kontakt_email" className="space-y-1.5">
-        <Label htmlFor="kontakt_email">Kontakt-E-Mail</Label>
+        <Label htmlFor="kontakt_email">{fieldLabel('event_verwaltung', 'kontakt_email')}</Label>
         <Input
           id="kontakt_email"
           type="email"
-          placeholder="z. B. info@event.de"
+          placeholder=""
           value={fields.kontakt_email ?? ''}
           onChange={e => setFields(f => ({ ...f, kontakt_email: e.target.value }))}
         />
@@ -592,7 +593,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'event_website': (
       <div key="event_website" className="space-y-1.5">
-        <Label htmlFor="event_website">Website des Events</Label>
+        <Label htmlFor="event_website">{fieldLabel('event_verwaltung', 'event_website')}</Label>
         <Input
           id="event_website"
           value={fields.event_website ?? ''}
@@ -602,7 +603,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'flyer': (
       <div key="flyer" className="space-y-1.5">
-        <Label htmlFor="flyer">Flyer / Bild</Label>
+        <Label htmlFor="flyer">{fieldLabel('event_verwaltung', 'flyer')}</Label>
         {fields.flyer ? (
           <div className="flex items-center gap-3 rounded-lg border p-2">
             <div className="relative h-14 w-14 shrink-0 rounded-md bg-muted overflow-hidden">
@@ -622,7 +623,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                 <label
                   className="text-xs text-primary hover:underline cursor-pointer"
                 >
-                  Ändern
+                  {t('fr_change')}
                   <input
                     type="file"
                     accept="image/*,.pdf"
@@ -642,7 +643,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                   className="text-xs text-muted-foreground hover:text-destructive"
                   onClick={() => setFields(f => ({ ...f, flyer: undefined }))}
                 >
-                  Entfernen
+                  {t('fr_remove')}
                 </button>
               </div>
             </div>
@@ -652,7 +653,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
             className="flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-muted-foreground/25 p-4 cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-colors"
           >
             <IconUpload size={20} className="text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Datei hochladen</span>
+            <span className="text-sm text-muted-foreground">{t('fr_upload_file')}</span>
             <input
               type="file"
               accept="image/*,.pdf"
@@ -672,7 +673,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'kontakt_telefon': (
       <div key="kontakt_telefon" className="space-y-1.5">
-        <Label htmlFor="kontakt_telefon">Kontakt-Telefonnummer</Label>
+        <Label htmlFor="kontakt_telefon">{fieldLabel('event_verwaltung', 'kontakt_telefon')}</Label>
         <Input
           id="kontakt_telefon"
           value={fields.kontakt_telefon ?? ''}
@@ -749,9 +750,9 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     // Backend-Feld mit €-Label ODER virtueller Computed-Key, dessen Name nach Geld aussieht.
     const looksLikeCurrency = CURRENCY_KEYS.has(k) || /(?:kosten|preis|betrag|gesamt|netto|brutto|summe|mwst|rabatt|anzahlung|umsatz|saldo)/i.test(k);
     if (looksLikeCurrency) {
-      return n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return n.toLocaleString(localeTag(), { style: 'currency', currency: CURRENCY, minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
-    return n.toLocaleString('de-DE', { maximumFractionDigits: 2 });
+    return n.toLocaleString(localeTag(), { maximumFractionDigits: 2 });
   }
 
   return (
@@ -773,14 +774,14 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
               }`}
             >
               <IconSparkles className={`h-3.5 w-3.5 ${aiOpen ? '' : 'text-primary'}`} />
-              <span className="hidden sm:inline">KI-Ausfüllen</span>
+              <span className="hidden sm:inline">{t('smart_fill')}</span>
               <IconChevronDown className={`h-3 w-3 transition-transform ${aiOpen ? 'rotate-180' : ''}`} />
             </button>
           )}
         </DialogHeader>
         {enablePhotoScan && aiOpen && (
           <div id="ai-fill-panel" className="border-b bg-muted/20 px-6 py-4 space-y-3">
-            <p className="text-xs text-muted-foreground">Versteht Fotos, Dokumente und Text und füllt alles für dich aus</p>
+            <p className="text-xs text-muted-foreground">{t('scan_header_sub')}</p>
             <div className="flex items-start gap-2 pl-0.5">
               <Checkbox
                 id="ai-use-personal-info"
@@ -790,21 +791,21 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
               />
               <span className="text-xs text-muted-foreground leading-snug">
                 <Label htmlFor="ai-use-personal-info" className="text-xs font-normal text-muted-foreground cursor-pointer inline">
-                  KI-Assistent darf zusätzlich Informationen zu meiner Person verwenden
+                  {t('useinfo_label')}
                 </Label>
                 {' '}
                 <button type="button" onClick={handleShowProfileInfo} className="text-xs text-primary hover:underline whitespace-nowrap">
-                  {profileLoading ? 'Lade...' : '(mehr Infos)'}
+                  {profileLoading ? t('useinfo_loading') : `(${t('useinfo_more')})`}
                 </button>
               </span>
             </div>
             {showProfileInfo && (
               <div className="rounded-md border bg-muted/50 p-2 text-xs max-h-40 overflow-y-auto">
-                <p className="font-medium mb-1">Folgende Infos über dich können von der KI genutzt werden:</p>
+                <p className="font-medium mb-1">{t('profile_preamble')}</p>
                 {profileData ? Object.values(profileData).map((v, i) => (
                   <span key={i}>{i > 0 && ", "}{typeof v === "object" ? JSON.stringify(v) : String(v)}</span>
                 )) : (
-                  <span className="text-muted-foreground">Profil konnte nicht geladen werden</span>
+                  <span className="text-muted-foreground">{t('useinfo_error')}</span>
                 )}
               </div>
             )}
@@ -835,8 +836,8 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                     <IconLoader2 className="h-7 w-7 text-primary animate-spin" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-medium">KI analysiert...</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Felder werden automatisch ausgefüllt</p>
+                    <p className="text-sm font-medium">{t('scan_analyzing')}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t('scan_analyzing_sub')}</p>
                   </div>
                 </div>
               ) : scanSuccess ? (
@@ -845,8 +846,8 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                     <IconCircleCheck className="h-7 w-7 text-green-600 dark:text-green-400" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-medium text-green-700 dark:text-green-400">Felder ausgefüllt!</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Prüfe die Werte und passe sie ggf. an</p>
+                    <p className="text-sm font-medium text-green-700 dark:text-green-400">{t('scan_success')}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t('scan_success_sub')}</p>
                   </div>
                 </div>
               ) : (
@@ -855,7 +856,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                     <IconPhotoPlus className="h-7 w-7 text-primary/70" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-medium">Foto oder Dokument hierher ziehen oder auswählen</p>
+                    <p className="text-sm font-medium">{t('scan_upload')}</p>
                   </div>
                 </div>
               )}
@@ -879,11 +880,11 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
             <div className="grid grid-cols-3 gap-2">
               <Button type="button" variant="outline" size="sm" className="h-10 text-xs" disabled={scanning}
                 onClick={e => { e.stopPropagation(); cameraInputRef.current?.click(); }}>
-                <IconCamera className="h-3.5 w-3.5 mr-1" />Kamera
+                <IconCamera className="h-3.5 w-3.5 mr-1" />{t('scan_camera_btn')}
               </Button>
               <Button type="button" variant="outline" size="sm" className="h-10 text-xs" disabled={scanning}
                 onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}>
-                <IconUpload className="h-3.5 w-3.5 mr-1" />Foto wählen
+                <IconUpload className="h-3.5 w-3.5 mr-1" />{t('scan_file_btn')}
               </Button>
               <Button type="button" variant="outline" size="sm" className="h-10 text-xs" disabled={scanning}
                 onClick={e => {
@@ -894,13 +895,13 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                     setTimeout(() => { if (fileInputRef.current) fileInputRef.current.accept = 'image/*,application/pdf'; }, 100);
                   }
                 }}>
-                <IconFileText className="h-3.5 w-3.5 mr-1" />Dokument
+                <IconFileText className="h-3.5 w-3.5 mr-1" />{t('scan_doc_btn')}
               </Button>
             </div>
 
             <div className="relative">
               <Textarea
-                placeholder="Text eingeben oder einfügen, z.B. Notizen, E-Mails, Beschreibungen..."
+                placeholder={t('scan_text_placeholder')}
                 value={aiText}
                 onChange={e => {
                   setAiText(e.target.value);
@@ -928,7 +929,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                     if (text) setAiText(prev => prev ? prev + '\n' + text : text);
                   } catch {}
                 }}
-                title="Paste"
+                title={t('paste')}
               >
                 <IconClipboard className="h-4 w-4" />
               </button>
@@ -942,7 +943,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                 disabled={scanning}
                 onClick={() => handleAiExtract()}
               >
-                <IconSparkles className="h-3.5 w-3.5 mr-1.5" />Analysieren
+                <IconSparkles className="h-3.5 w-3.5 mr-1.5" />{t('scan_text_analyze')}
               </Button>
             )}
           </div>
@@ -1037,7 +1038,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
             {showErrors && missingRequired.length > 0 && (
               <p className="text-xs text-destructive flex items-center gap-1.5" role="alert">
                 <IconAlertCircle className="h-3.5 w-3.5 shrink-0" />
-                Bitte fülle die markierten Pflichtfelder aus.
+                {t('missing_required')}
               </p>
             )}
             {recordId && (
@@ -1053,13 +1054,13 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
             </div>
           )}
           <DialogFooter className="sticky bottom-0 border-t bg-background/95 backdrop-blur px-6 py-3 gap-2 max-sm:flex-row">
-            <Button type="button" variant="outline" onClick={onClose} className="max-sm:h-12 max-sm:flex-1 max-sm:text-base">Abbrechen</Button>
+            <Button type="button" variant="outline" onClick={onClose} className="max-sm:h-12 max-sm:flex-1 max-sm:text-base">{t('cancel')}</Button>
             <Button
               type="submit"
               className="max-sm:h-12 max-sm:flex-1 max-sm:text-base"
               disabled={saving || !isDirty || (showErrors && missingRequired.length > 0)}
             >
-              {saving ? 'Speichern...' : defaultValues ? 'Speichern' : 'Erstellen'}
+              {saving ? t('saving') : defaultValues ? t('save') : t('create')}
             </Button>
           </DialogFooter>
         </form>

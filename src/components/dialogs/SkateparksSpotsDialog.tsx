@@ -27,6 +27,7 @@ import type { ComputedContext } from '@/config/form-enhancements/types';
 import { applyFieldOrder, flattenFieldOrder, applyDefaults, evalComputed, numberInputProps, clampNumberValue, classifyComputed, extractApplookupRefs, mergeApplookupRefs, resolveApplookupRef } from '@/config/form-enhancements/types';
 import { formEnhancements, computedDeps, computedApplookupRefs } from '@/config/form-enhancements/SkateparksSpots';
 import { AttachmentsSection } from '@/components/AttachmentsSection';
+import { t, appLabel, fieldLabel, lookupLabel, localeTag, CURRENCY } from '@/i18n';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { IconAlertCircle, IconCamera, IconChevronDown, IconCircleCheck, IconClipboard, IconCrosshair, IconFileText, IconLoader2, IconPhotoPlus, IconSparkles, IconUpload, IconX } from '@tabler/icons-react';
@@ -201,7 +202,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
       await onSubmit(clean as SkateparksSpots['fields']);
       onClose();
     } catch (err) {
-      setSubmitError(err instanceof Error && err.message ? err.message : 'Speichern fehlgeschlagen.');
+      setSubmitError(err instanceof Error && err.message ? err.message : t('submit_error'));
     } finally {
       setSaving(false);
     }
@@ -356,7 +357,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
       setScanSuccess(true);
       setTimeout(() => setScanSuccess(false), 3000);
     } catch (err) {
-      console.error('Scan fehlgeschlagen:', err);
+      console.error(`${t('scan_error')}:`, err);
       alert(err instanceof Error ? err.message : String(err));
     } finally {
       setScanning(false);
@@ -391,12 +392,14 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
     }
   }, []);
 
-  const DIALOG_INTENT = defaultValues ? 'Skateparks & Spots bearbeiten' : 'Skateparks & Spots hinzufügen';
+  const DIALOG_INTENT = defaultValues
+    ? t('edit_entity', { entity: appLabel('skateparks_spots') })
+    : t('new_entity', { entity: appLabel('skateparks_spots') });
 
   const fieldBlocks: Record<string, React.ReactNode> = {
     'name': (
       <div key="name" className="space-y-1.5">
-        <Label htmlFor="name">Name des Ortes <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="name">{fieldLabel('skateparks_spots', 'name')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="name"
           placeholder=""
@@ -405,13 +408,13 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
           required
         />
         {showErrors && !fields.name && (
-          <p className="text-xs text-destructive mt-1">Pflichtfeld</p>
+          <p className="text-xs text-destructive mt-1">{t('required_hint')}</p>
         )}
       </div>
     ),
     'strasse': (
       <div key="strasse" className="space-y-1.5">
-        <Label htmlFor="strasse">Straße <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="strasse">{fieldLabel('skateparks_spots', 'strasse')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="strasse"
           placeholder=""
@@ -420,13 +423,13 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
           required
         />
         {showErrors && !fields.strasse && (
-          <p className="text-xs text-destructive mt-1">Pflichtfeld</p>
+          <p className="text-xs text-destructive mt-1">{t('required_hint')}</p>
         )}
       </div>
     ),
     'hausnummer': (
       <div key="hausnummer" className="space-y-1.5">
-        <Label htmlFor="hausnummer">Hausnummer <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="hausnummer">{fieldLabel('skateparks_spots', 'hausnummer')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="hausnummer"
           placeholder=""
@@ -435,13 +438,13 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
           required
         />
         {showErrors && !fields.hausnummer && (
-          <p className="text-xs text-destructive mt-1">Pflichtfeld</p>
+          <p className="text-xs text-destructive mt-1">{t('required_hint')}</p>
         )}
       </div>
     ),
     'postleitzahl': (
       <div key="postleitzahl" className="space-y-1.5">
-        <Label htmlFor="postleitzahl">Postleitzahl <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="postleitzahl">{fieldLabel('skateparks_spots', 'postleitzahl')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="postleitzahl"
           placeholder=""
@@ -450,13 +453,13 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
           required
         />
         {showErrors && !fields.postleitzahl && (
-          <p className="text-xs text-destructive mt-1">Pflichtfeld</p>
+          <p className="text-xs text-destructive mt-1">{t('required_hint')}</p>
         )}
       </div>
     ),
     'stadt': (
       <div key="stadt" className="space-y-1.5">
-        <Label htmlFor="stadt">Stadt <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="stadt">{fieldLabel('skateparks_spots', 'stadt')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="stadt"
           placeholder=""
@@ -465,13 +468,13 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
           required
         />
         {showErrors && !fields.stadt && (
-          <p className="text-xs text-destructive mt-1">Pflichtfeld</p>
+          <p className="text-xs text-destructive mt-1">{t('required_hint')}</p>
         )}
       </div>
     ),
     'beschreibung': (
       <div key="beschreibung" className="space-y-1.5">
-        <Label htmlFor="beschreibung">Beschreibung</Label>
+        <Label htmlFor="beschreibung">{fieldLabel('skateparks_spots', 'beschreibung')}</Label>
         <Textarea
           id="beschreibung"
           placeholder=""
@@ -483,7 +486,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'untergrundtyp': (
       <div key="untergrundtyp" className="space-y-1.5">
-        <Label htmlFor="untergrundtyp">Untergrundtyp</Label>
+        <Label htmlFor="untergrundtyp">{fieldLabel('skateparks_spots', 'untergrundtyp')}</Label>
         <div role="radiogroup" className="flex flex-wrap gap-1.5">
           <button
             type="button"
@@ -496,7 +499,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Beton
+            {lookupLabel('skateparks_spots', 'untergrundtyp', 'beton') ?? 'Beton'}
           </button>
           <button
             type="button"
@@ -509,7 +512,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Asphalt
+            {lookupLabel('skateparks_spots', 'untergrundtyp', 'asphalt') ?? 'Asphalt'}
           </button>
           <button
             type="button"
@@ -522,7 +525,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Holz
+            {lookupLabel('skateparks_spots', 'untergrundtyp', 'holz') ?? 'Holz'}
           </button>
           <button
             type="button"
@@ -535,7 +538,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Fliesen
+            {lookupLabel('skateparks_spots', 'untergrundtyp', 'fliesen') ?? 'Fliesen'}
           </button>
           <button
             type="button"
@@ -548,25 +551,25 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
                 : 'bg-background text-foreground border-input hover:bg-accent'
             }`}
           >
-            Sonstiges
+            {lookupLabel('skateparks_spots', 'untergrundtyp', 'sonstiges') ?? 'Sonstiges'}
           </button>
         </div>
       </div>
     ),
     'standort': (
       <div key="standort" className="space-y-1.5">
-        <Label htmlFor="standort">Standort auf der Karte</Label>
+        <Label htmlFor="standort">{fieldLabel('skateparks_spots', 'standort')}</Label>
         <div className="space-y-3">
           <Button type="button" variant="outline" className="w-full max-sm:h-11" disabled={locating} onClick={() => geoLocate("standort")}>
             {locating ? <IconLoader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <IconCrosshair className="h-4 w-4 mr-1.5" />}
-            Aktuellen Standort verwenden
+            {t('fr_use_location')}
           </Button>
           <AddressAutocomplete
-            placeholder="Adresse suchen und auswählen…"
+            placeholder={t('fr_search_address')}
             onSelect={r => setFields(f => ({ ...f, standort: { lat: r.lat, long: r.long, info: r.label } as any }))}
           />
           {geoFromPhoto && fields.standort && (
-            <p className="text-xs text-primary italic">Standort aus Foto übernommen</p>
+            <p className="text-xs text-primary italic">{t('fr_photo_location')}</p>
           )}
           {fields.standort?.info && (
             <p className="text-sm text-muted-foreground break-words whitespace-normal">
@@ -581,13 +584,13 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
             />
           )}
           <button type="button" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 py-1 max-sm:py-2 transition-colors" onClick={() => setShowCoords(v => !v)}>
-            {showCoords ? 'Koordinaten verbergen' : 'Koordinaten anzeigen'}
+            {showCoords ? t('fr_hide_coords') : t('fr_show_coords')}
             <IconChevronDown className={`h-3 w-3 transition-transform ${showCoords ? "rotate-180" : ""}`} />
           </button>
           {showCoords && (
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label className="text-xs text-muted-foreground">Breitengrad</Label>
+                <Label className="text-xs text-muted-foreground">{t('fr_lat')}</Label>
                 <Input type="number" step="any"
                   value={fields.standort?.lat ?? ''}
                   onChange={e => {
@@ -597,7 +600,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
                 />
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Längengrad</Label>
+                <Label className="text-xs text-muted-foreground">{t('fr_long')}</Label>
                 <Input type="number" step="any"
                   value={fields.standort?.long ?? ''}
                   onChange={e => {
@@ -613,7 +616,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'website': (
       <div key="website" className="space-y-1.5">
-        <Label htmlFor="website">Website</Label>
+        <Label htmlFor="website">{fieldLabel('skateparks_spots', 'website')}</Label>
         <Input
           id="website"
           value={fields.website ?? ''}
@@ -690,9 +693,9 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
     // Backend-Feld mit €-Label ODER virtueller Computed-Key, dessen Name nach Geld aussieht.
     const looksLikeCurrency = CURRENCY_KEYS.has(k) || /(?:kosten|preis|betrag|gesamt|netto|brutto|summe|mwst|rabatt|anzahlung|umsatz|saldo)/i.test(k);
     if (looksLikeCurrency) {
-      return n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return n.toLocaleString(localeTag(), { style: 'currency', currency: CURRENCY, minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
-    return n.toLocaleString('de-DE', { maximumFractionDigits: 2 });
+    return n.toLocaleString(localeTag(), { maximumFractionDigits: 2 });
   }
 
   return (
@@ -714,14 +717,14 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
               }`}
             >
               <IconSparkles className={`h-3.5 w-3.5 ${aiOpen ? '' : 'text-primary'}`} />
-              <span className="hidden sm:inline">KI-Ausfüllen</span>
+              <span className="hidden sm:inline">{t('smart_fill')}</span>
               <IconChevronDown className={`h-3 w-3 transition-transform ${aiOpen ? 'rotate-180' : ''}`} />
             </button>
           )}
         </DialogHeader>
         {enablePhotoScan && aiOpen && (
           <div id="ai-fill-panel" className="border-b bg-muted/20 px-6 py-4 space-y-3">
-            <p className="text-xs text-muted-foreground">Versteht Fotos, Dokumente und Text und füllt alles für dich aus</p>
+            <p className="text-xs text-muted-foreground">{t('scan_header_sub')}</p>
             <div className="flex items-start gap-2 pl-0.5">
               <Checkbox
                 id="ai-use-personal-info"
@@ -731,21 +734,21 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
               />
               <span className="text-xs text-muted-foreground leading-snug">
                 <Label htmlFor="ai-use-personal-info" className="text-xs font-normal text-muted-foreground cursor-pointer inline">
-                  KI-Assistent darf zusätzlich Informationen zu meiner Person verwenden
+                  {t('useinfo_label')}
                 </Label>
                 {' '}
                 <button type="button" onClick={handleShowProfileInfo} className="text-xs text-primary hover:underline whitespace-nowrap">
-                  {profileLoading ? 'Lade...' : '(mehr Infos)'}
+                  {profileLoading ? t('useinfo_loading') : `(${t('useinfo_more')})`}
                 </button>
               </span>
             </div>
             {showProfileInfo && (
               <div className="rounded-md border bg-muted/50 p-2 text-xs max-h-40 overflow-y-auto">
-                <p className="font-medium mb-1">Folgende Infos über dich können von der KI genutzt werden:</p>
+                <p className="font-medium mb-1">{t('profile_preamble')}</p>
                 {profileData ? Object.values(profileData).map((v, i) => (
                   <span key={i}>{i > 0 && ", "}{typeof v === "object" ? JSON.stringify(v) : String(v)}</span>
                 )) : (
-                  <span className="text-muted-foreground">Profil konnte nicht geladen werden</span>
+                  <span className="text-muted-foreground">{t('useinfo_error')}</span>
                 )}
               </div>
             )}
@@ -776,8 +779,8 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
                     <IconLoader2 className="h-7 w-7 text-primary animate-spin" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-medium">KI analysiert...</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Felder werden automatisch ausgefüllt</p>
+                    <p className="text-sm font-medium">{t('scan_analyzing')}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t('scan_analyzing_sub')}</p>
                   </div>
                 </div>
               ) : scanSuccess ? (
@@ -786,8 +789,8 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
                     <IconCircleCheck className="h-7 w-7 text-green-600 dark:text-green-400" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-medium text-green-700 dark:text-green-400">Felder ausgefüllt!</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Prüfe die Werte und passe sie ggf. an</p>
+                    <p className="text-sm font-medium text-green-700 dark:text-green-400">{t('scan_success')}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t('scan_success_sub')}</p>
                   </div>
                 </div>
               ) : (
@@ -796,7 +799,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
                     <IconPhotoPlus className="h-7 w-7 text-primary/70" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-medium">Foto oder Dokument hierher ziehen oder auswählen</p>
+                    <p className="text-sm font-medium">{t('scan_upload')}</p>
                   </div>
                 </div>
               )}
@@ -820,11 +823,11 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
             <div className="grid grid-cols-3 gap-2">
               <Button type="button" variant="outline" size="sm" className="h-10 text-xs" disabled={scanning}
                 onClick={e => { e.stopPropagation(); cameraInputRef.current?.click(); }}>
-                <IconCamera className="h-3.5 w-3.5 mr-1" />Kamera
+                <IconCamera className="h-3.5 w-3.5 mr-1" />{t('scan_camera_btn')}
               </Button>
               <Button type="button" variant="outline" size="sm" className="h-10 text-xs" disabled={scanning}
                 onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}>
-                <IconUpload className="h-3.5 w-3.5 mr-1" />Foto wählen
+                <IconUpload className="h-3.5 w-3.5 mr-1" />{t('scan_file_btn')}
               </Button>
               <Button type="button" variant="outline" size="sm" className="h-10 text-xs" disabled={scanning}
                 onClick={e => {
@@ -835,13 +838,13 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
                     setTimeout(() => { if (fileInputRef.current) fileInputRef.current.accept = 'image/*,application/pdf'; }, 100);
                   }
                 }}>
-                <IconFileText className="h-3.5 w-3.5 mr-1" />Dokument
+                <IconFileText className="h-3.5 w-3.5 mr-1" />{t('scan_doc_btn')}
               </Button>
             </div>
 
             <div className="relative">
               <Textarea
-                placeholder="Text eingeben oder einfügen, z.B. Notizen, E-Mails, Beschreibungen..."
+                placeholder={t('scan_text_placeholder')}
                 value={aiText}
                 onChange={e => {
                   setAiText(e.target.value);
@@ -869,7 +872,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
                     if (text) setAiText(prev => prev ? prev + '\n' + text : text);
                   } catch {}
                 }}
-                title="Paste"
+                title={t('paste')}
               >
                 <IconClipboard className="h-4 w-4" />
               </button>
@@ -883,7 +886,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
                 disabled={scanning}
                 onClick={() => handleAiExtract()}
               >
-                <IconSparkles className="h-3.5 w-3.5 mr-1.5" />Analysieren
+                <IconSparkles className="h-3.5 w-3.5 mr-1.5" />{t('scan_text_analyze')}
               </Button>
             )}
           </div>
@@ -978,7 +981,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
             {showErrors && missingRequired.length > 0 && (
               <p className="text-xs text-destructive flex items-center gap-1.5" role="alert">
                 <IconAlertCircle className="h-3.5 w-3.5 shrink-0" />
-                Bitte fülle die markierten Pflichtfelder aus.
+                {t('missing_required')}
               </p>
             )}
             {recordId && (
@@ -994,13 +997,13 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
             </div>
           )}
           <DialogFooter className="sticky bottom-0 border-t bg-background/95 backdrop-blur px-6 py-3 gap-2 max-sm:flex-row">
-            <Button type="button" variant="outline" onClick={onClose} className="max-sm:h-12 max-sm:flex-1 max-sm:text-base">Abbrechen</Button>
+            <Button type="button" variant="outline" onClick={onClose} className="max-sm:h-12 max-sm:flex-1 max-sm:text-base">{t('cancel')}</Button>
             <Button
               type="submit"
               className="max-sm:h-12 max-sm:flex-1 max-sm:text-base"
               disabled={saving || !isDirty || (showErrors && missingRequired.length > 0)}
             >
-              {saving ? 'Speichern...' : defaultValues ? 'Speichern' : 'Erstellen'}
+              {saving ? t('saving') : defaultValues ? t('save') : t('create')}
             </Button>
           </DialogFooter>
         </form>

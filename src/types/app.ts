@@ -1,3 +1,5 @@
+import { lookupLabel } from '@/i18n';
+
 // AUTOMATICALLY GENERATED TYPES - DO NOT EDIT
 
 export type LookupValue = { key: string; label: string };
@@ -103,15 +105,15 @@ export const APP_IDS = {
 
 export const LOOKUP_OPTIONS: Record<string, Record<string, {key: string, label: string}[]>> = {
   'skateparks_spots': {
-    untergrundtyp: [{ key: "beton", label: "Beton" }, { key: "asphalt", label: "Asphalt" }, { key: "holz", label: "Holz" }, { key: "fliesen", label: "Fliesen" }, { key: "sonstiges", label: "Sonstiges" }],
+    untergrundtyp: [{ key: "beton", get label() { return lookupLabel('skateparks_spots', 'untergrundtyp', "beton") ?? "Beton"; } }, { key: "asphalt", get label() { return lookupLabel('skateparks_spots', 'untergrundtyp', "asphalt") ?? "Asphalt"; } }, { key: "holz", get label() { return lookupLabel('skateparks_spots', 'untergrundtyp', "holz") ?? "Holz"; } }, { key: "fliesen", get label() { return lookupLabel('skateparks_spots', 'untergrundtyp', "fliesen") ?? "Fliesen"; } }, { key: "sonstiges", get label() { return lookupLabel('skateparks_spots', 'untergrundtyp', "sonstiges") ?? "Sonstiges"; } }],
   },
   'event_verwaltung': {
-    kategorie: [{ key: "contest", label: "Contest" }, { key: "jam", label: "Jam Session" }, { key: "demo", label: "Demo" }, { key: "workshop", label: "Workshop" }, { key: "sonstiges", label: "Sonstiges" }],
-    skill_level: [{ key: "fortgeschritten", label: "Fortgeschritten" }, { key: "profi", label: "Profi" }, { key: "alle_levels", label: "Alle Levels" }, { key: "anfaenger", label: "Anfänger" }],
+    kategorie: [{ key: "contest", get label() { return lookupLabel('event_verwaltung', 'kategorie', "contest") ?? "Contest"; } }, { key: "jam", get label() { return lookupLabel('event_verwaltung', 'kategorie', "jam") ?? "Jam Session"; } }, { key: "demo", get label() { return lookupLabel('event_verwaltung', 'kategorie', "demo") ?? "Demo"; } }, { key: "workshop", get label() { return lookupLabel('event_verwaltung', 'kategorie', "workshop") ?? "Workshop"; } }, { key: "sonstiges", get label() { return lookupLabel('event_verwaltung', 'kategorie', "sonstiges") ?? "Sonstiges"; } }],
+    skill_level: [{ key: "fortgeschritten", get label() { return lookupLabel('event_verwaltung', 'skill_level', "fortgeschritten") ?? "Fortgeschritten"; } }, { key: "profi", get label() { return lookupLabel('event_verwaltung', 'skill_level', "profi") ?? "Profi"; } }, { key: "alle_levels", get label() { return lookupLabel('event_verwaltung', 'skill_level', "alle_levels") ?? "Alle Levels"; } }, { key: "anfaenger", get label() { return lookupLabel('event_verwaltung', 'skill_level', "anfaenger") ?? "Anfänger"; } }],
   },
   'anmeldungen': {
-    skill_level: [{ key: "fortgeschritten", label: "Fortgeschritten" }, { key: "profi", label: "Profi" }, { key: "anfaenger", label: "Anfänger" }],
-    board_stil: [{ key: "street", label: "Street" }, { key: "park", label: "Park" }, { key: "vert", label: "Vert" }, { key: "bowl", label: "Bowl" }, { key: "freestyle", label: "Freestyle" }],
+    skill_level: [{ key: "fortgeschritten", get label() { return lookupLabel('anmeldungen', 'skill_level', "fortgeschritten") ?? "Fortgeschritten"; } }, { key: "profi", get label() { return lookupLabel('anmeldungen', 'skill_level', "profi") ?? "Profi"; } }, { key: "anfaenger", get label() { return lookupLabel('anmeldungen', 'skill_level', "anfaenger") ?? "Anfänger"; } }],
+    board_stil: [{ key: "street", get label() { return lookupLabel('anmeldungen', 'board_stil', "street") ?? "Street"; } }, { key: "park", get label() { return lookupLabel('anmeldungen', 'board_stil', "park") ?? "Park"; } }, { key: "vert", get label() { return lookupLabel('anmeldungen', 'board_stil', "vert") ?? "Vert"; } }, { key: "bowl", get label() { return lookupLabel('anmeldungen', 'board_stil', "bowl") ?? "Bowl"; } }, { key: "freestyle", get label() { return lookupLabel('anmeldungen', 'board_stil', "freestyle") ?? "Freestyle"; } }],
   },
 };
 

@@ -4,6 +4,7 @@ import { extractRecordId } from '@/services/livingAppsService';
 import {
   RecordSection, RecordField, RecordRelation, RecordAttachments,
 } from '@/components/widgets/RecordView';
+import { t, appLabel, fieldLabel } from '@/i18n';
 import { SatelliteSection } from '@/components/SatelliteSection';
 
 export interface SkateparksSpotsDetailsProps {
@@ -25,22 +26,22 @@ export function SkateparksSpotsDetails({
 }: SkateparksSpotsDetailsProps) {
   return (
     <>
-      <RecordSection title="Details" cols={2}>
-        <RecordField label="Name des Ortes" value={record.fields.name} format="text" />
-        <RecordField label="Straße" value={record.fields.strasse} format="text" />
-        <RecordField label="Hausnummer" value={record.fields.hausnummer} format="text" />
-        <RecordField label="Postleitzahl" value={record.fields.postleitzahl} format="text" />
-        <RecordField label="Stadt" value={record.fields.stadt} format="text" />
-        <RecordField label="Beschreibung" value={record.fields.beschreibung} format="longtext" className="md:col-span-2" />
-        <RecordField label="Untergrundtyp" value={record.fields.untergrundtyp} format="pill" />
-        <RecordField label="Standort auf der Karte" value={record.fields.standort?.info ?? (record.fields.standort ? `${record.fields.standort.lat}, ${record.fields.standort.long}` : null)} />
-        <RecordField label="Website" value={record.fields.website} format="url" />
+      <RecordSection title={t('details')} cols={2}>
+        <RecordField label={fieldLabel('skateparks_spots', 'name')} value={record.fields.name} format="text" />
+        <RecordField label={fieldLabel('skateparks_spots', 'strasse')} value={record.fields.strasse} format="text" />
+        <RecordField label={fieldLabel('skateparks_spots', 'hausnummer')} value={record.fields.hausnummer} format="text" />
+        <RecordField label={fieldLabel('skateparks_spots', 'postleitzahl')} value={record.fields.postleitzahl} format="text" />
+        <RecordField label={fieldLabel('skateparks_spots', 'stadt')} value={record.fields.stadt} format="text" />
+        <RecordField label={fieldLabel('skateparks_spots', 'beschreibung')} value={record.fields.beschreibung} format="longtext" className="md:col-span-2" />
+        <RecordField label={fieldLabel('skateparks_spots', 'untergrundtyp')} value={record.fields.untergrundtyp} format="pill" />
+        <RecordField label={fieldLabel('skateparks_spots', 'standort')} value={record.fields.standort?.info ?? (record.fields.standort ? `${record.fields.standort.lat}, ${record.fields.standort.long}` : null)} />
+        <RecordField label={fieldLabel('skateparks_spots', 'website')} value={record.fields.website} format="url" />
       </RecordSection>
 
       <SatelliteSection
-        title="Event-Verwaltung"
+        title={appLabel('event_verwaltung')}
         items={eventVerwaltungList.filter(r => extractRecordId(r.fields.ort) === record.record_id)}
-        map={r => ({ name: r.fields.titel ?? 'Event-Verwaltung', meta: r.fields.datum_uhrzeit })}
+        map={r => ({ name: r.fields.titel ?? appLabel('event_verwaltung'), meta: r.fields.datum_uhrzeit })}
         onOpen={onOpenEventVerwaltung}
         onAdd={onAddEventVerwaltung}
         getKey={r => r.record_id}

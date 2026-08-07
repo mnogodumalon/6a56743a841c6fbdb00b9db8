@@ -116,6 +116,40 @@ if (pages.length > 0) {
   }
 }
 
+// Runtime i18n: intent pages must render their UI text through makeT (all
+// three languages) — the dashboard has a live language switcher. Same rule
+// and same escape hatch as check-dashboard gate 21.
+for (const page of pages) {
+  const file = join(DIR, `${page}.tsx`);
+  const src = readFileSync(file, 'utf8');
+  const lines = src.split('\n');
+  const jsxText = />[^<>{}\n]*[A-Za-zÄÖÜäöüßÀ-ž]{3,}[^<>{}\n]*</;
+  const attrText = /\b(?:title|placeholder|label|aria-label|alt|emptyLabel|emptyText)=(?:\{\s*)?(?:"[^"{}]*[A-Za-zÄÖÜäöüßÀ-ž]{3,}[^"{}]*"|'[^'{}]*[A-Za-zÄÖÜäöüßÀ-ž]{3,}[^'{}]*')/;
+  const objText = /\b(?:title|label|name|emptyLabel|emptyText|hint|description)\s*:\s*(?:"[^"{}]*[A-Za-zÄÖÜäöüßÀ-ž]{3,}[^"{}]*"|'[^'{}]*[A-Za-zÄÖÜäöüßÀ-ž]{3,}[^'{}]*')/;
+  const hits = [];
+  for (let i = 0; i < lines.length && hits.length < 8; i++) {
+    const l = lines[i];
+    if (l.includes('i18n-exempt')) continue;
+    const trimmed = l.trim();
+    if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) continue;
+    if (jsxText.test(l) || attrText.test(l) || objText.test(l)) hits.push(`    line ${i + 1}: ${l}`);
+  }
+  if (hits.length) {
+    errors.push(
+      `${file}: hardcoded UI text — define your strings ONCE via makeT from '@/i18n' ({ de, en, cs }) and render {tt('key')}; ` +
+      `brand names/codes take /* i18n-exempt */ on the line.\n` + hits.join('\n')
+    );
+  }
+  // LOOKUP_OPTIONS labels are locale-aware getters — resolving them at module
+  // scope freezes one language at import time (same rule as check-dashboard 22).
+  const hoistedLabelRead = /^const\s.*LOOKUP_OPTIONS.*(?:\.label|label\s*:)/;
+  for (let i = 0; i < lines.length; i++) {
+    if (hoistedLabelRead.test(lines[i])) {
+      errors.push(`${file}:${i + 1}: module-scope LOOKUP_OPTIONS label read — move it inside the component body, the getters freeze at import otherwise:\n    ${lines[i]}`);
+    }
+  }
+}
+
 if (errors.length > 0) {
   for (const e of errors) console.error(`ERROR: ${e}`);
   process.exit(1);

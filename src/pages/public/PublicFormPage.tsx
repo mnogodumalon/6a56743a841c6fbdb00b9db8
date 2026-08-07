@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/DatePicker';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
+import { t } from '@/i18n';
 import {
   loadPublicPagesConfig,
   prepareChallenge,
@@ -222,14 +223,14 @@ function FieldInput({ field, value, onChange, refOptions, refLoading }: FieldInp
     return (
       <div className="space-y-2">
         <AddressAutocomplete
-          placeholder="Adresse suchen..."
+          placeholder={t('pf_address_placeholder')}
           onSelect={r => onChange({ lat: r.lat, long: r.long, info: r.label })}
         />
         {geo ? (
           <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
             <span className="truncate">{geo.info ?? `${geo.lat}, ${geo.long}`}</span>
             <button type="button" className="underline shrink-0" onClick={() => onChange(undefined)}>
-              Entfernen
+              {t('pf_remove_text')}
             </button>
           </div>
         ) : null}
@@ -332,7 +333,7 @@ export default function PublicFormPage() {
     const missing: Record<string, string> = {};
     for (const field of page.fields) {
       if (field.required && isEmpty(values[field.key])) {
-        missing[field.key] = 'Dieses Feld ist erforderlich.';
+        missing[field.key] = t('pf_required_error_text');
       }
     }
     if (Object.keys(missing).length > 0) {
@@ -356,15 +357,15 @@ export default function PublicFormPage() {
       setStatus('ready');
       if (err instanceof FieldValidationError) {
         const errs: Record<string, string> = {};
-        for (const key of err.missingFields) errs[key] = 'Dieses Feld ist erforderlich.';
+        for (const key of err.missingFields) errs[key] = t('pf_required_error_text');
         setFieldErrors(errs);
         if (err.unallowedFields.length > 0 || err.missingFields.length === 0) {
-          setFormError('Etwas ist schiefgelaufen. Bitte versuche es erneut.');
+          setFormError(t('pf_error_generic_text'));
         }
       } else if (err instanceof RateLimitedError) {
-        setFormError('Zu viele Versuche — bitte warte einen Moment und versuche es erneut.');
+        setFormError(t('pf_rate_limit_text'));
       } else {
-        setFormError('Etwas ist schiefgelaufen. Bitte versuche es erneut.');
+        setFormError(t('pf_error_generic_text'));
       }
     }
   };
@@ -381,7 +382,7 @@ export default function PublicFormPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <main className="flex-1 w-full max-w-lg mx-auto px-4 py-8 sm:py-12">{children}</main>
       <footer className="py-4 text-center text-xs text-muted-foreground">
-        Powered by Klar
+        {t('pf_powered_by_text')}
       </footer>
     </div>
   );
@@ -397,8 +398,8 @@ export default function PublicFormPage() {
   if (status === 'unavailable' || !page || !config) {
     return shell(
       <div className="rounded-[27px] bg-card shadow-lg p-6 sm:p-8 text-center">
-        <h1 className="text-xl font-medium mb-2">Nicht verfügbar</h1>
-        <p className="text-muted-foreground">Dieses Formular ist derzeit nicht verfügbar.</p>
+        <h1 className="text-xl font-medium mb-2">{t('pf_unavailable_title')}</h1>
+        <p className="text-muted-foreground">{t('pf_unavailable_message')}</p>
       </div>,
     );
   }
@@ -409,7 +410,7 @@ export default function PublicFormPage() {
         <IconCircleCheck size={44} stroke={1.5} className="mx-auto mb-3 text-primary" />
         <h1 className="text-xl font-medium mb-2">{page.thank_you_title}</h1>
         <p className="text-muted-foreground mb-6">{page.thank_you_message}</p>
-        <Button variant="outline" onClick={resetForAnotherEntry}>Weitere Eingabe</Button>
+        <Button variant="outline" onClick={resetForAnotherEntry}>{t('pf_another_entry_text')}</Button>
       </div>,
     );
   }
@@ -452,10 +453,10 @@ export default function PublicFormPage() {
           {status === 'submitting' ? (
             <span className="inline-flex items-center gap-2">
               <IconLoader2 size={16} stroke={1.5} className="animate-spin" />
-              Wird gesendet...
+              {t('pf_submitting_text')}
             </span>
           ) : (
-            'Absenden'
+            t('pf_submit_text')
           )}
         </Button>
       </form>

@@ -261,6 +261,53 @@ if (gridIdx >= 0) {
   }
 }
 
+// 21. Runtime i18n: the dashboard ships three UI languages with a live
+// switcher — hardcoded UI strings stay frozen in one language. Every string
+// the agent writes must go through makeT (all three locales) or t()/labels
+// from '@/i18n'. Detection is text-based: JSX text nodes and localized
+// attributes carrying ≥3 consecutive letters. Conscious exceptions (brand
+// names, codes) take an /* i18n-exempt */ on the same line.
+{
+  const literalHits = [];
+  const jsxText = />[^<>{}\n]*[A-Za-zÄÖÜäöüßÀ-ž]{3,}[^<>{}\n]*</;
+  const attrText = /\b(?:title|placeholder|label|aria-label|alt|emptyLabel|emptyText)=(?:\{\s*)?(?:"[^"{}]*[A-Za-zÄÖÜäöüßÀ-ž]{3,}[^"{}]*"|'[^'{}]*[A-Za-zÄÖÜäöüßÀ-ž]{3,}[^'{}]*')/;
+  // Widget props take their text as object fields (dimension={{ label: 'Kosten' }},
+  // measure label, Kanban column labels) — same rule, different syntax.
+  const objText = /\b(?:title|label|name|emptyLabel|emptyText|hint|description)\s*:\s*(?:"[^"{}]*[A-Za-zÄÖÜäöüßÀ-ž]{3,}[^"{}]*"|'[^'{}]*[A-Za-zÄÖÜäöüßÀ-ž]{3,}[^'{}]*')/;
+  for (let i = 0; i < dashLines.length; i++) {
+    const l = dashLines[i];
+    if (l.includes('i18n-exempt')) continue;
+    const trimmed = l.trim();
+    if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) continue;
+    if (jsxText.test(l) || attrText.test(l) || objText.test(l)) literalHits.push(`    line ${i + 1}: ${l}`);
+  }
+  if (literalHits.length) {
+    errors.push(
+      "Hardcoded UI text found — the dashboard has a runtime language switcher (de/en/cs), so every string must render through i18n. Define your page texts ONCE via makeT from '@/i18n' (all three languages) and use {tt('key')}; scaffold text comes from t()/appLabel()/fieldLabel()/lookupLabel(). Brand names or codes: append /* i18n-exempt */ on that line." +
+      '\n' + literalHits.slice(0, 10).join('\n')
+    );
+  }
+  if (literalHits.length && !src.includes('makeT(')) {
+    errors.push("No makeT( table found — import { makeT } from '@/i18n' and define { de: {...}, en: {...}, cs: {...} } once at the top of the file.");
+  }
+}
+
+// 22. LOOKUP_OPTIONS labels resolve the CURRENT locale via getters — a
+// module-scope derivation that touches `.label` (e.g.
+// `const COLS = LOOKUP_OPTIONS.x.status.map(o => ({key: o.key, label: o.label}))`)
+// evaluates ONCE at import and freezes that language forever (live-proven:
+// Czech dashboard with English kanban columns). Storing the raw arrays is
+// fine — only resolving labels at module scope is not.
+{
+  const hoistedLabelRead = /^const\s.*LOOKUP_OPTIONS.*(?:\.label|label\s*:)/;
+  const hits = quoteLines(hoistedLabelRead);
+  if (hits) {
+    errors.push(
+      'Module-scope LOOKUP_OPTIONS label read — the labels are locale-aware getters and freeze in whatever language is active at import. Move the derivation INSIDE the component body (a plain const in the function is enough; keys-only derivations may stay at module scope).' + hits
+    );
+  }
+}
+
 for (const w of warnings) console.log(`WARN: ${w}`);
 if (errors.length > 0) {
   for (const e of errors) console.error(`ERROR: ${e}`);

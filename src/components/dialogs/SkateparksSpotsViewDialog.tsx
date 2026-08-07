@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { IconPencil, IconChevronDown } from '@tabler/icons-react';
 import { GeoMapPicker } from '@/components/GeoMapPicker';
 import { MapRouteLinks } from '@/components/widgets/MapWidget';
+import { t, appLabel, fieldLabel, lookupLabel } from '@/i18n';
 
 interface SkateparksSpotsViewDialogProps {
   open: boolean;
@@ -29,46 +30,46 @@ export function SkateparksSpotsViewDialog({ open, onClose, record, onEdit }: Ska
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Skateparks & Spots anzeigen</DialogTitle>
+          <DialogTitle>{t('view_entity', { entity: appLabel('skateparks_spots') })}</DialogTitle>
         </DialogHeader>
         <div className="flex justify-end">
           <Button size="sm" onClick={() => { onClose(); onEdit(record); }}>
             <IconPencil className="h-3.5 w-3.5 mr-1.5" />
-            Bearbeiten
+            {t('edit_button')}
           </Button>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Name des Ortes</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('skateparks_spots', 'name')}</Label>
             <p className="text-sm">{record.fields.name ?? '—'}</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Straße</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('skateparks_spots', 'strasse')}</Label>
             <p className="text-sm">{record.fields.strasse ?? '—'}</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Hausnummer</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('skateparks_spots', 'hausnummer')}</Label>
             <p className="text-sm">{record.fields.hausnummer ?? '—'}</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Postleitzahl</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('skateparks_spots', 'postleitzahl')}</Label>
             <p className="text-sm">{record.fields.postleitzahl ?? '—'}</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Stadt</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('skateparks_spots', 'stadt')}</Label>
             <p className="text-sm">{record.fields.stadt ?? '—'}</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Beschreibung</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('skateparks_spots', 'beschreibung')}</Label>
             <p className="text-sm whitespace-pre-wrap">{record.fields.beschreibung ?? '—'}</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Untergrundtyp</Label>
-            <Badge variant="secondary">{record.fields.untergrundtyp?.label ?? '—'}</Badge>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('skateparks_spots', 'untergrundtyp')}</Label>
+            <Badge variant="secondary">{lookupLabel('skateparks_spots', 'untergrundtyp', record.fields.untergrundtyp?.key) ?? record.fields.untergrundtyp?.label ?? '—'}</Badge>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Standort auf der Karte</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('skateparks_spots', 'standort')}</Label>
             {record.fields.standort?.info && (
               <p className="text-sm text-muted-foreground break-words whitespace-normal">{record.fields.standort.info}</p>
             )}
@@ -83,18 +84,18 @@ export function SkateparksSpotsViewDialog({ open, onClose, record, onEdit }: Ska
               <MapRouteLinks lat={record.fields.standort.lat} long={record.fields.standort.long} className="mt-1" />
             )}
             <button type="button" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 py-1 max-sm:py-2 transition-colors" onClick={() => setShowCoords(v => !v)}>
-              {showCoords ? 'Koordinaten verbergen' : 'Koordinaten anzeigen'}
+              {showCoords ? t('fr_hide_coords') : t('fr_show_coords')}
               <IconChevronDown className={`h-3 w-3 transition-transform ${showCoords ? "rotate-180" : ""}`} />
             </button>
             {showCoords && (
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <div><span className="text-xs text-muted-foreground">Breitengrad:</span> {record.fields.standort?.lat?.toFixed(6) ?? '—'}</div>
-                <div><span className="text-xs text-muted-foreground">Längengrad:</span> {record.fields.standort?.long?.toFixed(6) ?? '—'}</div>
+                <div><span className="text-xs text-muted-foreground">{t('fr_lat')}:</span> {record.fields.standort?.lat?.toFixed(6) ?? '—'}</div>
+                <div><span className="text-xs text-muted-foreground">{t('fr_long')}:</span> {record.fields.standort?.long?.toFixed(6) ?? '—'}</div>
               </div>
             )}
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Website</Label>
+            <Label className="text-xs text-muted-foreground">{fieldLabel('skateparks_spots', 'website')}</Label>
             <p className="text-sm">{record.fields.website ?? '—'}</p>
           </div>
           <div className="pt-2 border-t border-border">

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { IconAlertCircle, IconArrowLeft, IconCheck } from '@tabler/icons-react';
+import { t } from '@/i18n';
 
 interface WizardStep {
   label: string;
@@ -82,11 +83,11 @@ export function IntentWizardShell({
             <IconAlertCircle size={22} className="text-destructive" />
           </div>
           <div className="text-center">
-            <h3 className="font-semibold text-foreground mb-1">Fehler beim Laden</h3>
+            <h3 className="font-semibold text-foreground mb-1">{t('load_error_title')}</h3>
             <p className="text-sm text-muted-foreground max-w-xs">{error.message}</p>
           </div>
           {onRetry && (
-            <Button variant="outline" size="sm" onClick={onRetry}>Erneut versuchen</Button>
+            <Button variant="outline" size="sm" onClick={onRetry}>{t('retry')}</Button>
           )}
         </div>
       </div>
@@ -100,7 +101,7 @@ export function IntentWizardShell({
         {back !== false && (
           <a href={back?.href ?? '#/'} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2">
             <IconArrowLeft size={14} className="shrink-0" />
-            {back?.label ?? 'Zurück zum Dashboard'}
+            {back?.label ?? t('wizard_back_to_dashboard')}
           </a>
         )}
         {title && <h1 className="text-2xl font-bold tracking-tight">{title}</h1>}

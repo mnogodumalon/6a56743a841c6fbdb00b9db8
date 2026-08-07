@@ -4,6 +4,7 @@ import { extractRecordId } from '@/services/livingAppsService';
 import {
   RecordSection, RecordField, RecordRelation, RecordAttachments,
 } from '@/components/widgets/RecordView';
+import { t, appLabel, fieldLabel } from '@/i18n';
 
 export interface AnmeldungenDetailsProps {
   /** Der Record — enriched oder roh; alle Felder werden hier gerendert. */
@@ -22,22 +23,22 @@ export function AnmeldungenDetails({
   const eventTarget = eventVerwaltungList.find(r => r.record_id === extractRecordId(record.fields.event));
   return (
     <>
-      <RecordSection title="Details" cols={2}>
-        <RecordField label="Vorname" value={record.fields.vorname} format="text" />
-        <RecordField label="Nachname" value={record.fields.nachname} format="text" />
-        <RecordField label="Geburtsdatum" value={record.fields.geburtsdatum} format="date" />
-        <RecordField label="E-Mail-Adresse" value={record.fields.email} format="email" />
-        <RecordField label="Telefonnummer" value={record.fields.telefon} format="text" />
-        <RecordField label="Skill-Level" value={record.fields.skill_level} format="pill" />
-        <RecordField label="Board-Stil" value={Array.isArray(record.fields.board_stil) ? record.fields.board_stil.map((v: unknown) => (v && typeof v === 'object' && 'label' in v) ? (v as {label: unknown}).label : v).join(', ') : null} format="text" />
-        <RecordField label="Anmerkungen" value={record.fields.anmerkungen} format="longtext" className="md:col-span-2" />
-        <RecordField label="Ich stimme den Teilnahmebedingungen zu" value={record.fields.teilnahmebedingungen} format="bool" />
+      <RecordSection title={t('details')} cols={2}>
+        <RecordField label={fieldLabel('anmeldungen', 'vorname')} value={record.fields.vorname} format="text" />
+        <RecordField label={fieldLabel('anmeldungen', 'nachname')} value={record.fields.nachname} format="text" />
+        <RecordField label={fieldLabel('anmeldungen', 'geburtsdatum')} value={record.fields.geburtsdatum} format="date" />
+        <RecordField label={fieldLabel('anmeldungen', 'email')} value={record.fields.email} format="email" />
+        <RecordField label={fieldLabel('anmeldungen', 'telefon')} value={record.fields.telefon} format="text" />
+        <RecordField label={fieldLabel('anmeldungen', 'skill_level')} value={record.fields.skill_level} format="pill" />
+        <RecordField label={fieldLabel('anmeldungen', 'board_stil')} value={Array.isArray(record.fields.board_stil) ? record.fields.board_stil.map((v: unknown) => (v && typeof v === 'object' && 'label' in v) ? (v as {label: unknown}).label : v).join(', ') : null} format="text" />
+        <RecordField label={fieldLabel('anmeldungen', 'anmerkungen')} value={record.fields.anmerkungen} format="longtext" className="md:col-span-2" />
+        <RecordField label={fieldLabel('anmeldungen', 'teilnahmebedingungen')} value={record.fields.teilnahmebedingungen} format="bool" />
       </RecordSection>
 
       {/* N:1 — verknüpfte Records: IMMER klickbar, nie eine Text-Sackgasse. */}
-      <RecordSection title="Verknüpft" cols={1}>
+      <RecordSection title={t('relations')} cols={1}>
         <RecordRelation
-          label="Event"
+          label={fieldLabel('anmeldungen', 'event')}
           name={eventTarget?.fields.titel ?? '—'}
           meta={[eventTarget?.fields.kontakt_email, eventTarget?.fields.kontakt_telefon].filter(Boolean).join(' · ') || undefined}
           onClick={eventTarget && onOpenEventVerwaltung ? () => onOpenEventVerwaltung!(eventTarget!) : undefined}
