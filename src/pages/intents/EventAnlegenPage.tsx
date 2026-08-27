@@ -34,6 +34,7 @@ import { useDashboardData } from '@/hooks/useDashboardData';
 import type { SkateparksSpots } from '@/types/app';
 import { APP_IDS, LOOKUP_OPTIONS } from '@/types/app';
 import { LivingAppsService, createRecordUrl } from '@/services/livingAppsService';
+import { tx } from '@/i18n';
 
 // Lookup option arrays (safe access with ?. and ?? [])
 const KATEGORIE_OPTIONS = LOOKUP_OPTIONS['event_verwaltung']?.['kategorie'] ?? [];
@@ -166,7 +167,7 @@ export default function EventAnlegenPage() {
       setStep(3);
     } catch (err) {
       setSubmitError(
-        err instanceof Error ? err.message : 'Das Event konnte nicht angelegt werden.'
+        err instanceof Error ? err.message : tx('Das Event konnte nicht angelegt werden.')
       );
     } finally {
       setSubmitBusy(false);
@@ -202,9 +203,9 @@ export default function EventAnlegenPage() {
 
   return (
     <IntentWizardShell
-      title="Event anlegen"
-      subtitle="Wähle einen Skatepark und gib die Event-Details ein."
-      steps={[{ label: 'Skatepark' }, { label: 'Event-Details' }, { label: 'Fertig' }]}
+      title={tx('Event anlegen')}
+      subtitle={tx('Wähle einen Skatepark und gib die Event-Details ein.')}
+      steps={[{ label: tx('Skatepark') }, { label: tx('Event-Details') }, { label: tx('Fertig') }]}
       currentStep={step}
       onStepChange={setStep}
       loading={loading}
@@ -216,7 +217,7 @@ export default function EventAnlegenPage() {
         <EntitySelectStep
           items={skateparkList.map((s) => ({
             id: s.record_id,
-            title: s.fields.name ?? '(Kein Name)',
+            title: s.fields.name ?? tx('(Kein Name)'),
             subtitle: [
               s.fields.stadt,
               s.fields.untergrundtyp?.label,
@@ -226,42 +227,42 @@ export default function EventAnlegenPage() {
             icon: <IconMapPin size={20} className="text-primary" />,
           }))}
           onSelect={handleSkateparkSelect}
-          searchPlaceholder="Skatepark suchen …"
-          emptyText="Kein Skatepark gefunden"
+          searchPlaceholder={tx('Skatepark suchen …')}
+          emptyText={tx('Kein Skatepark gefunden')}
           emptyIcon={<IconMapPin size={32} className="text-muted-foreground" />}
-          createLabel="Neuen Skatepark anlegen"
+          createLabel={tx('Neuen Skatepark anlegen')}
           onCreateNew={() => setShowCreateSkatepark(true)}
           createDialog={
             showCreateSkatepark ? (
               <div className="rounded-2xl border bg-card p-5 space-y-4">
-                <p className="text-sm font-medium text-foreground">Neuen Skatepark anlegen</p>
+                <p className="text-sm font-medium text-foreground">{tx('Neuen Skatepark anlegen')}</p>
 
                 <div className="space-y-2">
-                  <Label htmlFor="sp-name">Name *</Label>
+                  <Label htmlFor="sp-name">{tx('Name *')}</Label>
                   <Input
                     id="sp-name"
                     value={newSkatepark.name}
                     onChange={(e) =>
                       setNewSkatepark((prev) => ({ ...prev, name: e.target.value }))
                     }
-                    placeholder="z. B. Skatepark Mitte"
+                    placeholder={tx('z. B. Skatepark Mitte')}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="sp-stadt">Stadt *</Label>
+                  <Label htmlFor="sp-stadt">{tx('Stadt *')}</Label>
                   <Input
                     id="sp-stadt"
                     value={newSkatepark.stadt}
                     onChange={(e) =>
                       setNewSkatepark((prev) => ({ ...prev, stadt: e.target.value }))
                     }
-                    placeholder="z. B. Berlin"
+                    placeholder={tx('z. B. Berlin')}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="sp-untergrund">Untergrundtyp</Label>
+                  <Label htmlFor="sp-untergrund">{tx('Untergrundtyp')}</Label>
                   <Select
                     value={newSkatepark.untergrundKey}
                     onValueChange={(v) =>
@@ -269,10 +270,10 @@ export default function EventAnlegenPage() {
                     }
                   >
                     <SelectTrigger id="sp-untergrund" className="w-full">
-                      <SelectValue placeholder="Untergrund wählen …" />
+                      <SelectValue placeholder={tx('Untergrund wählen …')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Kein Untergrundtyp</SelectItem>
+                      <SelectItem value="none">{tx('Kein Untergrundtyp')}</SelectItem>
                       {UNTERGRUND_OPTIONS.map((opt) => (
                         <SelectItem key={opt.key} value={opt.key}>
                           {opt.label}
@@ -291,7 +292,7 @@ export default function EventAnlegenPage() {
                       setNewSkatepark({ name: '', stadt: '', untergrundKey: 'none' });
                     }}
                   >
-                    Abbrechen
+                    {tx('Abbrechen')}
                   </Button>
                   <Button
                     className="flex-1"
@@ -303,7 +304,7 @@ export default function EventAnlegenPage() {
                     onClick={handleCreateSkatepark}
                   >
                     <IconPlus size={16} className="mr-1" />
-                    {createSkateparkBusy ? 'Wird angelegt …' : 'Anlegen'}
+                    {createSkateparkBusy ? tx('Wird angelegt …') : tx('Anlegen')}
                   </Button>
                 </div>
               </div>
@@ -320,9 +321,9 @@ export default function EventAnlegenPage() {
             <div className="rounded-2xl border bg-secondary/50 px-4 py-3 flex items-center gap-3">
               <IconMapPin size={20} className="text-primary shrink-0" />
               <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Gewählter Skatepark</p>
+                <p className="text-xs text-muted-foreground">{tx('Gewählter Skatepark')}</p>
                 <p className="font-medium truncate">
-                  {selectedSkatepark.fields.name ?? '(Kein Name)'}
+                  {selectedSkatepark.fields.name ?? tx('(Kein Name)')}
                   {selectedSkatepark.fields.stadt
                     ? ` · ${selectedSkatepark.fields.stadt}`
                     : ''}
@@ -334,27 +335,27 @@ export default function EventAnlegenPage() {
                 className="ml-auto shrink-0"
                 onClick={() => setStep(1)}
               >
-                Ändern
+                {tx('Ändern')}
               </Button>
             </div>
 
             {/* Event-Titel */}
             <div className="space-y-2">
-              <Label htmlFor="ev-titel">Titel *</Label>
+              <Label htmlFor="ev-titel">{tx('Titel *')}</Label>
               <Input
                 id="ev-titel"
                 value={titel}
                 onChange={(e) => setTitel(e.target.value)}
-                placeholder="z. B. Sommerjam 2026"
+                placeholder={tx('z. B. Sommerjam 2026')}
               />
             </div>
 
             {/* Kategorie */}
             <div className="space-y-2">
-              <Label htmlFor="ev-kategorie">Kategorie *</Label>
+              <Label htmlFor="ev-kategorie">{tx('Kategorie *')}</Label>
               <Select value={kategorieKey} onValueChange={setKategorieKey}>
                 <SelectTrigger id="ev-kategorie" className="w-full">
-                  <SelectValue placeholder="Kategorie wählen …" />
+                  <SelectValue placeholder={tx('Kategorie wählen …')} />
                 </SelectTrigger>
                 <SelectContent>
                   {KATEGORIE_OPTIONS.map((opt) => (
@@ -368,7 +369,7 @@ export default function EventAnlegenPage() {
 
             {/* Datum & Uhrzeit */}
             <div className="space-y-2">
-              <Label htmlFor="ev-datum">Datum & Uhrzeit *</Label>
+              <Label htmlFor="ev-datum">{tx('Datum & Uhrzeit *')}</Label>
               <Input
                 id="ev-datum"
                 type="datetime-local"
@@ -379,13 +380,13 @@ export default function EventAnlegenPage() {
 
             {/* Skill Level */}
             <div className="space-y-2">
-              <Label htmlFor="ev-skill">Skill-Level</Label>
+              <Label htmlFor="ev-skill">{tx('Skill-Level')}</Label>
               <Select value={skillLevelKey} onValueChange={setSkillLevelKey}>
                 <SelectTrigger id="ev-skill" className="w-full">
-                  <SelectValue placeholder="Skill-Level wählen …" />
+                  <SelectValue placeholder={tx('Skill-Level wählen …')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Kein Skill-Level</SelectItem>
+                  <SelectItem value="none">{tx('Kein Skill-Level')}</SelectItem>
                   {SKILL_LEVEL_OPTIONS.map((opt) => (
                     <SelectItem key={opt.key} value={opt.key}>
                       {opt.label}
@@ -398,7 +399,7 @@ export default function EventAnlegenPage() {
             {/* Max. Teilnehmer & Startgebühr — side by side on wider screens */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="ev-max">Max. Teilnehmer</Label>
+                <Label htmlFor="ev-max">{tx('Max. Teilnehmer')}</Label>
                 <Input
                   id="ev-max"
                   type="number"
@@ -409,7 +410,7 @@ export default function EventAnlegenPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ev-gebuehr">Startgebühr (€)</Label>
+                <Label htmlFor="ev-gebuehr">{tx('Startgebühr (€)')}</Label>
                 <Input
                   id="ev-gebuehr"
                   type="number"
@@ -424,24 +425,24 @@ export default function EventAnlegenPage() {
 
             {/* Kontakt-E-Mail */}
             <div className="space-y-2">
-              <Label htmlFor="ev-email">Kontakt-E-Mail</Label>
+              <Label htmlFor="ev-email">{tx('Kontakt-E-Mail')}</Label>
               <Input
                 id="ev-email"
                 type="email"
                 value={kontaktEmail}
                 onChange={(e) => setKontaktEmail(e.target.value)}
-                placeholder="kontakt@example.com"
+                placeholder={tx('kontakt@example.com')}
               />
             </div>
 
             {/* Beschreibung */}
             <div className="space-y-2">
-              <Label htmlFor="ev-beschreibung">Beschreibung</Label>
+              <Label htmlFor="ev-beschreibung">{tx('Beschreibung')}</Label>
               <Textarea
                 id="ev-beschreibung"
                 value={beschreibung}
                 onChange={(e) => setBeschreibung(e.target.value)}
-                placeholder="Infos zum Event …"
+                placeholder={tx('Infos zum Event …')}
                 rows={4}
               />
             </div>
@@ -458,7 +459,7 @@ export default function EventAnlegenPage() {
                 className="flex-1"
                 onClick={() => setStep(1)}
               >
-                Zurück
+                {tx('Zurück')}
               </Button>
               <Button
                 className="flex-1"
@@ -466,7 +467,7 @@ export default function EventAnlegenPage() {
                 onClick={handleSubmitEvent}
               >
                 <IconCalendarEvent size={16} className="mr-1" />
-                {submitBusy ? 'Wird angelegt …' : 'Event anlegen'}
+                {submitBusy ? tx('Wird angelegt …') : tx('Event anlegen')}
               </Button>
             </div>
           </div>
@@ -474,10 +475,10 @@ export default function EventAnlegenPage() {
           /* Safety fallback when step=2 is accessed without a selection */
           <div className="text-center py-12 space-y-3">
             <p className="text-sm text-muted-foreground">
-              Dieser Schritt braucht die Auswahl aus Schritt 1.
+              {tx('Dieser Schritt braucht die Auswahl aus Schritt 1.')}
             </p>
             <Button variant="outline" onClick={() => setStep(1)}>
-              Neu starten
+              {tx('Neu starten')}
             </Button>
           </div>
         )
@@ -491,14 +492,14 @@ export default function EventAnlegenPage() {
               <IconCheck size={32} className="text-primary" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-xl font-semibold">Event angelegt!</h2>
+              <h2 className="text-xl font-semibold">{tx('Event angelegt!')}</h2>
               <p className="text-muted-foreground text-sm">
                 <span className="font-medium text-foreground">{createdEventTitel}</span>{' '}
-                wurde erfolgreich bei{' '}
+                {tx('wurde erfolgreich bei')}{' '}
                 <span className="font-medium text-foreground">
-                  {selectedSkatepark?.fields.name ?? 'dem Skatepark'}
+                  {selectedSkatepark?.fields.name ?? tx('dem Skatepark')}
                 </span>{' '}
-                angelegt.
+                {tx('angelegt.')}
               </p>
             </div>
 
@@ -522,18 +523,18 @@ export default function EventAnlegenPage() {
               )}
               {maxTeilnehmer && (
                 <div className="text-sm text-muted-foreground">
-                  Max. {maxTeilnehmer} Teilnehmer
-                  {startgebuehr ? ` · Startgebühr: ${startgebuehr} €` : ''}
+                  {tx('Max.')} {maxTeilnehmer} {tx('Teilnehmer')}
+                  {startgebuehr ? tx` · Startgebühr: ${startgebuehr} €` : ''}
                 </div>
               )}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <Button variant="outline" className="flex-1" onClick={handleReset}>
-                Weiteres Event anlegen
+                {tx('Weiteres Event anlegen')}
               </Button>
               <a href="#/" className="flex-1">
-                <Button className="w-full">Zurück zum Dashboard</Button>
+                <Button className="w-full">{tx('Zurück zum Dashboard')}</Button>
               </a>
             </div>
           </div>
@@ -541,10 +542,10 @@ export default function EventAnlegenPage() {
           /* Safety fallback when step=3 is accessed without a created event */
           <div className="text-center py-12 space-y-3">
             <p className="text-sm text-muted-foreground">
-              Dieser Schritt braucht die Daten aus Schritt 2.
+              {tx('Dieser Schritt braucht die Daten aus Schritt 2.')}
             </p>
             <Button variant="outline" onClick={() => setStep(1)}>
-              Neu starten
+              {tx('Neu starten')}
             </Button>
           </div>
         )

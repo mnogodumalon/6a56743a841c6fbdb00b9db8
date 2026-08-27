@@ -1,10 +1,12 @@
 // AUTOMATICALLY GENERATED SERVICE
 import { APP_IDS, LOOKUP_OPTIONS, FIELD_TYPES } from '@/types/app';
 import { ensureUploadableImage } from '@/lib/ai';
+import { REST_URL } from '@/lib/origin';
 import type { SkateparksSpots, EventVerwaltung, Anmeldungen, CreateSkateparksSpots, CreateEventVerwaltung, CreateAnmeldungen } from '@/types/app';
 
-// Base Configuration
-const API_BASE_URL = 'https://my.living-apps.de/rest';
+// Base Configuration — the host is a RUNTIME fact (lib/origin.ts):
+// a bundle copied to another LA instance must talk to THAT instance.
+const API_BASE_URL = REST_URL;
 
 // --- HELPER FUNCTIONS ---
 export function extractRecordId(url: unknown): string | null {
@@ -30,7 +32,7 @@ export function extractRecordIds(urls: unknown): string[] {
 }
 
 export function createRecordUrl(appId: string, recordId: string): string {
-  return `https://my.living-apps.de/rest/apps/${appId}/records/${recordId}`;
+  return `${API_BASE_URL}/apps/${appId}/records/${recordId}`;
 }
 
 export class LivingAppsApiError extends Error {
@@ -199,6 +201,69 @@ function enrichLookupFields<T extends { fields: Record<string, unknown> }>(
   });
 }
 
+/** A textarea that HOLDS A LIST but was typed on one line.
+ *
+ *  Rendering such a field as tiles/bullets is the natural thing to do, and
+ *  the natural way to write it is `value.split('\n')` — one item per line
+ *  is the convention every form implies. Owners type differently though:
+ *  a live landing page collapsed five services into ONE tile because the
+ *  record held 'Tagesbetreuung, Übernachtung, …' without a single line
+ *  break. Normalizing HERE makes that natural split correct whatever was
+ *  typed, instead of asking every page to re-derive the heuristic.
+ *
+ *  Deliberately conservative — prose must survive untouched:
+ *    · already has line breaks  → left alone (the author's own structure)
+ *    · ; • · |                  → unambiguous separators, 2 parts suffice
+ *    · commas                   → only with 3+ parts that all read like
+ *                                 labels: short, at most four words, no
+ *                                 sentence punctuation. A prose clause like
+ *                                 "Katzen und Kleintiere aller Rassen" is
+ *                                 short enough but not wordy-short.
+ *  Anything else stays as it is, so a wrong guess degrades to today's
+ *  behaviour (one item), never to mangled prose. */
+const LIST_LABEL_MAX = 40;
+const LIST_LABEL_MAX_WORDS = 4;
+function listTextToLines(text: string): string {
+  if (!text || /\r?\n/.test(text)) return text;
+  const bulleted = text.split(/\s*[;•·|]\s*/).map(s => s.trim()).filter(Boolean);
+  if (bulleted.length >= 2) return bulleted.join('\n');
+  const parts = text.split(/\s*,\s*/).map(s => s.trim()).filter(Boolean);
+  const looksLikeLabels = parts.length >= 3 && parts.every(p =>
+    p.length <= LIST_LABEL_MAX
+    && p.split(/\s+/).length <= LIST_LABEL_MAX_WORDS
+    && !/[.!?:]$/.test(p));
+  return looksLikeLabels ? parts.join('\n') : text;
+}
+
+function normalizeListTextareas<T extends { fields: Record<string, unknown> }>(
+  records: T[], entityKey: string
+): T[] {
+  const types = FIELD_TYPES[entityKey];
+  if (!types) return records;
+  const areas = Object.keys(types).filter(k => types[k] === 'string/textarea');
+  if (areas.length === 0) return records;
+  return records.map(r => {
+    let touched = false;
+    const fields = { ...r.fields };
+    for (const key of areas) {
+      const val = fields[key];
+      if (typeof val !== 'string') continue;
+      const next = listTextToLines(val);
+      if (next !== val) { fields[key] = next; touched = true; }
+    }
+    return touched ? ({ ...r, fields } as T) : r;
+  });
+}
+
+/** The one post-processing step every READ goes through: lookup objects
+ *  attached, list-ish textareas line-broken. Read helpers call this, not
+ *  the individual passes. */
+function hydrateRecords<T extends { fields: Record<string, unknown> }>(
+  records: T[], entityKey: string
+): T[] {
+  return normalizeListTextareas(enrichLookupFields(records, entityKey), entityKey);
+}
+
 /** Normalize fields for API writes: strip lookup objects to keys, fix date formats. */
 export function cleanFieldsForApi(
   fields: Record<string, unknown>,
@@ -334,12 +399,12 @@ export class LivingAppsService {
       record_id: id, ...rec,
       createdat: rec.created_at ?? '', updatedat: rec.updated_at ?? null,
     })) as SkateparksSpots[];
-    return enrichLookupFields(records, 'skateparks_spots');
+    return hydrateRecords(records, 'skateparks_spots');
   }
   static async getSkateparksSpot(id: string): Promise<SkateparksSpots | undefined> {
     const data = await callApi('GET', `/apps/${APP_IDS.SKATEPARKS_SPOTS}/records/${id}`);
     const record = { record_id: data.id, ...data, createdat: data.created_at ?? '', updatedat: data.updated_at ?? null } as SkateparksSpots;
-    return enrichLookupFields([record], 'skateparks_spots')[0];
+    return hydrateRecords([record], 'skateparks_spots')[0];
   }
   static async createSkateparksSpot(fields: CreateSkateparksSpots): Promise<MutationResult> {
     const data = await callApi('POST', `/apps/${APP_IDS.SKATEPARKS_SPOTS}/records`, { fields: cleanFieldsForApi(fields as any, 'skateparks_spots') });
@@ -360,12 +425,12 @@ export class LivingAppsService {
       record_id: id, ...rec,
       createdat: rec.created_at ?? '', updatedat: rec.updated_at ?? null,
     })) as EventVerwaltung[];
-    return enrichLookupFields(records, 'event_verwaltung');
+    return hydrateRecords(records, 'event_verwaltung');
   }
   static async getEventVerwaltungEntry(id: string): Promise<EventVerwaltung | undefined> {
     const data = await callApi('GET', `/apps/${APP_IDS.EVENT_VERWALTUNG}/records/${id}`);
     const record = { record_id: data.id, ...data, createdat: data.created_at ?? '', updatedat: data.updated_at ?? null } as EventVerwaltung;
-    return enrichLookupFields([record], 'event_verwaltung')[0];
+    return hydrateRecords([record], 'event_verwaltung')[0];
   }
   static async createEventVerwaltungEntry(fields: CreateEventVerwaltung): Promise<MutationResult> {
     const data = await callApi('POST', `/apps/${APP_IDS.EVENT_VERWALTUNG}/records`, { fields: cleanFieldsForApi(fields as any, 'event_verwaltung') });
@@ -386,12 +451,12 @@ export class LivingAppsService {
       record_id: id, ...rec,
       createdat: rec.created_at ?? '', updatedat: rec.updated_at ?? null,
     })) as Anmeldungen[];
-    return enrichLookupFields(records, 'anmeldungen');
+    return hydrateRecords(records, 'anmeldungen');
   }
   static async getAnmeldungenEntry(id: string): Promise<Anmeldungen | undefined> {
     const data = await callApi('GET', `/apps/${APP_IDS.ANMELDUNGEN}/records/${id}`);
     const record = { record_id: data.id, ...data, createdat: data.created_at ?? '', updatedat: data.updated_at ?? null } as Anmeldungen;
-    return enrichLookupFields([record], 'anmeldungen')[0];
+    return hydrateRecords([record], 'anmeldungen')[0];
   }
   static async createAnmeldungenEntry(fields: CreateAnmeldungen): Promise<MutationResult> {
     const data = await callApi('POST', `/apps/${APP_IDS.ANMELDUNGEN}/records`, { fields: cleanFieldsForApi(fields as any, 'anmeldungen') });

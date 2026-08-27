@@ -1,13 +1,9 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { IconAlertCircle } from '@tabler/icons-react';
 import { useState, useEffect, useRef } from 'react';
-import ChatWidget from '@/components/ChatWidget';
-import { ActionCodeDrawer } from '@/components/ActionCodeDrawer';
-import { ActionInputDialog } from '@/components/ActionInputDialog';
 import { ActionsSidebar } from '@/components/ActionsSidebar';
 import { IntentsNav } from '@/components/IntentsNav';
 import { PublicPagesNav } from '@/components/PublicPagesNav';
-import { useActions } from '@/context/ActionsContext';
 import { Button } from '@/components/ui/button';
 import { VersionCheck } from '@/components/VersionCheck';
 // Sprachwechsel kommt aus der Plattform-Topnav: sie schreibt <html lang>,
@@ -22,7 +18,6 @@ const IS_EMBED = new URLSearchParams(window.location.search).has('embed') || win
 export function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { inputFormAction, inputFormOptions, submitActionInputs, cancelInputForm } = useActions();
   const [authError, setAuthError] = useState(false);
   const drawerRef = useRef<HTMLElement>(null);
   const dashboardLinkRef = useRef<HTMLElement>(null);
@@ -136,10 +131,11 @@ export function Layout() {
             </la-nav-section>
           </la-nav-section>
 
-          {/* Aktionen-Sektion (Figma-Muster): alles, was man TUN kann —
+          {/* Produktivitäts-Sektion (Figma-Muster): zusätzliche Funktionen —
               Abläufe und Öffentliche Seiten als aufklappbare Gruppen
               (starten zu), Werkzeuge als schlichter Eintrag (öffnet den
-              ActionsDrawer), dann die Version als Meta-Zeile. Klar Lab und
+              Werkzeuge-Drawer des Assistenten), dann die Version als
+              Meta-Zeile. Klar Lab und
               die Entwickler/Beta-Toggles stecken im Versions-Panel. */}
           <la-nav-section type="secondary" label={t('actions_section')}>
             <IntentsNav />
@@ -152,7 +148,7 @@ export function Layout() {
 
           {/* Sticky Footer = dünne Meta-Zeile (Figma-Muster). Relative
               Pfade, damit die Plattform-Seiten auf jedem Host stimmen. */}
-          <div slot="footer" className="flex flex-wrap gap-x-4 gap-y-1 border-t border-sidebar-border py-3 text-sm font-medium text-muted-foreground">
+          <div slot="footer" className="flex flex-wrap justify-center gap-x-4 gap-y-1 border-t border-sidebar-border py-3 text-sm font-medium text-muted-foreground">
             <a href="/impressum.htm" className="hover:text-foreground transition-colors">{t('legal_imprint')}</a>
             <a href="/datenschutz.htm" className="hover:text-foreground transition-colors">{t('legal_privacy')}</a>
             <a href="/apps.htm" className="hover:text-foreground transition-colors">LivingApps</a>
@@ -180,18 +176,9 @@ export function Layout() {
         </main>
       </div>
 
-      <ChatWidget />
-      <ActionCodeDrawer />
-
-      {inputFormAction && inputFormAction.metadata?.input_schema && (
-        <ActionInputDialog
-          action={inputFormAction}
-          schema={inputFormAction.metadata.input_schema}
-          options={inputFormOptions}
-          onSubmit={(inputs, files) => submitActionInputs(inputFormAction, inputs, files)}
-          onCancel={cancelInputForm}
-        />
-      )}
+      {/* The assistant element (<la-klar-assistant>) mounts in App.tsx,
+          OUTSIDE LocaleGate — its keyed remounts must not tear the element
+          down mid-chat. */}
     </div>
   );
 }

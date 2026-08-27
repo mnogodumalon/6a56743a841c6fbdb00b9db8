@@ -72,8 +72,8 @@ export function PublicPagesNav({ onNavigate }: { onNavigate?: () => void }) {
   };
 
   return (
-    <nav className="px-3 pt-4" aria-label={t('ppn_heading')}>
-      <div className="flex items-center justify-between px-4 pb-1">
+    <nav className="pt-4" aria-label={t('ppn_heading')}>
+      <div className="flex items-center justify-between px-2 pb-1">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
           {t('ppn_heading')}
         </p>
@@ -85,6 +85,8 @@ export function PublicPagesNav({ onNavigate }: { onNavigate?: () => void }) {
           {t('ppn_manage_label')}
         </NavLink>
       </div>
+      {/* The leading icons share the section heading's px-2 gutter; titles
+          receive their hierarchy naturally from the icon and gap. */}
       <div className="space-y-0.5">
         {entries.map(entry => (
           <div key={entry.slug} className="group flex items-center min-w-0">
@@ -92,7 +94,7 @@ export function PublicPagesNav({ onNavigate }: { onNavigate?: () => void }) {
               href={entry.url}
               target="_blank"
               rel="noreferrer"
-              className="flex flex-1 items-center gap-2 px-4 py-2 rounded-2xl text-base transition-colors min-w-0 font-normal text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+              className="flex flex-1 items-center gap-2 px-2 py-2 rounded-2xl text-base transition-colors min-w-0 font-normal text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
             >
               <IconWorld size={18} stroke={1.5} className="shrink-0" />
               <span className="truncate">{entry.title}</span>

@@ -53,6 +53,19 @@ for (const [hub, spec] of Object.entries(HUBS)) {
   const need = spec.satellites.length;
   const names = [...new Set(spec.satellites)].join(', ');
 
+  // Path 0 — the page uses the EntityCrud scaffold: its generated host
+  // renders <{Hub}Details> for every entity by construction, so the literal
+  // never appears in DashboardOverview.tsx. Without this path the gate would
+  // hard-fail every hub app built on EntityCrud. Coverage is still verified
+  // where the sections live (the Details file), same as path 1.
+  if (/\buseEntityCrud\s*\(/.test(src) && existsSync(spec.file)) {
+    const inBlock = countSections(readFileSync(spec.file, 'utf8'));
+    if (inBlock + inOverview >= need) {
+      resolved.push(`${hub} via useEntityCrud() host`);
+      continue;
+    }
+  }
+
   // Path 1 — the overlay composes the generated block. Verify the coverage
   // where the sections actually live instead of demanding a literal copy here.
   if (new RegExp(`<${spec.component}\\b`).test(src)) {

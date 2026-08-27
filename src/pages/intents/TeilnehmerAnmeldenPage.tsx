@@ -7,7 +7,6 @@
  */
 import { useState, useMemo } from 'react';
 import { format, parseISO } from 'date-fns';
-import { de } from 'date-fns/locale';
 import {
   IconCalendarEvent,
   IconUser,
@@ -30,6 +29,7 @@ import { LivingAppsService, createRecordUrl } from '@/services/livingAppsService
 import { APP_IDS, LOOKUP_OPTIONS } from '@/types/app';
 import type { EventVerwaltung } from '@/types/app';
 import { formatDateTime } from '@/lib/formatters';
+import { dateFnsLocale, tx } from '@/i18n';
 
 const SKILL_LEVEL_OPTIONS = LOOKUP_OPTIONS['anmeldungen']?.['skill_level'] ?? [];
 const BOARD_STIL_OPTIONS = LOOKUP_OPTIONS['anmeldungen']?.['board_stil'] ?? [];
@@ -81,7 +81,7 @@ export default function TeilnehmerAnmeldenPage() {
   function formatEventDate(dateStr: string | undefined): string {
     if (!dateStr) return '—';
     try {
-      return format(parseISO(dateStr), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: de });
+      return format(parseISO(dateStr), "dd.MM.yyyy 'um' HH:mm 'Uhr'", { locale: dateFnsLocale() });
     } catch {
       return dateStr;
     }
@@ -143,7 +143,7 @@ export default function TeilnehmerAnmeldenPage() {
       await fetchAll();
       setStep(3);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.');
+      setSubmitError(err instanceof Error ? err.message : tx('Anmeldung fehlgeschlagen. Bitte erneut versuchen.'));
     } finally {
       setSubmitting(false);
     }
@@ -158,12 +158,12 @@ export default function TeilnehmerAnmeldenPage() {
 
   return (
     <IntentWizardShell
-      title="Skater anmelden"
-      subtitle="Melde einen Teilnehmer in drei Schritten für ein Event an."
+      title={tx('Skater anmelden')}
+      subtitle={tx('Melde einen Teilnehmer in drei Schritten für ein Event an.')}
       steps={[
-        { label: 'Event wählen' },
-        { label: 'Anmeldedaten' },
-        { label: 'Bestätigung' },
+        { label: tx('Event wählen') },
+        { label: tx('Anmeldedaten') },
+        { label: tx('Bestätigung') },
       ]}
       currentStep={step}
       onStepChange={setStep}
@@ -175,36 +175,36 @@ export default function TeilnehmerAnmeldenPage() {
       {step === 1 && (
         <div className="space-y-4">
           <div>
-            <h2 className="text-lg font-semibold">Event auswählen</h2>
+            <h2 className="text-lg font-semibold">{tx('Event auswählen')}</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Wähle das Event, für das du einen Skater anmelden möchtest.
+              {tx('Wähle das Event, für das du einen Skater anmelden möchtest.')}
             </p>
           </div>
           <EntitySelectStep
-            searchPlaceholder="Event suchen..."
+            searchPlaceholder={tx('Event suchen...')}
             emptyIcon={<IconCalendarEvent size={32} />}
-            emptyText="Keine Events gefunden."
+            emptyText={tx('Keine Events gefunden.')}
             items={eventVerwaltung.map(ev => {
               const count = anmeldungenCountByEvent.get(ev.record_id) ?? 0;
               const max = ev.fields.max_teilnehmer;
               const isFullyBooked = max != null && count >= max;
               const spotsText = max != null
-                ? `${max - count} / ${max} Plätze frei`
-                : `${count} Anmeldungen`;
+                ? tx`${max - count} / ${max} Plätze frei`
+                : tx`${count} Anmeldungen`;
 
               return {
                 id: ev.record_id,
-                title: ev.fields.titel ?? '(Kein Titel)',
+                title: ev.fields.titel ?? tx('(Kein Titel)'),
                 subtitle: formatEventDate(ev.fields.datum_uhrzeit),
                 status: isFullyBooked
-                  ? { key: 'ausgebucht', label: 'Ausgebucht' }
+                  ? { key: 'ausgebucht', label: tx('Ausgebucht') }
                   : ev.fields.kategorie
                   ? { key: ev.fields.kategorie.key, label: ev.fields.kategorie.label }
                   : undefined,
                 stats: [
-                  { label: 'Plätze', value: spotsText },
-                  ...(ev.fields.skill_level ? [{ label: 'Level', value: ev.fields.skill_level.label }] : []),
-                  ...(ev.fields.startgebuehr != null ? [{ label: 'Gebühr', value: `${ev.fields.startgebuehr} €` }] : []),
+                  { label: tx('Plätze'), value: spotsText },
+                  ...(ev.fields.skill_level ? [{ label: tx('Level'), value: ev.fields.skill_level.label }] : []),
+                  ...(ev.fields.startgebuehr != null ? [{ label: tx('Gebühr'), value: `${ev.fields.startgebuehr} €` }] : []),
                 ],
                 icon: <IconCalendarEvent size={20} className={isFullyBooked ? 'text-destructive' : 'text-primary'} />,
               };
@@ -224,14 +224,14 @@ export default function TeilnehmerAnmeldenPage() {
                 <IconCalendarEvent size={20} className="text-primary" />
               </div>
               <div className="min-w-0">
-                <p className="font-semibold text-sm truncate">{selectedEvent.fields.titel ?? '(Kein Titel)'}</p>
+                <p className="font-semibold text-sm truncate">{selectedEvent.fields.titel ?? tx('(Kein Titel)')}</p>
                 <p className="text-xs text-muted-foreground">{formatEventDate(selectedEvent.fields.datum_uhrzeit)}</p>
               </div>
               <button
                 onClick={() => setStep(1)}
                 className="ml-auto shrink-0 text-xs text-muted-foreground underline-offset-2 hover:underline"
               >
-                Ändern
+                {tx('Ändern')}
               </button>
             </div>
 
@@ -247,34 +247,34 @@ export default function TeilnehmerAnmeldenPage() {
                   : <IconBolt size={16} className="shrink-0 text-primary" />
                 }
                 <span>
-                  <strong>{selectedEventCount}</strong> von <strong>{selectedEventMax}</strong> Plätzen belegt
-                  {selectedEventCount >= selectedEventMax && ' — Event ist ausgebucht'}
+                  <strong>{selectedEventCount}</strong> {tx('von')} <strong>{selectedEventMax}</strong> {tx('Plätzen belegt')}
+                  {selectedEventCount >= selectedEventMax && (' — ' + tx('Event ist ausgebucht'))}
                 </span>
               </div>
             )}
 
             {/* Formular */}
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Anmeldedaten eingeben</h2>
+              <h2 className="text-lg font-semibold">{tx('Anmeldedaten eingeben')}</h2>
 
               {/* Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="vorname">Vorname <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="vorname">{tx('Vorname')} <span className="text-destructive">*</span></Label>
                   <Input
                     id="vorname"
                     value={vorname}
                     onChange={e => setVorname(e.target.value)}
-                    placeholder="z. B. Max"
+                    placeholder={tx('z. B. Max')}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="nachname">Nachname <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="nachname">{tx('Nachname')} <span className="text-destructive">*</span></Label>
                   <Input
                     id="nachname"
                     value={nachname}
                     onChange={e => setNachname(e.target.value)}
-                    placeholder="z. B. Mustermann"
+                    placeholder={tx('z. B. Mustermann')}
                   />
                 </div>
               </div>
@@ -282,7 +282,7 @@ export default function TeilnehmerAnmeldenPage() {
               {/* Kontakt */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="email">E-Mail <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="email">{tx('E-Mail')} <span className="text-destructive">*</span></Label>
                   <div className="relative">
                     <IconMail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
@@ -290,13 +290,13 @@ export default function TeilnehmerAnmeldenPage() {
                       type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      placeholder="max@beispiel.de"
+                      placeholder={tx('max@beispiel.de')}
                       className="pl-9"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="telefon">Telefon</Label>
+                  <Label htmlFor="telefon">{tx('Telefon')}</Label>
                   <div className="relative">
                     <IconPhone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
@@ -314,10 +314,10 @@ export default function TeilnehmerAnmeldenPage() {
               {/* Skill Level + Geburtsdatum */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="skill-level">Skill Level <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="skill-level">{tx('Skill Level')} <span className="text-destructive">*</span></Label>
                   <Select value={skillLevel} onValueChange={setSkillLevel}>
                     <SelectTrigger id="skill-level">
-                      <SelectValue placeholder="Level wählen..." />
+                      <SelectValue placeholder={tx('Level wählen...')} />
                     </SelectTrigger>
                     <SelectContent>
                       {SKILL_LEVEL_OPTIONS.map(opt => (
@@ -327,7 +327,7 @@ export default function TeilnehmerAnmeldenPage() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="geburtsdatum">Geburtsdatum</Label>
+                  <Label htmlFor="geburtsdatum">{tx('Geburtsdatum')}</Label>
                   <Input
                     id="geburtsdatum"
                     type="date"
@@ -339,7 +339,7 @@ export default function TeilnehmerAnmeldenPage() {
 
               {/* Board-Stil */}
               <div className="space-y-2">
-                <Label>Board-Stil</Label>
+                <Label>{tx('Board-Stil')}</Label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {BOARD_STIL_OPTIONS.map(opt => {
                     const checked = boardStil.includes(opt.key);
@@ -372,12 +372,12 @@ export default function TeilnehmerAnmeldenPage() {
 
               {/* Anmerkungen */}
               <div className="space-y-1.5">
-                <Label htmlFor="anmerkungen">Anmerkungen</Label>
+                <Label htmlFor="anmerkungen">{tx('Anmerkungen')}</Label>
                 <Textarea
                   id="anmerkungen"
                   value={anmerkungen}
                   onChange={e => setAnmerkungen(e.target.value)}
-                  placeholder="Besondere Hinweise, Fragen, ..."
+                  placeholder={tx('Besondere Hinweise, Fragen, ...')}
                   rows={3}
                 />
               </div>
@@ -392,7 +392,7 @@ export default function TeilnehmerAnmeldenPage() {
                     className="mt-0.5"
                   />
                   <Label htmlFor="teilnahmebedingungen" className="text-sm leading-relaxed cursor-pointer">
-                    Ich stimme den Teilnahmebedingungen zu und bestätige, dass die angemeldete Person an der Veranstaltung teilnehmen darf. <span className="text-destructive">*</span>
+                    {tx('Ich stimme den Teilnahmebedingungen zu und bestätige, dass die angemeldete Person an der Veranstaltung teilnehmen darf.')} <span className="text-destructive">*</span>
                   </Label>
                 </div>
               </div>
@@ -412,22 +412,22 @@ export default function TeilnehmerAnmeldenPage() {
                   onClick={() => setStep(1)}
                   className="sm:w-auto w-full"
                 >
-                  Zurück
+                  {tx('Zurück')}
                 </Button>
                 <Button
                   onClick={handleSubmit}
                   disabled={!canSubmit || submitting}
                   className="sm:flex-1 w-full"
                 >
-                  {submitting ? 'Wird angemeldet...' : 'Jetzt anmelden'}
+                  {submitting ? tx('Wird angemeldet...') : tx('Jetzt anmelden')}
                 </Button>
               </div>
             </div>
           </div>
         ) : (
           <div className="text-center py-12 space-y-3">
-            <p className="text-sm text-muted-foreground">Dieser Schritt braucht die Auswahl aus Schritt 1.</p>
-            <Button variant="outline" onClick={() => setStep(1)}>Neu starten</Button>
+            <p className="text-sm text-muted-foreground">{tx('Dieser Schritt braucht die Auswahl aus Schritt 1.')}</p>
+            <Button variant="outline" onClick={() => setStep(1)}>{tx('Neu starten')}</Button>
           </div>
         )
       )}
@@ -441,9 +441,9 @@ export default function TeilnehmerAnmeldenPage() {
                 <IconCircleCheck size={32} className="text-primary" />
               </div>
               <div>
-                <h2 className="text-xl font-bold">Anmeldung erfolgreich!</h2>
+                <h2 className="text-xl font-bold">{tx('Anmeldung erfolgreich!')}</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {vorname} {nachname} wurde erfolgreich angemeldet.
+                  {vorname} {nachname} {tx('wurde erfolgreich angemeldet.')}
                 </p>
               </div>
             </div>
@@ -451,23 +451,23 @@ export default function TeilnehmerAnmeldenPage() {
             {/* Zusammenfassung */}
             <div className="rounded-2xl border bg-card overflow-hidden">
               <div className="px-4 py-3 border-b bg-secondary/30">
-                <p className="text-sm font-semibold">Anmeldungsdetails</p>
+                <p className="text-sm font-semibold">{tx('Anmeldungsdetails')}</p>
               </div>
               <div className="divide-y">
                 <div className="flex items-center gap-3 px-4 py-3">
                   <IconUser size={16} className="text-muted-foreground shrink-0" />
-                  <span className="text-sm text-muted-foreground">Teilnehmer</span>
+                  <span className="text-sm text-muted-foreground">{tx('Teilnehmer')}</span>
                   <span className="ml-auto text-sm font-medium">{vorname} {nachname}</span>
                 </div>
                 <div className="flex items-center gap-3 px-4 py-3">
                   <IconMail size={16} className="text-muted-foreground shrink-0" />
-                  <span className="text-sm text-muted-foreground">E-Mail</span>
+                  <span className="text-sm text-muted-foreground">{tx('E-Mail')}</span>
                   <span className="ml-auto text-sm font-medium truncate max-w-[200px]">{email}</span>
                 </div>
                 {skillLevel && (
                   <div className="flex items-center gap-3 px-4 py-3">
                     <IconBolt size={16} className="text-muted-foreground shrink-0" />
-                    <span className="text-sm text-muted-foreground">Skill Level</span>
+                    <span className="text-sm text-muted-foreground">{tx('Skill Level')}</span>
                     <span className="ml-auto text-sm font-medium">
                       {SKILL_LEVEL_OPTIONS.find(o => o.key === skillLevel)?.label ?? skillLevel}
                     </span>
@@ -475,7 +475,7 @@ export default function TeilnehmerAnmeldenPage() {
                 )}
                 <div className="flex items-start gap-3 px-4 py-3">
                   <IconCalendarEvent size={16} className="text-muted-foreground shrink-0 mt-0.5" />
-                  <span className="text-sm text-muted-foreground">Event</span>
+                  <span className="text-sm text-muted-foreground">{tx('Event')}</span>
                   <div className="ml-auto text-right">
                     <p className="text-sm font-medium">{selectedEvent.fields.titel ?? '—'}</p>
                     <p className="text-xs text-muted-foreground">{formatEventDate(selectedEvent.fields.datum_uhrzeit)}</p>
@@ -484,7 +484,7 @@ export default function TeilnehmerAnmeldenPage() {
                 {boardStil.length > 0 && (
                   <div className="flex items-start gap-3 px-4 py-3">
                     <IconBolt size={16} className="text-muted-foreground shrink-0 mt-0.5" />
-                    <span className="text-sm text-muted-foreground">Board-Stil</span>
+                    <span className="text-sm text-muted-foreground">{tx('Board-Stil')}</span>
                     <span className="ml-auto text-sm font-medium text-right max-w-[200px]">
                       {boardStil.map(k => BOARD_STIL_OPTIONS.find(o => o.key === k)?.label ?? k).join(', ')}
                     </span>
@@ -500,19 +500,19 @@ export default function TeilnehmerAnmeldenPage() {
                 onClick={resetWizard}
                 className="w-full sm:flex-1"
               >
-                Weitere Anmeldung
+                {tx('Weitere Anmeldung')}
               </Button>
               <a href="#/" className="w-full sm:flex-1">
                 <Button className="w-full">
-                  Zurück zum Dashboard
+                  {tx('Zurück zum Dashboard')}
                 </Button>
               </a>
             </div>
           </div>
         ) : (
           <div className="text-center py-12 space-y-3">
-            <p className="text-sm text-muted-foreground">Dieser Schritt braucht eine abgeschlossene Anmeldung.</p>
-            <Button variant="outline" onClick={() => setStep(selectedEvent ? 2 : 1)}>Zurück</Button>
+            <p className="text-sm text-muted-foreground">{tx('Dieser Schritt braucht eine abgeschlossene Anmeldung.')}</p>
+            <Button variant="outline" onClick={() => setStep(selectedEvent ? 2 : 1)}>{tx('Zurück')}</Button>
           </div>
         )
       )}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   IconWorld, IconCheck, IconLink, IconExternalLink, IconLoader2, IconAlertTriangle,
-  IconAdjustments, IconEye,
+  IconAdjustments, IconEye, IconTicket,
 } from '@tabler/icons-react';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import {
-  listPublicPages, setPublished, getFields, updateFields,
-  type PublicPageSummary, type FieldCatalogEntry,
+  listPublicPages, setPublished, getFields, updateFields, getShareLinks,
+  type PublicPageSummary, type FieldCatalogEntry, type ShareLink,
 } from '@/lib/publicPagesAdmin';
 import { t } from '@/i18n';
 
@@ -54,6 +54,12 @@ export default function PublicPagesAdmin() {
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [fieldsLoading, setFieldsLoading] = useState(false);
   const [savingFields, setSavingFields] = useState(false);
+  // Per-record links: a page declaring a link_param is unusable through its
+  // bare URL, so the owner picks the record here and copies THAT link.
+  const [linksSlug, setLinksSlug] = useState<string | null>(null);
+  const [links, setLinks] = useState<ShareLink[]>([]);
+  const [linksLoading, setLinksLoading] = useState(false);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
   const load = async () => {
     try {
@@ -89,6 +95,30 @@ export default function PublicPagesAdmin() {
       setTimeout(() => setCopiedSlug(c => (c === page.slug ? null : c)), 1500);
     } catch {
       // clipboard unavailable — the open link still works
+    }
+  };
+
+  const openLinks = async (slug: string) => {
+    setLinksSlug(slug);
+    setLinksLoading(true);
+    try {
+      setLinks((await getShareLinks(slug)).links);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setLinksSlug(null);
+    } finally {
+      setLinksLoading(false);
+    }
+  };
+
+  const copyLink = async (link: ShareLink) => {
+    try {
+      await navigator.clipboard.writeText(link.url);
+      setCopiedLink(link.record_id);
+      setTimeout(() => setCopiedLink(c => (c === link.record_id ? null : c)), 1500);
+    } catch {
+      // clipboard unavailable — the link stays selectable in the list
     }
   };
 
@@ -171,18 +201,26 @@ export default function PublicPagesAdmin() {
                 </span>
               </div>
 
-              {page.published ? (
-                <div className="flex items-center gap-1 shrink-0">
-                  <a
-                    href={page.share_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    title={t('ppa_open')}
-                    aria-label={t('ppa_open')}
-                    className="p-2 rounded-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-                  >
-                    <IconExternalLink size={18} stroke={1.5} />
-                  </a>
+              {/* Opening works for a DRAFT too — the page then renders as the
+                  owner's preview (see publicClient). There is deliberately no
+                  separate preview button: a page reached with a record
+                  parameter has no meaningful URL of its own, so a second entry
+                  point would hand out broken links. Copying, however, stays
+                  published-only — a draft link is worthless to a visitor. */}
+              <div className="flex items-center gap-1 shrink-0">
+                <a
+                  href={page.share_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={page.published ? t('ppa_open') : t('ppa_preview')}
+                  aria-label={page.published ? t('ppa_open') : t('ppa_preview')}
+                  className="p-2 rounded-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
+                  {page.published
+                    ? <IconExternalLink size={18} stroke={1.5} />
+                    : <IconEye size={18} stroke={1.5} />}
+                </a>
+                {page.published ? (
                   <button
                     type="button"
                     title={copiedSlug === page.slug ? t('ppa_copied') : t('ppa_copy')}
@@ -192,7 +230,19 @@ export default function PublicPagesAdmin() {
                   >
                     {copiedSlug === page.slug ? <IconCheck size={18} stroke={1.5} /> : <IconLink size={18} stroke={1.5} />}
                   </button>
-                </div>
+                ) : null}
+              </div>
+
+              {page.link_param ? (
+                <button
+                  type="button"
+                  title={t('ppa_links')}
+                  aria-label={t('ppa_links')}
+                  onClick={() => openLinks(page.slug)}
+                  className="shrink-0 p-2 rounded-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
+                  <IconTicket size={18} stroke={1.5} />
+                </button>
               ) : null}
 
               {page.type !== 'custom' ? (
@@ -250,6 +300,60 @@ export default function PublicPagesAdmin() {
               {t('ppa_confirm_publish')}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!linksSlug} onOpenChange={v => !v && setLinksSlug(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('ppa_links_title')}</DialogTitle>
+            <DialogDescription>{t('ppa_links_intro')}</DialogDescription>
+          </DialogHeader>
+          {linksLoading ? (
+            <div className="flex justify-center py-8">
+              <IconLoader2 size={22} stroke={1.5} className="animate-spin text-muted-foreground" />
+            </div>
+          ) : links.length === 0 ? (
+            <p className="py-6 text-sm text-muted-foreground">{t('ppa_links_empty')}</p>
+          ) : (
+            <div className="max-h-[60vh] space-y-1 overflow-y-auto">
+              {links.map(link => (
+                <div
+                  key={link.record_id}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-accent/50 transition-colors min-w-0"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">{link.label}</div>
+                    {link.secondary ? (
+                      <div className="truncate text-xs text-muted-foreground">{link.secondary}</div>
+                    ) : null}
+                  </div>
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={t('ppa_open')}
+                    aria-label={t('ppa_open')}
+                    className="shrink-0 p-2 rounded-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                  >
+                    <IconExternalLink size={16} stroke={1.5} />
+                  </a>
+                  <button
+                    type="button"
+                    title={copiedLink === link.record_id ? t('ppa_copied') : t('ppa_copy')}
+                    aria-label={t('ppa_copy')}
+                    onClick={() => copyLink(link)}
+                    className="shrink-0 p-2 rounded-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                  >
+                    {copiedLink === link.record_id
+                      ? <IconCheck size={16} stroke={1.5} />
+                      : <IconLink size={16} stroke={1.5} />}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="pt-2 text-xs text-muted-foreground">{t('ppa_links_hint')}</p>
         </DialogContent>
       </Dialog>
 

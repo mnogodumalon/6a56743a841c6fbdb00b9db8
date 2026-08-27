@@ -331,7 +331,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
         }
       }
       const photoContext = contextParts.length ? contextParts.join('\n') : undefined;
-      const schema = `{\n  "name": string | null, // Name des Ortes\n  "strasse": string | null, // Straße\n  "hausnummer": string | null, // Hausnummer\n  "postleitzahl": string | null, // Postleitzahl\n  "stadt": string | null, // Stadt\n  "beschreibung": string | null, // Beschreibung\n  "untergrundtyp": LookupValue | null, // Untergrundtyp (select one key: "beton" | "asphalt" | "holz" | "fliesen" | "sonstiges") mapping: beton=Beton, asphalt=Asphalt, holz=Holz, fliesen=Fliesen, sonstiges=Sonstiges\n  "website": string | null, // Website\n}`;
+      const schema = `{\n  "name": string | null, // Name des Ortes\n  "strasse": string | null, // Straße\n  "hausnummer": string | null, // Hausnummer\n  "postleitzahl": string | null, // Postleitzahl\n  "stadt": string | null, // Stadt\n  "beschreibung": string | null, // Beschreibung\n  "untergrundtyp": LookupValue | null, // Untergrundtyp (select one key: "asphalt" | "holz" | "fliesen" | "sonstiges" | "beton") mapping: asphalt=Asphalt, holz=Holz, fliesen=Fliesen, sonstiges=Sonstiges, beton=Beton\n  "website": string | null, // Website\n}`;
       const raw = await extractFromInput<Record<string, unknown>>(schema, {
         dataUri: uri,
         userText: aiText.trim() || undefined,
@@ -491,19 +491,6 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
           <button
             type="button"
             role="radio"
-            aria-checked={lookupKey(fields.untergrundtyp) === 'beton'}
-            onClick={() => setFields(f => ({ ...f, untergrundtyp: (lookupKey(f.untergrundtyp) === 'beton' ? undefined : 'beton') as any }))}
-            className={`inline-flex items-center justify-center min-h-9 max-sm:min-h-11 max-sm:px-4 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-              lookupKey(fields.untergrundtyp) === 'beton'
-                ? 'bg-foreground text-background border-foreground'
-                : 'bg-background text-foreground border-input hover:bg-accent'
-            }`}
-          >
-            {lookupLabel('skateparks_spots', 'untergrundtyp', 'beton') ?? 'Beton'}
-          </button>
-          <button
-            type="button"
-            role="radio"
             aria-checked={lookupKey(fields.untergrundtyp) === 'asphalt'}
             onClick={() => setFields(f => ({ ...f, untergrundtyp: (lookupKey(f.untergrundtyp) === 'asphalt' ? undefined : 'asphalt') as any }))}
             className={`inline-flex items-center justify-center min-h-9 max-sm:min-h-11 max-sm:px-4 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
@@ -552,6 +539,19 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
             }`}
           >
             {lookupLabel('skateparks_spots', 'untergrundtyp', 'sonstiges') ?? 'Sonstiges'}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={lookupKey(fields.untergrundtyp) === 'beton'}
+            onClick={() => setFields(f => ({ ...f, untergrundtyp: (lookupKey(f.untergrundtyp) === 'beton' ? undefined : 'beton') as any }))}
+            className={`inline-flex items-center justify-center min-h-9 max-sm:min-h-11 max-sm:px-4 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+              lookupKey(fields.untergrundtyp) === 'beton'
+                ? 'bg-foreground text-background border-foreground'
+                : 'bg-background text-foreground border-input hover:bg-accent'
+            }`}
+          >
+            {lookupLabel('skateparks_spots', 'untergrundtyp', 'beton') ?? 'Beton'}
           </button>
         </div>
       </div>

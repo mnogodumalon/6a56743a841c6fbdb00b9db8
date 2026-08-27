@@ -67,6 +67,17 @@ export interface PublicPageConfig {
   fields: PublicFieldConfig[];
   /** Custom pages: which app_id serves which op (list/create). */
   endpoints?: PublicEndpointConfig[];
+  /** Declared when the page is reached with `?<name>=<record_id>`. The page
+   *  itself reads the value from the URL; this exists so the OWNER-facing
+   *  management UI can offer one link per record instead of the bare page
+   *  URL, which for such a page is a dead end. */
+  link_param?: {
+    name: string;
+    entity: string;
+    app_id: string;
+    label_field: string;
+    secondary_field?: string | null;
+  } | null;
 }
 
 export interface PublicPagesConfig {
@@ -77,14 +88,70 @@ export interface PublicPagesConfig {
    *  published ones, so this is the sidebar's only way to know whether there
    *  is anything to publish. Absent in artifacts written before 0.0.281. */
   unpublished_count?: number;
+  /** Owner preview of a draft: the data calls go through Klar with the
+   *  owner's session instead of a grant, because a draft has no grant. Set by
+   *  the service, never by a page. */
+  preview?: boolean;
+  /** Preview only: base path for the proxied record calls. */
+  preview_base?: string;
+  /** Preview only: the vSQL scope is NOT applied (the rest-service evaluates
+   *  it, not Klar), so a scoped list shows MORE rows than the live page. The
+   *  banner says so — reimplementing the filter here would be a second
+   *  derivation that drifts. */
+  preview_unscoped?: boolean;
 }
 
-/**
- * Loads ./public-pages.json relative to the deployed bundle. Returns null when
- * the file is absent (no page published yet), unparsable, or unreachable —
- * callers render the "unavailable" state for all of those.
- */
-export async function loadPublicPagesConfig(): Promise<PublicPagesConfig | null> {
+/** Owner preview of a page that is still a draft.
+ *
+ *  There is no preview FLAG and no preview BUTTON: the owner opens the page's
+ *  normal link (invitation links with their `?…=<record>` parameter included)
+ *  and simply sees it. That is the whole trick — a parameterised page has no
+ *  meaningful URL without its parameter, so any preview entry point that
+ *  invents its own link leads to a broken page.
+ *
+ *  Mechanically it is a FALLBACK, not a mode: the artifact is asked first and
+ *  only lists PUBLISHED pages, so a hit means "live" and nothing changes. A
+ *  miss is either a draft (then Klar answers with the owner's session, and the
+ *  page renders with the preview banner) or a stranger asking for a page that
+ *  is not public (then Klar refuses and the page stays unavailable).
+ *
+ *  A draft has no grant at all — grants are created on publish, so a draft
+ *  leaves zero footprint in the rest-service. The preview therefore runs its
+ *  data through Klar instead: same page code, same field projection, no
+ *  public exposure. */
+let previewActive = false;
+
+/** True once a preview config was loaded — PublicShell shows its banner from
+ *  this. Deliberately module state, not a prop: every page would otherwise
+ *  have to thread a flag through to the shell, and the ones that forgot would
+ *  silently show a draft with no warning that it is one. */
+export function isPreviewMode(): boolean {
+  return previewActive;
+}
+
+function previewBase(slug: string): string {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  const appgroupId = parts[parts.indexOf('objects') + 1] || '';
+  return `/claude/public-pages/${encodeURIComponent(appgroupId)}/${encodeURIComponent(slug)}/preview`;
+}
+
+async function loadPreviewConfig(slug: string): Promise<PublicPagesConfig | null> {
+  try {
+    const res = await fetch(previewBase(slug), {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const cfg = await res.json();
+    if (!cfg || typeof cfg !== 'object' || !cfg.pages) return null;
+    return cfg as PublicPagesConfig;
+  } catch {
+    return null;
+  }
+}
+
+async function loadArtifactConfig(): Promise<PublicPagesConfig | null> {
   try {
     const base = window.location.href.split('#')[0];
     const res = await fetch(new URL('public-pages.json', base).toString(), { cache: 'no-store' });
@@ -95,6 +162,27 @@ export async function loadPublicPagesConfig(): Promise<PublicPagesConfig | null>
   } catch {
     return null;
   }
+}
+
+/**
+ * Loads the page's runtime config: ./public-pages.json (published pages) with
+ * the owner preview as a fallback for drafts — see the preview note above.
+ * Returns null when the page is neither published nor previewable; callers
+ * render the "unavailable" state for that.
+ *
+ * ALWAYS pass the slug. Without it a draft cannot be recognised and the page
+ * is unavailable even to its owner.
+ */
+export async function loadPublicPagesConfig(slug?: string): Promise<PublicPagesConfig | null> {
+  const artifact = await loadArtifactConfig();
+  if (!slug) return artifact;
+  if (artifact && artifact.pages[slug]) return artifact;
+  const preview = await loadPreviewConfig(slug);
+  if (preview) {
+    previewActive = true;
+    return preview;
+  }
+  return artifact;
 }
 
 // ---------------------------------------------------------------------------
@@ -287,7 +375,8 @@ export function prepareChallenge(
   method: string,
   path: string,
 ): void {
-  if (page.challenge === 'none') return;
+  // No grant in a preview, so nothing to pre-solve against.
+  if (cfg.preview || page.challenge === 'none') return;
   const key = `${page.grant_id} ${method} ${path}`;
   if (prepared && prepared.key === key && prepared.staleAt > Date.now()) return;
   const tokenPromise = fetchChallenge(cfg.public_api_base, page.grant_id, method, path).then(solveChallenge);
@@ -329,6 +418,65 @@ export interface PublicRecordResult {
   fields: Record<string, unknown>;
   created_at: string | null;
   updated_at: string | null;
+}
+
+/** A textarea that HOLDS A LIST but was typed on one line.
+ *
+ *  A page rendering such a field as tiles writes the natural
+ *  `value.split('\n')` — one item per line is the convention every form
+ *  implies. Owners type differently: a live landing page collapsed five
+ *  services into ONE tile because the record held
+ *  'Tagesbetreuung, Übernachtung, …' without a single line break.
+ *  Normalizing on READ makes that natural split correct whatever was typed,
+ *  so no page has to re-derive the heuristic (mirror of hydrateRecords in
+ *  livingAppsService — keep the two in step).
+ *
+ *  Conservative on purpose, prose must survive untouched: existing line
+ *  breaks win; ; • · | separate from two parts on; commas only with 3+ parts
+ *  that all read like labels — short, at most four words, no sentence
+ *  punctuation. The word cap is what keeps prose out: "Katzen und Kleintiere
+ *  aller Rassen" is short enough to pass a length test alone. A wrong guess
+ *  degrades to one item — never to mangled prose. */
+const LIST_LABEL_MAX = 40;
+const LIST_LABEL_MAX_WORDS = 4;
+
+function listTextToLines(text: string): string {
+  if (!text || /\r?\n/.test(text)) return text;
+  const bulleted = text.split(/\s*[;•·|]\s*/).map(s => s.trim()).filter(Boolean);
+  if (bulleted.length >= 2) return bulleted.join('\n');
+  const parts = text.split(/\s*,\s*/).map(s => s.trim()).filter(Boolean);
+  const looksLikeLabels = parts.length >= 3 && parts.every(p =>
+    p.length <= LIST_LABEL_MAX
+    && p.split(/\s+/).length <= LIST_LABEL_MAX_WORDS
+    && !/[.!?:]$/.test(p));
+  return looksLikeLabels ? parts.join('\n') : text;
+}
+
+function normalizeListTextareas(
+  body: Record<string, PublicRecordResult>,
+  page: PublicPageConfig,
+  appId: string,
+): Record<string, PublicRecordResult> {
+  // The page config carries each projected field's fulltype — no schema
+  // import needed on the anonymous surface.
+  const ep = page.endpoints?.find(e => e.op === 'list' && e.app_id === appId);
+  const areas = (ep?.fields ?? page.fields ?? [])
+    .filter(f => f.fulltype === 'string/textarea')
+    .map(f => f.key);
+  if (areas.length === 0) return body;
+  const out: Record<string, PublicRecordResult> = {};
+  for (const [id, rec] of Object.entries(body)) {
+    let touched = false;
+    const fields = { ...(rec?.fields ?? {}) };
+    for (const key of areas) {
+      const val = fields[key];
+      if (typeof val !== 'string') continue;
+      const next = listTextToLines(val);
+      if (next !== val) { fields[key] = next; touched = true; }
+    }
+    out[id] = touched ? { ...rec, fields } : rec;
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -471,6 +619,18 @@ export async function createPublicRecord(
 ): Promise<PublicRecordResult> {
   fields = normalizeApplookupRefs(cfg, page, fields);
   const path = `/apps/${page.app_id}/records`;
+  if (cfg.preview) {
+    // A preview submit creates a REAL record — deliberately: a form you
+    // cannot send is exactly the half that needs testing. The banner says so.
+    const res = await fetch(`${cfg.preview_base}/records`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ app_id: page.app_id, fields }),
+    });
+    if (!res.ok) await throwSubmitError(res);
+    return (await res.json()) as PublicRecordResult;
+  }
   for (let attempt = 0; ; attempt++) {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -512,6 +672,16 @@ export async function listPublicRecords(
   if (opts.limit !== undefined) params.set('limit', String(opts.limit));
   if (opts.offset !== undefined) params.set('offset', String(opts.offset));
   const query = params.size > 0 ? `?${params.toString()}` : '';
+  if (cfg.preview) {
+    // Owner preview: no grant exists yet, so Klar reads with the session and
+    // applies the same field projection.
+    const res = await fetch(`${cfg.preview_base}/records?app_id=${encodeURIComponent(appId)}`, {
+      credentials: 'include', headers: { Accept: 'application/json' }, cache: 'no-store',
+    });
+    if (!res.ok) throw new PageUnavailableError();
+    const body = (await res.json()) as Record<string, PublicRecordResult>;
+    return normalizeListTextareas(body, page, appId);
+  }
   for (let attempt = 0; ; attempt++) {
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (page.challenge !== 'none') {
@@ -523,7 +693,10 @@ export async function listPublicRecords(
     } catch (err) {
       throw new SubmitFailedError(err instanceof Error ? err.message : 'network error');
     }
-    if (res.ok) return (await res.json()) as Record<string, PublicRecordResult>;
+    if (res.ok) {
+      const body = (await res.json()) as Record<string, PublicRecordResult>;
+      return normalizeListTextareas(body, page, appId);
+    }
     if (res.status === 403 && attempt === 0 && page.challenge !== 'none') continue;
     await throwSubmitError(res);
   }

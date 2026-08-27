@@ -1,6 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
 import { format, parseISO, isAfter, isBefore, startOfDay, addDays } from 'date-fns';
-import { de } from 'date-fns/locale';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { enrichEventVerwaltung, enrichAnmeldungen } from '@/lib/enrich';
 import type { EnrichedEventVerwaltung, EnrichedAnmeldungen } from '@/types/enriched';
@@ -40,6 +39,7 @@ import {
   IconAlertTriangle,
   IconPlus,
 } from '@tabler/icons-react';
+import { dateFnsLocale, tx } from '@/i18n';
 
 type OverlayItem =
   | { type: 'event'; id: string }
@@ -86,7 +86,7 @@ export default function DashboardOverview() {
           return {
             id: `event:${e.record_id}`,
             start: e.fields.datum_uhrzeit!,
-            title: e.fields.titel ?? 'Unbenannt',
+            title: e.fields.titel ?? tx('Unbenannt'),
             subtitle: e.fields.kategorie?.label,
             tone,
           };
@@ -104,7 +104,7 @@ export default function DashboardOverview() {
     setEventVerwaltung(evs =>
       evs.map(e => e.record_id === rid ? { ...e, fields: { ...e.fields, datum_uhrzeit: newStart } } : e)
     );
-    undoToast(`Event verschoben auf ${formatDateTime(newStart)}`, () => {
+    undoToast(tx`Event verschoben auf ${formatDateTime(newStart)}`, () => {
       setEventVerwaltung(snapshot);
       LivingAppsService.updateEventVerwaltungEntry(rid, { datum_uhrzeit: prev.fields.datum_uhrzeit }).catch(() => fetchAll());
     });
@@ -145,8 +145,8 @@ export default function DashboardOverview() {
   // Context-Linie
   const kontextNamen = dieseWoche.slice(0, 3).map(e => e.fields.titel ?? '');
   const kontextLinie = dieseWoche.length > 0
-    ? `${gruss(clock)} Diese Woche: ${namen(kontextNamen, 2)}${dieseWoche.length > 3 ? ` +${dieseWoche.length - 3} weitere` : ''}.`
-    : `${gruss(clock)} Aktuell keine Events in Sicht — leg das nächste an!`;
+    ? tx`${gruss(clock)} Diese Woche: ${namen(kontextNamen, 2)}${dieseWoche.length > 3 ? ` +${dieseWoche.length - 3} weitere` : ''}.`
+    : tx`${gruss(clock)} Aktuell keine Events in Sicht — leg das nächste an!`;
 
   // Overlay-Helfer
   const openEventOverlay = (e: EventVerwaltung) => overlay.push({ type: 'event', id: e.record_id });
@@ -179,7 +179,7 @@ export default function DashboardOverview() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">{kontextLinie}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              {eventVerwaltung.length} Events · {totalAnmeldungen} Anmeldungen · {skateparksSpots.length} Spots
+              {eventVerwaltung.length} {tx('Events ·')} {totalAnmeldungen} {tx('Anmeldungen ·')} {skateparksSpots.length} {tx('Spots')}
             </p>
           </div>
           <button
@@ -187,7 +187,7 @@ export default function DashboardOverview() {
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors shrink-0"
           >
             <IconPlus size={16} className="shrink-0" />
-            Neues Event
+            {tx('Neues Event')}
           </button>
         </div>
       </div>
@@ -199,30 +199,30 @@ export default function DashboardOverview() {
             <HeroBanner
               icon={<IconAlertTriangle size={18} />}
               action={{
-                label: 'Anmeldung hinzufügen',
+                label: tx('Anmeldung hinzufügen'),
                 onClick: () => openAddAnmeldung(ohneAnmeldungen[0].record_id),
               }}
             >
-              <b>{namen(ohneAnmeldungen.map(e => e.fields.titel ?? ''))}</b> {ohneAnmeldungen.length === 1 ? 'hat' : 'haben'} noch keine Anmeldungen diese Woche.
+              <b>{namen(ohneAnmeldungen.map(e => e.fields.titel ?? ''))}</b> {ohneAnmeldungen.length === 1 ? 'hat' : 'haben'} {tx('noch keine Anmeldungen diese Woche.')}
             </HeroBanner>
           ) : undefined
         }
         kpis={
           <StatStrip>
             <StatStripItem
-              title="Diese Woche"
+              title={tx('Diese Woche')}
               value={dieseWoche.length}
               icon={<IconCalendarEvent size={16} />}
               tone={dieseWoche.length > 0 ? 'primary' : 'default'}
             />
             <StatStripItem
-              title="Anmeldungen"
+              title={tx('Anmeldungen')}
               value={totalAnmeldungen}
               icon={<IconUsers size={16} />}
               tone="default"
             />
             <StatStripItem
-              title="Spots"
+              title={tx('Spots')}
               value={skateparksSpots.length}
               icon={<IconMapPin size={16} />}
               tone="default"
@@ -232,7 +232,7 @@ export default function DashboardOverview() {
         primary={
           <CalendarWidget
             events={calEvents}
-            locale={de}
+            locale={dateFnsLocale()}
             defaultView="month"
             onEventClick={ev => overlay.replace({ type: 'event', id: ev.id.split(':')[1] })}
             onEventDrop={rescheduleEvent}
@@ -244,13 +244,13 @@ export default function DashboardOverview() {
         aside={
           <>
             <WorkList
-              title="Kommende Events"
+              title={tx('Kommende Events')}
               items={kommende.slice(0, 8).map(e => {
                 const anmCount = anmeldungen.filter(a => extractRecordId(a.fields.event) === e.record_id).length;
                 const maxT = e.fields.max_teilnehmer;
                 return {
                   id: e.record_id,
-                  title: e.fields.titel ?? 'Unbenannt',
+                  title: e.fields.titel ?? tx('Unbenannt'),
                   secondLine: (
                     <>
                       <span className="text-muted-foreground">{formatDateTime(e.fields.datum_uhrzeit)}</span>
@@ -259,12 +259,12 @@ export default function DashboardOverview() {
                       )}
                       {' · '}
                       <span className={anmCount === 0 ? 'font-medium text-warning' : 'text-muted-foreground'}>
-                        {anmCount}{maxT ? `/${maxT}` : ''} Anmeldungen
+                        {anmCount}{maxT ? `/${maxT}` : ''} {tx('Anmeldungen')}
                       </span>
                     </>
                   ),
                   action: {
-                    label: '+ Anmeldung',
+                    label: tx('+ Anmeldung'),
                     onClick: () => openAddAnmeldung(e.record_id),
                   },
                 };
@@ -274,21 +274,21 @@ export default function DashboardOverview() {
                 if (ev) overlay.replace({ type: 'event', id: ev.record_id });
               }}
               empty={{
-                text: 'Noch keine Events geplant.',
-                action: { label: 'Erstes Event anlegen', onClick: () => openAddEvent() },
+                text: tx('Noch keine Events geplant.'),
+                action: { label: tx('Erstes Event anlegen'), onClick: () => openAddEvent() },
               }}
             />
             <WorkList
-              title="Neueste Anmeldungen"
+              title={tx('Neueste Anmeldungen')}
               items={[...enrichedAnmeldungen]
                 .sort((a, b) => (b.createdat ?? '').localeCompare(a.createdat ?? ''))
                 .slice(0, 6)
                 .map(a => ({
                   id: a.record_id,
-                  title: `${a.fields.vorname ?? ''} ${a.fields.nachname ?? ''}`.trim() || 'Unbekannt',
+                  title: `${a.fields.vorname ?? ''} ${a.fields.nachname ?? ''}`.trim() || tx('Unbekannt'),
                   secondLine: (
                     <>
-                      <span className="text-muted-foreground">{a.eventName || 'Kein Event'}</span>
+                      <span className="text-muted-foreground">{a.eventName || tx('Kein Event')}</span>
                       {a.fields.skill_level && (
                         <span className="text-muted-foreground"> · {a.fields.skill_level.label}</span>
                       )}
@@ -300,8 +300,8 @@ export default function DashboardOverview() {
                 if (a) overlay.replace({ type: 'anmeldung', id: a.record_id });
               }}
               empty={{
-                text: 'Noch keine Anmeldungen.',
-                action: { label: 'Anmeldung erfassen', onClick: () => openAddAnmeldung() },
+                text: tx('Noch keine Anmeldungen.'),
+                action: { label: tx('Anmeldung erfassen'), onClick: () => openAddAnmeldung() },
               }}
             />
           </>
@@ -318,7 +318,7 @@ export default function DashboardOverview() {
             return (
               <>
                 <RecordHeader
-                  title={ev.fields.titel ?? 'Event'}
+                  title={ev.fields.titel ?? tx('Event')}
                   subtitle={ev.fields.kategorie?.label}
                   meta={formatDateTime(ev.fields.datum_uhrzeit)}
                 />
@@ -340,7 +340,7 @@ export default function DashboardOverview() {
             return (
               <>
                 <RecordHeader
-                  title={`${a.fields.vorname ?? ''} ${a.fields.nachname ?? ''}`.trim() || 'Anmeldung'}
+                  title={`${a.fields.vorname ?? ''} ${a.fields.nachname ?? ''}`.trim() || tx('Anmeldung')}
                   subtitle={ev?.fields.titel}
                   meta={a.fields.skill_level?.label}
                 />
@@ -358,7 +358,7 @@ export default function DashboardOverview() {
             return (
               <>
                 <RecordHeader
-                  title={spot.fields.name ?? 'Spot'}
+                  title={spot.fields.name ?? tx('Spot')}
                   subtitle={[spot.fields.strasse, spot.fields.hausnummer].filter(Boolean).join(' ')}
                   meta={spot.fields.stadt}
                 />

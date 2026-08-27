@@ -5,12 +5,13 @@ import {
   RecordSection, RecordField, RecordRelation, RecordAttachments,
 } from '@/components/widgets/RecordView';
 import { t, appLabel, fieldLabel } from '@/i18n';
+import { MapRouteLinks } from '@/components/widgets/MapWidget';
 import { SatelliteSection } from '@/components/SatelliteSection';
 
 export interface SkateparksSpotsDetailsProps {
   /** Der Record — enriched oder roh; alle Felder werden hier gerendert. */
   record: SkateparksSpots;
-  /** 1:N „Event-Verwaltung": VOLLE Liste — der Block filtert auf diesen Record. */
+  /** 1:N „Event-Verwaltung" (ort): VOLLE Liste — der Block filtert auf diesen Record. */
   eventVerwaltungList: EventVerwaltung[];
   /** Zeilen-Klick → overlay.push auf das EventVerwaltung-Detail (nie der Edit-Dialog). */
   onOpenEventVerwaltung: (record: EventVerwaltung) => void;
@@ -34,7 +35,16 @@ export function SkateparksSpotsDetails({
         <RecordField label={fieldLabel('skateparks_spots', 'stadt')} value={record.fields.stadt} format="text" />
         <RecordField label={fieldLabel('skateparks_spots', 'beschreibung')} value={record.fields.beschreibung} format="longtext" className="md:col-span-2" />
         <RecordField label={fieldLabel('skateparks_spots', 'untergrundtyp')} value={record.fields.untergrundtyp} format="pill" />
-        <RecordField label={fieldLabel('skateparks_spots', 'standort')} value={record.fields.standort?.info ?? (record.fields.standort ? `${record.fields.standort.lat}, ${record.fields.standort.long}` : null)} />
+        <RecordField label={fieldLabel('skateparks_spots', 'standort')}>
+          {record.fields.standort ? (
+            <div className="space-y-1">
+              <div>{record.fields.standort.info ?? `${record.fields.standort.lat}, ${record.fields.standort.long}`}</div>
+              {/* Directions links — the map popup is hover-fleeting; the overlay
+                  is the only mobile-reachable place for navigation. */}
+              <MapRouteLinks lat={record.fields.standort.lat} long={record.fields.standort.long} />
+            </div>
+          ) : '—'}
+        </RecordField>
         <RecordField label={fieldLabel('skateparks_spots', 'website')} value={record.fields.website} format="url" />
       </RecordSection>
 

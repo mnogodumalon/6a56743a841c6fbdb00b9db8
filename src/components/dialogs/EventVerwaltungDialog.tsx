@@ -275,7 +275,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         }
       }
       const photoContext = contextParts.length ? contextParts.join('\n') : undefined;
-      const schema = `{\n  "titel": string | null, // Titel des Events\n  "kategorie": LookupValue | null, // Kategorie (select one key: "contest" | "jam" | "demo" | "workshop" | "sonstiges") mapping: contest=Contest, jam=Jam Session, demo=Demo, workshop=Workshop, sonstiges=Sonstiges\n  "datum_uhrzeit": string | null, // YYYY-MM-DDTHH:MM\n  "beschreibung": string | null, // Beschreibung\n  "skill_level": LookupValue | null, // Skill-Level (select one key: "fortgeschritten" | "profi" | "alle_levels" | "anfaenger") mapping: fortgeschritten=Fortgeschritten, profi=Profi, alle_levels=Alle Levels, anfaenger=Anfänger\n  "max_teilnehmer": number | null, // Maximale Teilnehmerzahl\n  "startgebuehr": number | null, // Startgebühr (€)\n  "ort": string | null, // Display name from Skateparks & Spots (see <available-records>)\n  "kontakt_email": string | null, // Kontakt-E-Mail\n  "event_website": string | null, // Website des Events\n  "kontakt_telefon": string | null, // Kontakt-Telefonnummer\n}`;
+      const schema = `{\n  "titel": string | null, // Titel des Events\n  "kategorie": LookupValue | null, // Kategorie (select one key: "contest" | "jam" | "demo" | "workshop" | "sonstiges") mapping: contest=Contest, jam=Jam Session, demo=Demo, workshop=Workshop, sonstiges=Sonstiges\n  "datum_uhrzeit": string | null, // YYYY-MM-DDTHH:MM\n  "beschreibung": string | null, // Beschreibung\n  "skill_level": LookupValue | null, // Skill-Level (select one key: "anfaenger" | "fortgeschritten" | "profi" | "alle_levels") mapping: anfaenger=Anfänger, fortgeschritten=Fortgeschritten, profi=Profi, alle_levels=Alle Levels\n  "max_teilnehmer": number | null, // Maximale Teilnehmerzahl\n  "startgebuehr": number | null, // Startgebühr (€)\n  "ort": string | null, // Display name from Skateparks & Spots (see <available-records>)\n  "kontakt_email": string | null, // Kontakt-E-Mail\n  "event_website": string | null, // Website des Events\n  "kontakt_telefon": string | null, // Kontakt-Telefonnummer\n  "notizen": string | null, // Notizen\n}`;
       const raw = await extractFromInput<Record<string, unknown>>(schema, {
         dataUri: uri,
         userText: aiText.trim() || undefined,
@@ -479,6 +479,19 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
           <button
             type="button"
             role="radio"
+            aria-checked={lookupKey(fields.skill_level) === 'anfaenger'}
+            onClick={() => setFields(f => ({ ...f, skill_level: (lookupKey(f.skill_level) === 'anfaenger' ? undefined : 'anfaenger') as any }))}
+            className={`inline-flex items-center justify-center min-h-9 max-sm:min-h-11 max-sm:px-4 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+              lookupKey(fields.skill_level) === 'anfaenger'
+                ? 'bg-foreground text-background border-foreground'
+                : 'bg-background text-foreground border-input hover:bg-accent'
+            }`}
+          >
+            {lookupLabel('event_verwaltung', 'skill_level', 'anfaenger') ?? 'Anfänger'}
+          </button>
+          <button
+            type="button"
+            role="radio"
             aria-checked={lookupKey(fields.skill_level) === 'fortgeschritten'}
             onClick={() => setFields(f => ({ ...f, skill_level: (lookupKey(f.skill_level) === 'fortgeschritten' ? undefined : 'fortgeschritten') as any }))}
             className={`inline-flex items-center justify-center min-h-9 max-sm:min-h-11 max-sm:px-4 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
@@ -514,19 +527,6 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
             }`}
           >
             {lookupLabel('event_verwaltung', 'skill_level', 'alle_levels') ?? 'Alle Levels'}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={lookupKey(fields.skill_level) === 'anfaenger'}
-            onClick={() => setFields(f => ({ ...f, skill_level: (lookupKey(f.skill_level) === 'anfaenger' ? undefined : 'anfaenger') as any }))}
-            className={`inline-flex items-center justify-center min-h-9 max-sm:min-h-11 max-sm:px-4 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-              lookupKey(fields.skill_level) === 'anfaenger'
-                ? 'bg-foreground text-background border-foreground'
-                : 'bg-background text-foreground border-input hover:bg-accent'
-            }`}
-          >
-            {lookupLabel('event_verwaltung', 'skill_level', 'anfaenger') ?? 'Anfänger'}
           </button>
         </div>
       </div>
@@ -681,6 +681,18 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         />
       </div>
     ),
+    'notizen': (
+      <div key="notizen" className="space-y-1.5">
+        <Label htmlFor="notizen">{fieldLabel('event_verwaltung', 'notizen')}</Label>
+        <Textarea
+          id="notizen"
+          placeholder=""
+          value={fields.notizen ?? ''}
+          onChange={e => setFields(f => ({ ...f, notizen: e.target.value }))}
+          rows={3}
+        />
+      </div>
+    ),
   };
   const orderedFields = applyFieldOrder(Object.keys(fieldBlocks), formEnhancements.fieldOrder);
   const orderedFieldsKey = orderedFields.map((it) => typeof it === 'string' ? it : it.row.join('+')).join(',');
@@ -695,7 +707,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
   //     kein passendes Backend-Feld in orderedFields) erscheinen NICHT als
   //     Input, sondern unten als kompakte 'Berechnungen'-Übersicht oder als
   //     Inline-Hint unter dem letzten beitragenden Input.
-  const FIELD_LABELS: Record<string, string> = {"titel": "Titel des Events", "kategorie": "Kategorie", "datum_uhrzeit": "Datum und Uhrzeit", "beschreibung": "Beschreibung", "skill_level": "Skill-Level", "max_teilnehmer": "Maximale Teilnehmerzahl", "startgebuehr": "Startgebühr (€)", "ort": "Ort", "kontakt_email": "Kontakt-E-Mail", "event_website": "Website des Events", "flyer": "Flyer / Bild", "kontakt_telefon": "Kontakt-Telefonnummer"};
+  const FIELD_LABELS: Record<string, string> = {"titel": "Titel des Events", "kategorie": "Kategorie", "datum_uhrzeit": "Datum und Uhrzeit", "beschreibung": "Beschreibung", "skill_level": "Skill-Level", "max_teilnehmer": "Maximale Teilnehmerzahl", "startgebuehr": "Startgebühr (€)", "ort": "Ort", "kontakt_email": "Kontakt-E-Mail", "event_website": "Website des Events", "flyer": "Flyer / Bild", "kontakt_telefon": "Kontakt-Telefonnummer", "notizen": "Notizen"};
   const CURRENCY_KEYS = new Set<string>(["startgebuehr"]);
   // Applookup-Referenz-Labels: pro applookup-Feld in dieser Form (ownKey)
   // eine Map { lookupKey: label } für ALLE Felder des Target-Schemas. Wird

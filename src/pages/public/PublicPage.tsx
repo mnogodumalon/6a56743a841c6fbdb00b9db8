@@ -30,7 +30,7 @@ export default function PublicPage() {
   useEffect(() => {
     let cancelled = false;
     document.title = APP_TITLE;
-    configForTitle ??= loadPublicPagesConfig();
+    configForTitle ??= loadPublicPagesConfig(slug);
     configForTitle.then((cfg) => {
       const title = slug ? cfg?.pages[slug]?.title : undefined;
       if (!cancelled && title) document.title = `${title} – ${APP_TITLE}`;

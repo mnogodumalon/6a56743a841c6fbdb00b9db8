@@ -28,6 +28,11 @@ const ALLOWED_AT = [
   '@/components/widgets/',
   '@/lib/utils',
   '@/lib/formatters',
+  // The journey layer (port, rules, useStepForm, plan runner, public adapter)
+  // is door-agnostic by design — the internal adapter lives under
+  // '@/services/', which stays forbidden here.
+  '@/lib/journey',
+  '@/lib/journey/',
   '@/i18n',
   '@/types/',
 ];
@@ -65,6 +70,45 @@ for (const file of pageFiles) {
   if (restUrl) {
     const line = src.slice(0, restUrl.index).split('\n').length;
     errors.push(`${file}:${line}: reference to the authenticated /rest surface — public pages must not build /rest URLs (the anonymous surface rejects them); use recordRef(cfg, page, appId, recordId) from '@/lib/publicClient', or pass a reference URL through exactly as a list response returned it`);
+  }
+  // In-page anchors are broken by design here: the app is HASH-routed, so an
+  // href of "#anfrage" REPLACES the route (from the public slug route to a
+  // route named anfrage) and navigates the visitor off the page instead of
+  // scrolling. Live-proven by a hero CTA that kicked every visitor back to
+  // the router. Only hrefs continuing with a slash are real routes.
+  const ANCHOR_RE = /href\s*=\s*[{]?\s*["'`]#(?!\/)/g;
+  let anchor;
+  while ((anchor = ANCHOR_RE.exec(src)) !== null) {
+    const line = src.slice(0, anchor.index).split('\n').length;
+    errors.push(`${file}:${line}: in-page anchor href — the app is hash-routed, so this REPLACES the route and navigates the visitor off the page; scroll with a button + ref.scrollIntoView({ behavior: 'smooth' }) instead`);
+  }
+  // Root-relative hrefs are broken by design as well: the SPA is deployed
+  // under /objects/<id>/, so href="/#/public/x" resolves against the SITE
+  // root and dumps the visitor on the platform, not the dashboard. This is
+  // the historic evasion of the anchor rule above — forbidden href="#…",
+  // a live lane wrote href="/#/…", which passed the gate and broke worse.
+  const ROOT_HREF_RE = /href\s*=\s*[{]?\s*["'`]\//g;
+  let rootHref;
+  while ((rootHref = ROOT_HREF_RE.exec(src)) !== null) {
+    const line = src.slice(0, rootHref.index).split('\n').length;
+    errors.push(`${file}:${line}: root-relative href — the app is deployed under a sub-path, so "/…" resolves against the site root and throws the visitor off the dashboard; navigate page-to-page with react-router's <Link to="/public/<slug>">, and use a full https:// URL for external targets`);
+  }
+  // Router targets outside /public bounce an anonymous visitor into the
+  // authenticated shell. A public page may only navigate to public pages.
+  const INTERNAL_NAV_RE = /(?:to\s*=\s*[{]?\s*|navigate\(\s*)["'`]\/(?!public\b)/g;
+  let internalNav;
+  while ((internalNav = INTERNAL_NAV_RE.exec(src)) !== null) {
+    const line = src.slice(0, internalNav.index).split('\n').length;
+    errors.push(`${file}:${line}: navigation target outside /public — an anonymous visitor has no session there and gets bounced; public pages may only link to other public pages (<Link to="/public/<slug>">)`);
+  }
+  // The hosted-page look is standardized by the shell's card. A wizard fits
+  // inside it (the stepper is compact) — opting out with `plain` made two
+  // live dashboards on the SAME scaffold version look like different
+  // products, so the combination is rejected outright.
+  const plainWizard = src.includes('IntentWizardShell')
+    && /<PublicShell\b[^>]*\bplain\b/.test(src);
+  if (plainWizard) {
+    errors.push(`${file}: PublicShell \`plain\` combined with IntentWizardShell — wizards render INSIDE the shell's card (drop \`plain\`); the standardized hosted look must be identical across pages`);
   }
   let m;
   while ((m = IMPORT_RE.exec(src)) !== null) {
@@ -149,7 +193,44 @@ for (const [slug, page] of surfacePages) {
   if (!page.component) {
     errors.push(`${SURFACE}: page '${slug}' has no "component" — declare its data as additional endpoints of the page that shows it (one page may carry several list/create endpoints); extra carrier pages each force a separate publish`);
   }
+  // A page reached with `?x=<record_id>` MUST declare that parameter: the
+  // management UI can otherwise only offer the bare page URL, which for such
+  // a page is a dead end. Live proof: an invitation page demanded
+  // ?sitzungId=… and nothing in the whole dashboard produced one — correct
+  // and unreachable at the same time.
+  const src = existsSync(join(PAGES_DIR, `${page.component}.tsx`))
+    ? readFileSync(join(PAGES_DIR, `${page.component}.tsx`), 'utf8')
+    : '';
+  const readsParam = /useSearchParams|searchParams|URLSearchParams/.test(src);
+  if (readsParam && !page.link_param) {
+    errors.push(`${SURFACE}: page '${slug}' reads a query parameter but declares no "link_param" — without it the owner only gets the bare page URL, which shows "link incomplete". Add link_param: { name, entity, label_field } (entity needs a list endpoint on this page).`);
+  }
+  if (page.link_param) {
+    const lp = page.link_param;
+    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(String(lp.name || ''))) {
+      errors.push(`${SURFACE}: page '${slug}' link_param.name '${lp.name}' is not a query-parameter identifier`);
+    }
+    if (readsParam && src && !src.includes(String(lp.name || ' '))) {
+      errors.push(`${SURFACE}: page '${slug}' declares link_param '${lp.name}' but ${page.component}.tsx never reads that name — the generated links would carry a parameter the page ignores`);
+    }
+    const listed = (page.endpoints || []).some(e => e.op === 'list' && e.entity === lp.entity);
+    if (!listed) {
+      errors.push(`${SURFACE}: page '${slug}' link_param entity '${lp.entity}' has no list endpoint on this page — the page could not read the linked record`);
+    }
+  }
   for (const ep of page.endpoints || []) {
+    // A public page can READ and CREATE — nothing else. There is no update,
+    // no delete: a grant that lets an anonymous visitor MODIFY an existing
+    // record is not something the platform hands out. A live build declared
+    // `op: 'update'` (to append a member to a meeting's participant list),
+    // hand-rolled its own PATCH, passed every gate, and was thrown away by
+    // the ingest AFTER the deploy — 304 lane-seconds for nothing, and the
+    // dashboard was left without any public page at all.
+    // "Register for an existing X" is therefore a CREATE in a registration
+    // entity, never an edit of X.
+    if (!['list', 'create'].includes(ep.op)) {
+      errors.push(`${SURFACE}: page '${slug}' endpoint '${ep.entity}' declares op '${ep.op}' — only 'list' (read) and 'create' (anonymous submit) exist. An anonymous visitor can never MODIFY an existing record: model the action as a create in a registration entity. If this page cannot be built that way, write _public/<slug>.blocked.json instead (see the public-builder skill) — never invent an op.`);
+    }
     if (ep.scope && !ep.scope_description) {
       errors.push(`${SURFACE}: page '${slug}' endpoint '${ep.entity}' has a scope but no scope_description — the owner confirms that text when publishing, never the vSQL`);
     }
@@ -196,11 +277,15 @@ for (const [slug, page] of surfacePages) {
     if (ep.op === 'list' && !(Array.isArray(ep.fields) && ep.fields.length > 0)) {
       errors.push(`${SURFACE}: page '${slug}' endpoint '${ep.entity}' is a list without a "fields" projection — name exactly the columns the page shows`);
     }
-    if (ep.op === 'list' && Array.isArray(ep.fields) && appMeta) {
+    // file fields: READING is fine — a file URL answers an anonymous GET with
+    // 200 and `cache-control: public` (measured), so a listed logo or hero
+    // image simply renders. UPLOADING is not: /files is not grantable, so a
+    // visitor has nowhere to put the bytes and the service rejects the page.
+    if (ep.op === 'create' && Array.isArray(ep.fields) && appMeta) {
       const controls = appMeta.apps?.[ep.entity]?.controls || {};
       for (const key of ep.fields) {
         if (controls[key]?.fulltype?.startsWith('file')) {
-          errors.push(`${SURFACE}: page '${slug}' endpoint '${ep.entity}' lists file field '${key}' — attachments cannot be exposed on public lists, drop it`);
+          errors.push(`${SURFACE}: page '${slug}' endpoint '${ep.entity}' asks visitors to submit file field '${key}' — anonymous UPLOAD is impossible (/files is not grantable); drop it from the create endpoint (listing a file field for DISPLAY is fine)`);
         }
       }
     }

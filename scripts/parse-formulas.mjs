@@ -173,8 +173,8 @@ function renderTree(node) {
 // arrow functions only appear at entry level, so depth tracking + string-
 // literal awareness is enough.
 
-function findComputedBlock(src) {
-  const m = src.match(/computed\s*:\s*\{/);
+function findBlock(src, headRe) {
+  const m = src.match(headRe);
   if (!m) return null;
   const openIdx = m.index + m[0].length - 1; // position of '{'
   let depth = 0, i = openIdx, inStr = null, esc = false;
@@ -192,6 +192,33 @@ function findComputedBlock(src) {
     i++;
   }
   return null;
+}
+
+function findComputedBlock(src) {
+  return findBlock(src, /computed\s*:\s*\{/);
+}
+
+// SELF-HEAL 3: a `defaults` entry whose value is `undefined` (or `null`).
+// DefaultSpec has no undefined member — the sub-agent writes
+// `'feld': undefined` to mean "no default for this field", which is TS2322
+// and costs a build round (live: Fahrzeuge `kunde`). The intent and the fix
+// are the same thing: the entry must simply not be there. Runs on every
+// target file, independent of the computed block.
+function stripUndefinedDefaults(src) {
+  const block = findBlock(src, /defaults\s*:\s*\{/);
+  if (!block) return { src, removed: 0 };
+  const body = stripComments(src.slice(block.open + 1, block.close));
+  const entries = splitEntries(body);
+  const kept = [];
+  let removed = 0;
+  for (const raw of entries) {
+    const ent = parseEntry(raw);
+    if (ent && (ent.value === 'undefined' || ent.value === 'null')) { removed++; continue; }
+    kept.push('    ' + raw.trim());
+  }
+  if (removed === 0) return { src, removed: 0 };
+  const rendered = kept.length ? '{\n' + kept.join(',\n') + ',\n  }' : '{}';
+  return { src: src.slice(0, block.open) + rendered + src.slice(block.close + 1), removed };
 }
 
 function stripComments(s) {
@@ -498,8 +525,12 @@ async function main() {
       console.warn(`[parse-formulas] error in ${name}: ${err.message}`);
       res = { src, changed: false, count: 0, dropped: 0, deps: 0, applookupRefs: 0 };
     }
-    const healed = ensureExports(res.src);
-    if (healed !== res.src) {
+    const defaultsHeal = stripUndefinedDefaults(res.src);
+    if (defaultsHeal.removed) {
+      console.log(`[parse-formulas] ${name}: removed ${defaultsHeal.removed} undefined default(s) (TS2322 heal — an omitted field needs no entry)`);
+    }
+    const healed = ensureExports(defaultsHeal.src);
+    if (healed !== defaultsHeal.src) {
       console.log(`[parse-formulas] ${name}: appended missing computedDeps/computedApplookupRefs export(s)`);
     }
     if (res.healedParams) {

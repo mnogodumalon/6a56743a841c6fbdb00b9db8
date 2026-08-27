@@ -80,6 +80,14 @@ const done = [];
 const same = [];
 
 // ── src/App.tsx: lazy import + route ───────────────────────────────────────
+// The local identifier is ALWAYS `Intent${page}` — never the bare component
+// name. A flow page may legitimately share its name with an entity CRUD page
+// (live-proven twice: JahresinspektionPlanenPage was both the wish-app's CRUD
+// page and the flow page → TS2440, a repair agent per build). The alias makes
+// that collision class impossible; the scaffold never emits Intent*-named
+// pages, so the alias itself cannot collide.
+const ident = `Intent${page}`;
+
 let app = read(APP);
 const appBefore = app;
 
@@ -88,9 +96,19 @@ if (app.includes(`@/pages/intents/${page}`)) {
 } else {
   app = insertBeforeMarker(
     app, '// </custom:imports>',
-    `const ${page} = lazy(() => import('@/pages/intents/${page}'));`, APP,
+    `const ${ident} = lazy(() => import('@/pages/intents/${page}'));`, APP,
   );
-  done.push(`${APP}: lazy import for ${page}`);
+  done.push(`${APP}: lazy import for ${page} (as ${ident})`);
+}
+
+// The lazy chunk of a flow used to load behind `fallback={null}` — a white
+// page for the whole download. The scaffold's DashboardSkeleton is the
+// fallback now; its import lives inside <custom:imports> so a dashboard
+// without flows never carries an unused import (tsc noUnusedLocals).
+const SKELETON_IMPORT = "import { DashboardSkeleton } from '@/components/DashboardStates';";
+if (!app.includes("from '@/components/DashboardStates'")) {
+  app = insertBeforeMarker(app, '// </custom:imports>', SKELETON_IMPORT, APP);
+  done.push(`${APP}: DashboardSkeleton import (route fallback)`);
 }
 
 if (new RegExp(`<Route\\s+path=["']intents/${slug}["']`).test(app)) {
@@ -98,7 +116,7 @@ if (new RegExp(`<Route\\s+path=["']intents/${slug}["']`).test(app)) {
 } else {
   app = insertBeforeMarker(
     app, '{/* </custom:routes> */}',
-    `<Route path="intents/${slug}" element={<Suspense fallback={null}><${page} /></Suspense>} />`, APP,
+    `<Route path="intents/${slug}" element={<Suspense fallback={<DashboardSkeleton />}><${ident} /></Suspense>} />`, APP,
   );
   done.push(`${APP}: route intents/${slug}`);
 }
@@ -140,8 +158,8 @@ if (!entriesBlock) fail(`${REGISTRY}: marker '// <custom:intents>' not found —
 if (entriesBlock[1].includes(`path: '/intents/${slug}'`)) {
   same.push(`${REGISTRY}: entry /intents/${slug} already present`);
 } else {
-  // Label: preferred is a JSON object with all three UI languages
-  // ('{"de":"Neue Buchung","en":"New booking","cs":"Nová rezervace"}');
+  // Label: preferred is a JSON object with both UI languages
+  // ('{"de":"Neue Buchung","en":"New booking"}');
   // a plain string stays valid and renders unchanged in every language.
   let labelLiteral = `'${esc(label)}'`;
   if (label.trim().startsWith('{')) {

@@ -92,8 +92,12 @@
  *     columns               KanbanColumn[]  — ordered columns { key, label: string, tone? }; lowercase `columns`.
  *                                             `label` is a plain STRING (schema lookup label) — reusable in toasts,
  *                                             aria texts and LookupValue writes; rich headers via renderColumnHeader.
- *                                             Build them from the schema's lookup values:
+ *                                             Build them from the schema's lookup values, INSIDE the
+ *                                             component body — never as a module-scope const:
  *                                             (LOOKUP_OPTIONS['<app>']?.['<statusfeld>'] ?? []).map(o => ({ key: o.key, label: o.label }))
+ *                                             `o.label` is a locale-aware GETTER; hoisted to module
+ *                                             scope it evaluates once at import and freezes that one
+ *                                             language (check-dashboard gate 22 rejects the hoisted form).
  *                                             Declare EVERY lookup value — never drop one to save width (see
  *                                             defaultCollapsed; an undeclared value sends its cards to the fallback).
  *     defaultCollapsed?     string[]        — column keys that START collapsed (uncontrolled seed). A collapsed
@@ -179,7 +183,7 @@ import { Button } from '@/components/ui/button';
 // Shared widget MECHANICS (M4) — tone class-maps, drag-FSM core.
 // Sister widgets never import each other; ALL import './primitives'.
 import { TONE_DOT, TONE_ACCENT, usePointerDrag, useRejectNotice, useNarrowContainer, type DragGesture, type WriteResult } from './primitives';
-import { locale as i18nLocale, type Locale } from '@/i18n';
+import { coreLocale as i18nLocale, type CoreLocale as Locale } from '@/i18n';
 
 // The widget's OWN chrome strings — indexed at RENDER time (`KB[i18nLocale]`),
 // never hoisted into a module constant.
@@ -202,13 +206,6 @@ const KB: Record<Locale, {
     expandColumn: (label, n) => `Expand column ${label} (${n})`,
     collapseColumn: (label) => `Collapse column ${label}`,
     newCard: (label) => `New card — ${label}`,
-  },
-  cs: {
-    noStatus: 'Bez stavu', dismiss: 'Zavřít hlášení', card: 'Karta',
-    errorTitle: 'Nástěnku se nepodařilo načíst', retry: 'Zkusit znovu',
-    expandColumn: (label, n) => `Rozbalit sloupec ${label} (${n})`,
-    collapseColumn: (label) => `Sbalit sloupec ${label}`,
-    newCard: (label) => `Nová karta — ${label}`,
   },
 };
 

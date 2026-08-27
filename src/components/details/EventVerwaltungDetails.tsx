@@ -15,7 +15,7 @@ export interface EventVerwaltungDetailsProps {
   skateparksSpotsList: SkateparksSpots[];
   /** Klick auf die SkateparksSpots-Relation → overlay.push auf dessen Detail. */
   onOpenSkateparksSpots?: (record: SkateparksSpots) => void;
-  /** 1:N „Anmeldungen": VOLLE Liste — der Block filtert auf diesen Record. */
+  /** 1:N „Anmeldungen" (event): VOLLE Liste — der Block filtert auf diesen Record. */
   anmeldungenList: Anmeldungen[];
   /** Zeilen-Klick → overlay.push auf das Anmeldungen-Detail (nie der Edit-Dialog). */
   onOpenAnmeldungen: (record: Anmeldungen) => void;
@@ -50,6 +50,7 @@ export function EventVerwaltungDetails({
           ) : '—'}
         </RecordField>
         <RecordField label={fieldLabel('event_verwaltung', 'kontakt_telefon')} value={record.fields.kontakt_telefon} format="text" />
+        <RecordField label={fieldLabel('event_verwaltung', 'notizen')} value={record.fields.notizen} format="longtext" className="md:col-span-2" />
       </RecordSection>
 
       {/* N:1 — verknüpfte Records: IMMER klickbar, nie eine Text-Sackgasse. */}

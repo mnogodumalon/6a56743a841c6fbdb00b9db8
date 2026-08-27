@@ -1,59 +1,79 @@
 /**
  * src/i18n/index.ts — runtime language layer (generated). NEVER edit.
  *
- * The dashboard ships ALL locales (de/en/cs); the active one is chosen at
- * runtime: LA profile language → localStorage 'app-locale' (header switcher)
- * → build locale. Switching remounts the tree (LocaleGate in App.tsx), so
- * plain calls inside component bodies stay correct — never hoist their
- * results into module-scope constants.
+ * The dashboard ships the CORE locales de/en baked in; ADDITIONAL locales
+ * (e.g. ru) load as overlays from `locales/{lang}.json` next to the bundle —
+ * uploaded server-side, no rebuild needed. The active locale is chosen at
+ * runtime: LA profile language → localStorage 'app-locale' → build locale.
+ * Switching remounts the tree (LocaleGate in App.tsx), so plain calls inside
+ * component bodies stay correct — never hoist their results into module-scope
+ * constants.
  *
  * Scaffold chrome and structure labels are already localized — read them,
  * never re-type them:
  *   t(key, params?)                 — catalog chrome text ('save', 'search', …)
+ *   tp(key, n, params?)             — plural-aware: catalog keys key_one/key_few/
+ *                                     key_many/key_other (Intl.PluralRules)
  *   appLabel(entityKey)             — localized entity display name
  *   fieldLabel(entityKey, field)    — localized field label
  *   lookupLabel(entityKey, field, optionKey) — lookup option label (null = unknown)
  *   dateFormat()/dateTimeFormat()/dateFnsLocale()/localeTag()/CURRENCY
  *
- * Text YOU write (overview, intent pages, bespoke public pages) must work in
- * all three languages. Define it ONCE via makeT and render through it:
+ * Text YOU write (overview, intent pages, bespoke public pages): write it
+ * ONCE in the build language and MARK it with tx — the pipeline generates
+ * every translation after you finish. NEVER write translations yourself,
+ * NEVER build translation tables.
  *
- *   import { makeT, appLabel } from '@/i18n';
- *   const tt = makeT({
- *     de: { util: 'Auslastung', open: '{n} offene Aufträge' },
- *     en: { util: 'Utilization', open: '{n} open orders' },
- *     cs: { util: 'Vytížení', open: '{n} otevřených zakázek' },
- *   });
- *   … <h2>{tt('util')}</h2> <p>{tt('open', { n: count })}</p>
+ *   import { tx, appLabel } from '@/i18n';
+ *   <h2>{tx('Auslastung')}</h2>
+ *   label: tx('Bearbeiten')
+ *   toast(tx`${name} — zurückgegeben`)   // tagged template for interpolation
  *
- * WRONG: <h2>Auslastung</h2>            (one language, switcher breaks it)
- * RIGHT: <h2>{tt('util')}</h2>          (three languages, defined once)
+ * The tagged form keeps expressions OUT of the sentence ({0}/{1} slots), so
+ * it stays translatable — never assemble text with plain `${…}` literals or
+ * string concatenation. tx at MODULE SCOPE freezes one language at import
+ * time — call it inside the component body only. Deliberate exceptions
+ * (brand names, codes) take an i18n-exempt comment on the line.
+ *
+ * WRONG: <h2>Auslastung</h2>            (unmarked — frozen in one language)
+ * WRONG: const T = tx('Auslastung');    (module scope — frozen at import)
+ * RIGHT: <h2>{tx('Auslastung')}</h2>    (translated at render time)
+ *
+ * makeT (LEGACY): older pages carry per-page {de,en} tables and render
+ * tt('key') — still fully supported, but do not write new ones.
  */
-import { de as dfDe, cs as dfCs } from 'date-fns/locale';
+import { de as dfDe } from 'date-fns/locale';
 import type { Locale as DateFnsLocale } from 'date-fns';
+import { REST_URL } from '@/lib/origin';
 
-export type Locale = 'de' | 'en' | 'cs';
-export const LOCALES: Locale[] = ['de', 'en', 'cs'];
-export const LOCALE_NAMES: Record<Locale, string> = { de: 'Deutsch', en: 'English', cs: 'Čeština' };
+// Core = baked into the bundle. Locale stays an OPEN string type so overlay
+// languages added later never invalidate today's code (`string & {}` keeps
+// core autocompletion without closing the union).
+export type CoreLocale = 'de' | 'en';
+export type Locale = CoreLocale | (string & {});
+export const CORE_LOCALES: CoreLocale[] = ['de', 'en'];
+export const LOCALES: Locale[] = [...CORE_LOCALES];
+export const LOCALE_NAMES: Record<string, string> = { de: 'Deutsch', en: 'English' };
 
-export const BUILD_LOCALE: Locale = 'de';
+export const BUILD_LOCALE: CoreLocale = 'de';
 
-// Currency is a property of the DATA, not of the UI language — it stays
-// fixed at the build-time choice while number formatting follows the locale.
+// Currency is a property of the DATA, never of the UI language.
 export const CURRENCY = 'EUR';
 
 const STORAGE_KEY = 'app-locale';
-const LA_API_URL = 'https://my.living-apps.de/rest';
+const LA_API_URL = REST_URL;
 
 // ── Generated catalogs ─────────────────────────────────────────────
-// UI chrome strings (generator UI_TEXTS, all locales):
-export const UI_CATALOG: Record<Locale, Record<string, string>> = {
+// UI chrome strings (generator UI_TEXTS, all core locales):
+export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
   "de": {
     "overview": "Übersicht",
     "navigation": "Navigation",
     "cancel": "Abbrechen",
     "delete": "Löschen",
     "save": "Speichern",
+    "crud_created": "erstellt",
+    "crud_updated": "aktualisiert",
     "saving": "Speichern...",
     "submit_error": "Speichern fehlgeschlagen.",
     "create": "Erstellen",
@@ -111,7 +131,7 @@ export const UI_CATALOG: Record<Locale, Record<string, string>> = {
     "edit_dashboard": "Klar Lab",
     "developer": "Entwickler",
     "beta_features": "Beta Features",
-    "actions_section": "Aktionen",
+    "actions_section": "Produktivität",
     "public_pages_section": "Öffentliche Seiten",
     "legal_imprint": "Impressum",
     "legal_privacy": "Datenschutz",
@@ -227,6 +247,16 @@ export const UI_CATALOG: Record<Locale, Record<string, string>> = {
     "updating": "Aktualisiert…",
     "update_verifying": "Version wird bestätigt…",
     "update_verify_timeout": "Version konnte nicht bestätigt werden. Bitte Seite neu laden.",
+    "update_busy_queued": "Ein Build läuft gerade (gestartet vor {min} min). Das Update ist vorgemerkt und wird danach automatisch ausgeführt.",
+    "busy_build_running": "Für dieses Dashboard läuft gerade ein Build. Bitte versuche es in ein paar Minuten erneut.",
+    "vc_build_pill": "Deine Änderungen werden eingebaut",
+    "vc_build_initial": "Deine Anwendung wird fertig eingerichtet",
+    "vc_build_update": "Dashboard wird aktualisiert",
+    "vc_build_failed": "Die letzte Aktualisierung ist fehlgeschlagen — deine Änderung ist noch nicht im Dashboard.",
+    "vc_updated_toast": "Dashboard wurde aktualisiert",
+    "vc_updated_toast_desc": "Die Struktur hat sich geändert — offene Formulare bitte neu öffnen.",
+    "vc_updated_reload": "Neu laden",
+    "vc_updated_later": "Später",
     "rollback_label": "Zurück auf",
     "rollback_confirm_title": "Version zurücksetzen?",
     "rollback_confirm_desc": "Die Anwendung wird auf die ausgewählte Version zurückgesetzt.",
@@ -313,6 +343,13 @@ export const UI_CATALOG: Record<Locale, Record<string, string>> = {
     "ppa_cannot_line": "bestehende Daten sehen oder ändern.",
     "ppa_cancel": "Abbrechen",
     "ppa_confirm_publish": "Veröffentlichen",
+    "ps_preview_banner": "Vorschau — nur du siehst diese Seite. Absenden legt einen echten Eintrag an.",
+    "ppa_preview": "Vorschau",
+    "ppa_links": "Links",
+    "ppa_links_title": "Link pro Eintrag",
+    "ppa_links_intro": "Diese Seite braucht einen Eintrag im Link. Kopiere den passenden Link und verschicke ihn.",
+    "ppa_links_empty": "Noch keine Einträge vorhanden.",
+    "ppa_links_hint": "Der Link ohne Eintrag zeigt nur einen Hinweis — verschicke immer einen Link aus dieser Liste.",
     "ppa_fields": "Felder",
     "ppa_fields_title": "Felder auswählen",
     "ppa_fields_intro": "Wähle, welche Felder im öffentlichen Formular erscheinen.",
@@ -324,12 +361,91 @@ export const UI_CATALOG: Record<Locale, Record<string, string>> = {
     "retry": "Erneut versuchen",
     "data_load_failed": "Fehler beim Laden der Daten",
     "wizard_back_to_dashboard": "Zurück zum Dashboard",
+    "v_required": "„{label}\" ist ein Pflichtfeld",
+    "v_email": "„{label}\" ist keine gültige E-Mail-Adresse",
+    "v_tel": "„{label}\" ist keine gültige Telefonnummer",
+    "v_url": "„{label}\" ist keine gültige Web-Adresse",
+    "v_number": "„{label}\" muss eine Zahl sein",
+    "v_maxlength": "„{label}\" darf höchstens {max} Zeichen haben",
+    "v_option": "„{label}\" hat einen ungültigen Wert",
+    "v_range_order": "„{to}\" muss nach „{from}\" liegen",
+    "v_range_blocked": "Dieser Zeitraum ist nicht frei — bitte andere Tage wählen",
+    "v_min_nights_one": "Mindestaufenthalt: eine Nacht",
+    "v_min_nights_other": "Mindestaufenthalt: {n} Nächte",
+    "v_nights_one": "{n} Nacht",
+    "v_nights_other": "{n} Nächte",
+    "v_yes": "Ja",
+    "v_no": "Nein",
+    "v_ok": "Eingabe passt",
+    "es_title_one": "Bitte korrigiere eine Angabe",
+    "es_title_other": "Bitte korrigiere {n} Angaben",
+    "ss_title": "Alles richtig?",
+    "ss_change": "Ändern",
+    "ss_missing": "Noch offen:",
+    "ss_confirm": "Bestätigen",
+    "ss_submitting": "Wird gespeichert …",
+    "ss_error_title": "Das hat nicht geklappt — deine Eingaben sind noch da.",
+    "ss_retry": "Erneut versuchen",
+    "ss_step_done": "angelegt",
+    "ss_step_failed": "fehlgeschlagen",
+    "ss_step_running": "wird angelegt …",
+    "ss_step_idle": "ausstehend",
+    "ss_partial": "{done} ist gesichert. Ein erneuter Versuch legt nichts doppelt an.",
+    "ss_step_of": "Schritt {n}",
+    "sx_reference": "Referenz",
+    "sx_copy": "Kopieren",
+    "sx_copied": "Kopiert",
+    "sx_print": "Bestätigung drucken",
+    "sx_next_title": "Wie geht es weiter?",
+    "sx_default_title": "{entity} angelegt",
+    "sx_saved": "Gespeichert",
+    "sn_back": "Zurück",
+    "sn_next": "Weiter",
+    "sn_next_to": "Weiter: {step}",
+    "sn_to_summary": "Zurück zur Zusammenfassung",
+    "wz_progress": "Schritt {n} von {total}",
+    "wz_progress_label": "Schritt {n} von {total}: {label}",
+    "wz_steps_nav": "Fortschritt",
+    "wz_step_done": "erledigt",
+    "wz_completed": "Abgeschlossen",
+    "wz_answers": "Bisherige Angaben",
+    "wz_draft_resumed": "Entwurf {when} fortgesetzt — deine Angaben sind noch da.",
+    "wz_draft_discard": "Verwerfen",
+    "wz_draft_just_now": "von eben",
+    "wz_draft_today": "von heute",
+    "wz_draft_yesterday": "von gestern",
+    "wz_draft_days_ago": "von vor {n} Tagen",
+    "wz_intro_start": "Los geht's",
+    "wz_intro_steps": "So läuft es ab:",
+    "wz_intro_needs": "Das brauchst du",
+    "wz_intro_eyebrow": "So funktioniert's",
+    "wz_intro_button": "So funktioniert's",
+    "wz_intro_close": "Schließen",
+    "wz_intro_steps_count_one": "ein Schritt",
+    "wz_intro_steps_count_other": "{n} Schritte",
+    "wz_intro_minutes": "ca. {n} Min.",
+    "wz_intro_autosave": "Deine Eingaben werden automatisch zwischengespeichert.",
+    "wz_intro_once": "Diese Einführung erscheint nur beim ersten Mal.",
+    "pf_free": "frei",
+    "pf_occupied": "belegt",
     "step_create_new": "Neu erstellen",
     "budget_none": "Kein Budget definiert",
     "budget_booked": "Gebucht",
     "budget_of": "von",
     "budget_remaining": "Verbleibend",
     "budget_over": "Budget überschritten!",
+    "arp_pick_arrival": "Anreise wählen",
+    "arp_pick_departure": "Abreise wählen",
+    "arp_nights_one": "{n} Nacht ausgewählt",
+    "arp_nights_other": "{n} Nächte ausgewählt",
+    "arp_hint_blocked": "Dieser Zeitraum ist bereits belegt.",
+    "arp_hint_min_nights": "Mindestaufenthalt: {n} Nächte",
+    "arp_legend_free": "Frei",
+    "arp_legend_blocked": "Belegt",
+    "arp_legend_selected": "Ausgewählt",
+    "arp_prev_month": "Voriger Monat",
+    "arp_next_month": "Nächster Monat",
+    "arp_clear": "Auswahl löschen",
     "combo_search": "Suchen…",
     "combo_no_match": "Kein Treffer",
     "combo_clear_selection": "Auswahl entfernen",
@@ -389,6 +505,9 @@ export const UI_CATALOG: Record<Locale, Record<string, string>> = {
     "polish_greeting_morning": "Guten Morgen!",
     "polish_greeting_day": "Guten Tag!",
     "polish_greeting_evening": "Guten Abend!",
+    "polish_greeting_morning_named": "Guten Morgen, {name}!",
+    "polish_greeting_day_named": "Guten Tag, {name}!",
+    "polish_greeting_evening_named": "Guten Abend, {name}!",
     "polish_undo": "Rückgängig",
     "attachments_upload_failed": "Datei konnte nicht hochgeladen werden.",
     "scan_error": "Scan fehlgeschlagen",
@@ -423,6 +542,8 @@ export const UI_CATALOG: Record<Locale, Record<string, string>> = {
     "cancel": "Cancel",
     "delete": "Delete",
     "save": "Save",
+    "crud_created": "created",
+    "crud_updated": "updated",
     "saving": "Saving...",
     "submit_error": "Saving failed.",
     "create": "Create",
@@ -480,7 +601,7 @@ export const UI_CATALOG: Record<Locale, Record<string, string>> = {
     "edit_dashboard": "Klar Lab",
     "developer": "Developer",
     "beta_features": "Beta Features",
-    "actions_section": "Actions",
+    "actions_section": "Productivity",
     "public_pages_section": "Public pages",
     "legal_imprint": "Imprint",
     "legal_privacy": "Privacy",
@@ -596,6 +717,16 @@ export const UI_CATALOG: Record<Locale, Record<string, string>> = {
     "updating": "Updating…",
     "update_verifying": "Confirming version…",
     "update_verify_timeout": "Could not confirm new version. Please reload the page.",
+    "update_busy_queued": "A build is already running (started {min} min ago). The update is queued and will run automatically afterwards.",
+    "busy_build_running": "A build is currently running for this dashboard. Please try again in a few minutes.",
+    "vc_build_pill": "Building in your changes",
+    "vc_build_initial": "Finishing setting up your app",
+    "vc_build_update": "Dashboard is being updated",
+    "vc_build_failed": "The last update failed — your change is not in the dashboard yet.",
+    "vc_updated_toast": "Dashboard has been updated",
+    "vc_updated_toast_desc": "The structure has changed — please reopen any open forms.",
+    "vc_updated_reload": "Reload",
+    "vc_updated_later": "Later",
     "rollback_label": "Revert to",
     "rollback_confirm_title": "Revert version?",
     "rollback_confirm_desc": "The app will be reverted to the selected version.",
@@ -682,6 +813,13 @@ export const UI_CATALOG: Record<Locale, Record<string, string>> = {
     "ppa_cannot_line": "see or change existing data.",
     "ppa_cancel": "Cancel",
     "ppa_confirm_publish": "Publish",
+    "ps_preview_banner": "Preview — only you can see this page. Submitting creates a real record.",
+    "ppa_preview": "Preview",
+    "ppa_links": "Links",
+    "ppa_links_title": "Link per record",
+    "ppa_links_intro": "This page needs a record in the link. Copy the matching link and send it out.",
+    "ppa_links_empty": "No records yet.",
+    "ppa_links_hint": "The link without a record only shows a notice — always send a link from this list.",
     "ppa_fields": "Fields",
     "ppa_fields_title": "Choose fields",
     "ppa_fields_intro": "Choose which fields appear in the public form.",
@@ -693,12 +831,91 @@ export const UI_CATALOG: Record<Locale, Record<string, string>> = {
     "retry": "Try Again",
     "data_load_failed": "Failed to load data",
     "wizard_back_to_dashboard": "Back to Dashboard",
+    "v_required": "“{label}” is required",
+    "v_email": "“{label}” is not a valid email address",
+    "v_tel": "“{label}” is not a valid phone number",
+    "v_url": "“{label}” is not a valid web address",
+    "v_number": "“{label}” must be a number",
+    "v_maxlength": "“{label}” may have at most {max} characters",
+    "v_option": "“{label}” has an invalid value",
+    "v_range_order": "“{to}” must be after “{from}”",
+    "v_range_blocked": "This period is not available — please choose other days",
+    "v_min_nights_one": "Minimum stay: one night",
+    "v_min_nights_other": "Minimum stay: {n} nights",
+    "v_nights_one": "{n} night",
+    "v_nights_other": "{n} nights",
+    "v_yes": "Yes",
+    "v_no": "No",
+    "v_ok": "Looks good",
+    "es_title_one": "Please fix one entry",
+    "es_title_other": "Please fix {n} entries",
+    "ss_title": "Check your answers",
+    "ss_change": "Change",
+    "ss_missing": "Still missing:",
+    "ss_confirm": "Confirm",
+    "ss_submitting": "Saving …",
+    "ss_error_title": "That did not work — your entries are still here.",
+    "ss_retry": "Try again",
+    "ss_step_done": "created",
+    "ss_step_failed": "failed",
+    "ss_step_running": "creating …",
+    "ss_step_idle": "pending",
+    "ss_partial": "{done} is saved. Trying again will not create duplicates.",
+    "ss_step_of": "Step {n}",
+    "sx_reference": "Reference",
+    "sx_copy": "Copy",
+    "sx_copied": "Copied",
+    "sx_print": "Print confirmation",
+    "sx_next_title": "What happens next",
+    "sx_default_title": "{entity} created",
+    "sx_saved": "Saved",
+    "sn_back": "Back",
+    "sn_next": "Continue",
+    "sn_next_to": "Continue: {step}",
+    "sn_to_summary": "Back to the summary",
+    "wz_progress": "Step {n} of {total}",
+    "wz_progress_label": "Step {n} of {total}: {label}",
+    "wz_steps_nav": "Progress",
+    "wz_step_done": "done",
+    "wz_completed": "Completed",
+    "wz_answers": "Your answers so far",
+    "wz_draft_resumed": "Draft {when} resumed — your entries are still here.",
+    "wz_draft_discard": "Discard",
+    "wz_draft_just_now": "from a moment ago",
+    "wz_draft_today": "from today",
+    "wz_draft_yesterday": "from yesterday",
+    "wz_draft_days_ago": "from {n} days ago",
+    "wz_intro_start": "Get started",
+    "wz_intro_steps": "How it works:",
+    "wz_intro_needs": "What you need",
+    "wz_intro_eyebrow": "How it works",
+    "wz_intro_button": "How it works",
+    "wz_intro_close": "Close",
+    "wz_intro_steps_count_one": "one step",
+    "wz_intro_steps_count_other": "{n} steps",
+    "wz_intro_minutes": "about {n} min",
+    "wz_intro_autosave": "Your entries are saved automatically as you go.",
+    "wz_intro_once": "This introduction shows only the first time.",
+    "pf_free": "free",
+    "pf_occupied": "booked",
     "step_create_new": "Create new",
     "budget_none": "No budget defined",
     "budget_booked": "Booked",
     "budget_of": "of",
     "budget_remaining": "Remaining",
     "budget_over": "Over budget!",
+    "arp_pick_arrival": "Select arrival",
+    "arp_pick_departure": "Select departure",
+    "arp_nights_one": "{n} night selected",
+    "arp_nights_other": "{n} nights selected",
+    "arp_hint_blocked": "This period is already booked.",
+    "arp_hint_min_nights": "Minimum stay: {n} nights",
+    "arp_legend_free": "Available",
+    "arp_legend_blocked": "Booked",
+    "arp_legend_selected": "Selected",
+    "arp_prev_month": "Previous month",
+    "arp_next_month": "Next month",
+    "arp_clear": "Clear selection",
     "combo_search": "Search…",
     "combo_no_match": "No match",
     "combo_clear_selection": "Clear selection",
@@ -758,6 +975,9 @@ export const UI_CATALOG: Record<Locale, Record<string, string>> = {
     "polish_greeting_morning": "Good morning!",
     "polish_greeting_day": "Good afternoon!",
     "polish_greeting_evening": "Good evening!",
+    "polish_greeting_morning_named": "Good morning, {name}!",
+    "polish_greeting_day_named": "Good afternoon, {name}!",
+    "polish_greeting_evening_named": "Good evening, {name}!",
     "polish_undo": "Undo",
     "attachments_upload_failed": "File could not be uploaded.",
     "scan_error": "Scan failed",
@@ -785,391 +1005,24 @@ export const UI_CATALOG: Record<Locale, Record<string, string>> = {
     "relations": "Linked",
     "not_found": "Record not found",
     "required_hint": "Required"
-  },
-  "cs": {
-    "overview": "Přehled",
-    "navigation": "Navigace",
-    "cancel": "Zrušit",
-    "delete": "Smazat",
-    "save": "Uložit",
-    "saving": "Ukládám...",
-    "submit_error": "Uložení se nezdařilo.",
-    "create": "Vytvořit",
-    "search": "Hledat...",
-    "actions": "Akce",
-    "no_results": "Nebyly nalezeny žádné výsledky.",
-    "no_data_yet": "Zatím žádné {entity}. Přidej první!",
-    "select_placeholder": "Vybrat...",
-    "confirm_delete_desc": "Opravdu chceš tento záznam smazat? Tuto akci nelze vrátit zpět.",
-    "add": "Přidat",
-    "view_entity": "Zobrazit {entity}",
-    "edit_button": "Upravit",
-    "edit_entity": "Upravit {entity}",
-    "new_entity": "Přidat {entity}",
-    "delete_entity": "Smazat {entity}",
-    "yes": "Ano",
-    "no": "Ne",
-    "search_entity": "Hledat {entity}...",
-    "in_system": "{entity} v systému",
-    "welcome": "Vítej",
-    "overview_subtitle": "Zde je přehled tvých dat.",
-    "management": "Správa",
-    "dashboard": "Dashboard",
-    "date_format": "dd.MM.yyyy",
-    "admin": "Správa",
-    "admin_subtitle": "Správa všech dat",
-    "records": "Záznamy",
-    "select_all": "Vybrat vše",
-    "bulk_delete": "Smazat vybrané",
-    "bulk_clone": "Kopírovat",
-    "bulk_edit": "Upravit pole",
-    "selected": "vybráno",
-    "apply_to_n": "Použít na {n} záznamů",
-    "filter": "Filtrovat",
-    "clear_filters": "Zrušit filtry",
-    "choose_field": "Vybrat pole",
-    "new_value": "Nová hodnota",
-    "all_values": "Vše",
-    "confirm_bulk_delete": "Opravdu smazat {n} záznamů? Tuto akci nelze vrátit zpět.",
-    "deselect_all": "Zrušit výběr",
-    "applying": "Používám...",
-    "create_new_app": "Vytvořit novou aplikaci",
-    "apps_label": "Aplikace",
-    "profile_label": "Profil",
-    "back": "Zpět",
-    "display_section": "Zobrazení",
-    "data_management": "Správa dat",
-    "apps_search": "Hledat...",
-    "apps_no_results": "Žádné aplikace nenalezeny",
-    "apps_page_of": "z",
-    "sort_newest": "Nejnovější první",
-    "sort_oldest": "Nejstarší první",
-    "sort_az": "Název, A → Z",
-    "sort_za": "Název, Z → A",
-    "edit_dashboard": "Klar Lab",
-    "developer": "Vývojář",
-    "beta_features": "Beta funkce",
-    "actions_section": "Akce",
-    "public_pages_section": "Veřejné stránky",
-    "legal_imprint": "Impresum",
-    "legal_privacy": "Ochrana osobních údajů",
-    "source_code": "Zdrojový kód",
-    "copy_code": "Kopírovat kód",
-    "copied": "Zkopírováno!",
-    "code_for": "Kód pro",
-    "delete_confirm": "Smazat akci",
-    "delete_confirm_from": "z",
-    "action_deleted": "Akce smazána:",
-    "empty_action": "Prázdná akce",
-    "run": "Spustit",
-    "field_required": "je povinné",
-    "file_too_large": "Soubor překračuje limit 10 MB.",
-    "preparing": "Připravuji...",
-    "busy": "Pracuji...",
-    "files_label": "Soubory",
-    "no_files": "Žádné soubory",
-    "sort_name_az": "Název A→Z",
-    "sort_name_za": "Název Z→A",
-    "delete_file_confirm": "Smazat soubor",
-    "file_deleted": "Soubor smazán:",
-    "datetime_format": "dd.MM.yyyy, HH:mm",
-    "download": "Stáhnout",
-    "auth_error_title": "Nejsi přihlášen(a).",
-    "auth_login_button": "Přihlásit se",
-    "repair_text": "Opravit dashboard",
-    "repair_error_title": "Něco se pokazilo",
-    "repair_reload": "Znovu načíst",
-    "repair_starting": "Spouštím opravu...",
-    "repair_running": "Oprava probíhá...",
-    "repair_done_title": "Dashboard opraven",
-    "repair_done_desc": "Problém byl vyřešen. Načti prosím stránku znovu.",
-    "repair_failed": "Automatická oprava se nezdařila. Kontaktuj prosím podporu.",
-    "fix_action_button": "Opravit automaticky",
-    "fix_action_running": "Opravuji…",
-    "fix_error_heading": "Něco se nepovedlo při spuštění",
-    "fix_intro_prefix": "Oprava pro",
-    "fix_intro_suffix": "nová chatová relace pro tuto opravu byla spuštěna.",
-    "fix_still_fails": "Akce stále selhává",
-    "fix_not_confirmed": "Oprava zatím není potvrzena — tvůj původní vstup zůstává zachován.",
-    "fix_request_failed": "Žádost o opravu se nezdařila",
-    "fix_retry_hint": "Tvůj původní vstup zůstává zachován — můžeš to zkusit znovu.",
-    "close": "Zavřít",
-    "code_versions": "Verze",
-    "code_version_active": "Aktivní",
-    "code_tab_code": "Kód",
-    "code_tab_diff": "Změny",
-    "code_tab_diff_to": "Změny oproti",
-    "code_viewing_old_prefix": "Díváš se na",
-    "code_viewing_old_suffix": "— není to aktivní verze.",
-    "code_restore": "Obnovit tuto verzi",
-    "code_restore_confirm_title": "Obnovit verzi",
-    "code_restore_confirm_desc": "Aktuální kód bude nahrazen. Nic se neztratí — vznikne nová verze.",
-    "code_restore_failed": "Obnovení se nezdařilo",
-    "code_restored_to": "Obnoveno na verzi",
-    "code_origin_fix": "Auto-oprava",
-    "code_origin_chat": "Chat",
-    "code_origin_initial": "Vytvořeno",
-    "code_origin_revert": "Obnoveno",
-    "code_no_versions": "Žádné starší verze",
-    "code_lines": "řádků",
-    "code_out_tab": "Výstup",
-    "code_out_heading": "Testovací běh",
-    "code_out_history_badge": "Kód z historie — neobnoveno",
-    "code_out_inputs": "Vstupy",
-    "code_out_open": "Otevřít",
-    "code_out_no_output": "(žádný výstup)",
-    "code_chat_placeholder": "Zeptej se na kód…",
-    "code_back_to_tools": "Zpět na nástroje",
-    "code_switch_tool": "Přepnout akci",
-    "version_card_view_changes": "Zobrazit změny",
-    "version_card_undo": "Vrátit zpět",
-    "version_card_open_action": "Otevřít akci",
-    "chat_history_title": "Historie",
-    "chat_new": "Nový chat",
-    "run_done_badge": "Provedeno",
-    "run_id_copy": "Kopírovat RunID — při problémech uveď podpoře",
-    "dock_empty_hint": "Zeptej se na tuto akci — odpověď zná kód i verze.",
-    "dock_suggest_what": "Co tato akce dělá?",
-    "dock_suggest_explain": "Vysvětli mi kód",
-    "dock_ctx_other_prefix": "Tato konverzace patří k",
-    "dock_ctx_general": "Obecná konverzace bez vazby na akci",
-    "scope_menu_general_title": "Obecná konverzace",
-    "scope_general_short": "Obecné",
-    "scope_menu_action_desc": "Dotazy a změny k této akci",
-    "scope_menu_last_prefix": "Naposledy",
-    "run_result_details": "Podrobnosti",
-    "chat_new_for_tool": "Nová konverzace k této akci",
-    "chat_history_search": "Prohledat historii…",
-    "chat_history_empty": "Zatím žádné konverzace",
-    "chat_history_today": "Dnes",
-    "chat_history_yesterday": "Včera",
-    "chat_history_older": "Starší",
-    "chat_history_active": "Aktivní",
-    "chat_history_recent": "Naposledy",
-    "chat_history_filter_all": "Vše",
-    "chat_history_filter_tool": "Tato akce",
-    "chat_history_delete_title": "Smazat relaci?",
-    "chat_history_delete_desc": "Tato konverzace bude trvale smazána.",
-    "chat_history_delete_action": "Smazat",
-    "chat_resumed": "Relace obnovena",
-    "chat_messages_label": "zpráv",
-    "toast_network_title": "Chyba sítě",
-    "toast_network_desc": "Spojení se serverem bylo ztraceno.",
-    "toast_server_title": "Chyba serveru",
-    "toast_server_desc": "Zkus to prosím později znovu.",
-    "toast_bug_desc": "Byl zjištěn problém. Dashboard lze automaticky opravit.",
-    "update_available": "Dostupná aktualizace:",
-    "update_confirm_title": "Nainstalovat aktualizaci?",
-    "update_confirm_desc": "Aplikace bude aktualizována na nejnovější verzi. Zabere to několik minut.",
-    "update_confirm_action": "Aktualizovat",
-    "updating": "Aktualizuji…",
-    "update_verifying": "Ověřuji verzi…",
-    "update_verify_timeout": "Verzi se nepodařilo ověřit. Načti prosím stránku znovu.",
-    "rollback_label": "Zpět na",
-    "rollback_confirm_title": "Vrátit verzi?",
-    "rollback_confirm_desc": "Aplikace bude vrácena na vybranou verzi.",
-    "rollback_confirm_action": "Vrátit",
-    "rolling_back": "Vracím…",
-    "attachments_label": "Přílohy",
-    "attachments_empty": "Žádné přílohy",
-    "attachments_add": "Přidat přílohu",
-    "attachments_type": "Typ",
-    "attachments_label_field": "Označení",
-    "attachments_value": "Hodnota",
-    "attachments_value_file": "Soubor",
-    "attachments_value_note": "Poznámka",
-    "attachments_value_url": "URL",
-    "attachments_value_json": "JSON",
-    "attachments_choose_file": "Vybrat soubor",
-    "attachments_uploading": "Nahrávám…",
-    "attachments_loading": "Načítám přílohy…",
-    "attachments_save_record_first": "Nejdřív ulož záznam, pak lze přidávat přílohy.",
-    "attachments_invalid_json": "Neplatný JSON",
-    "attachments_open": "Otevřít",
-    "attachments_dz_hint": "Přetáhni soubor sem nebo klikni",
-    "attachments_dz_subhint": "PDF, obrázky, dokumenty",
-    "attachments_input_placeholder": "Poznámka, obrázek nebo URL",
-    "attachments_hint_enter": "↵ Enter pro přidání",
-    "attachments_add_dialog_title": "Přidat přílohu",
-    "attachments_or": "nebo",
-    "attachments_empty_cta": "Přidat přílohu — přetáhni soubor nebo klikni",
-    "attachments_drop_to_upload": "Pusť soubor pro nahrání",
-    "attachments_delete_title": "Smazat přílohu?",
-    "attachments_delete_desc": "Tato příloha bude nenávratně odstraněna.",
-    "attachments_rel_just_now": "právě teď",
-    "attachments_rel_min_prefix": "před ",
-    "attachments_rel_min": "min",
-    "attachments_rel_hr_prefix": "před ",
-    "attachments_rel_hr": "hod",
-    "attachments_rel_day_prefix": "před ",
-    "attachments_rel_day": "dny",
-    "fr_show_coords": "Zobrazit souřadnice",
-    "fr_hide_coords": "Skrýt souřadnice",
-    "fr_lat": "Zeměpisná šířka",
-    "fr_long": "Zeměpisná délka",
-    "fr_upload_file": "Nahrát soubor",
-    "fr_change": "Změnit",
-    "fr_remove": "Odebrat",
-    "fr_use_location": "Použít aktuální polohu",
-    "fr_photo_location": "Poloha převzata z fotky",
-    "fr_search_address": "Vyhledej a vyber adresu…",
-    "fr_record_url": "URL záznamu",
-    "create_in": "Nové v {entity}",
-    "pf_submit_text": "Odeslat",
-    "pf_submitting_text": "Odesílání...",
-    "pf_required_error_text": "Toto pole je povinné.",
-    "pf_unavailable_title": "Není dostupné",
-    "pf_unavailable_message": "Tento formulář není momentálně dostupný.",
-    "pf_error_generic_text": "Něco se pokazilo. Zkuste to prosím znovu.",
-    "pf_rate_limit_text": "Příliš mnoho pokusů — chvíli prosím počkejte a zkuste to znovu.",
-    "pf_another_entry_text": "Zadat další",
-    "pf_powered_by_text": "Powered by Klar",
-    "pf_address_placeholder": "Hledat adresu...",
-    "pf_remove_text": "Odebrat",
-    "pps_unavailable_message": "Tato stránka není momentálně dostupná.",
-    "ppn_heading": "Veřejné stránky",
-    "ppn_copy_label": "Kopírovat odkaz",
-    "ppn_manage_label": "Spravovat",
-    "ppa_title": "Veřejné stránky",
-    "ppa_subtitle": "Formuláře a stránky, které můžeš sdílet odkazem — návštěvníci nepotřebují účet.",
-    "ppa_empty": "Zatím žádné stránky. Napiš do chatu, jakou veřejnou stránku potřebuješ — vytvoří se a objeví se tady.",
-    "ppa_origin_auto": "Návrh",
-    "ppa_origin_user": "Vlastní",
-    "ppa_origin_agent": "Stránka od AI",
-    "ppa_status_published": "Veřejná",
-    "ppa_status_draft": "Koncept",
-    "ppa_publish": "Zveřejnit",
-    "ppa_pause": "Pozastavit",
-    "ppa_open": "Otevřít",
-    "ppa_copy": "Kopírovat odkaz",
-    "ppa_copied": "Zkopírováno!",
-    "ppa_confirm_title": "Opravdu zveřejnit?",
-    "ppa_can_do": "Kdokoli s odkazem může:",
-    "ppa_cannot_do": "Nikdo nemůže:",
-    "ppa_can_submit": "odesílat záznamy",
-    "ppa_can_view": "vidět tato data",
-    "ppa_cannot_line": "vidět ani měnit existující data.",
-    "ppa_cancel": "Zrušit",
-    "ppa_confirm_publish": "Zveřejnit",
-    "ppa_fields": "Pole",
-    "ppa_fields_title": "Výběr polí",
-    "ppa_fields_intro": "Vyber, která pole se zobrazí ve veřejném formuláři.",
-    "ppa_field_required": "Povinné pole — vždy obsaženo",
-    "ppa_field_file": "Nahrávání souborů není veřejně podporováno",
-    "ppa_field_exposes": "Zobrazí návštěvníkům seznam propojených záznamů",
-    "ppa_save": "Uložit",
-    "load_error_title": "Chyba při načítání",
-    "retry": "Zkusit znovu",
-    "data_load_failed": "Data se nepodařilo načíst",
-    "wizard_back_to_dashboard": "Zpět na dashboard",
-    "step_create_new": "Vytvořit nový",
-    "budget_none": "Rozpočet není nastavený",
-    "budget_booked": "Vyčerpáno",
-    "budget_of": "z",
-    "budget_remaining": "Zbývá",
-    "budget_over": "Rozpočet překročen!",
-    "combo_search": "Hledat…",
-    "combo_no_match": "Žádný výsledek",
-    "combo_clear_selection": "Odebrat výběr",
-    "combo_clear_search": "Vymazat hledání",
-    "combo_create_new": "Vytvořit nový záznam",
-    "combo_create_named": "Vytvořit „{name}“",
-    "combo_create_labeled": "Vytvořit {label}",
-    "combo_create_prefill_hint": "Použije zadaný text jako předvolbu",
-    "combo_create_inline_hint": "Zadej to přímo v dialogu",
-    "combo_add_more": "+ Přidat",
-    "combo_remove_item": "Odebrat {label}",
-    "date_hint_date": "dd.mm.rrrr",
-    "date_hint_datetime": "dd.mm.rrrr, hh:mm",
-    "date_pick_date": "Vyber datum",
-    "date_pick_datetime": "Vyber datum a čas",
-    "date_clear": "Vymazat datum",
-    "date_hours": "Hodiny",
-    "date_minutes": "Minuty",
-    "date_now": "Teď",
-    "date_today": "Dnes",
-    "date_reset": "Vymazat",
-    "address_search": "Hledat adresu…",
-    "address_none": "Žádná adresa nenalezena",
-    "sat_empty": "Zatím žádné {title}.",
-    "sat_add": "Přidat {title}",
-    "intents_heading": "Postupy",
-    "intents_pending": "Vytvářejí se …",
-    "placeholder_page_desc": "Tady si postav vlastní zobrazení pro {entity}.",
-    "placeholder_page_box": "Zástupný obsah — tady postav zobrazení pro {entity}",
-    "tools_label": "Nástroje",
-    "tools_subtitle_available": "k dispozici",
-    "tools_empty_title": "Zatím žádné nástroje",
-    "tools_empty_desc": "Napiš v chatu, co chceš zautomatizovat — z toho vznikne tvůj první nástroj.",
-    "tools_empty_cta": "Vytvořit v chatu",
-    "tools_file_singular": "soubor",
-    "tools_file_plural": "soubory",
-    "chatw_title": "Asistent",
-    "chatw_placeholder": "Zadej dotaz nebo nahraj obrázek...",
-    "chatw_thinking": "Přemýšlím...",
-    "chatw_analyze_image": "Analyzovat obrázek",
-    "chatw_attach_file": "Připojit soubor",
-    "chatw_fullscreen": "Na celou obrazovku",
-    "chatw_exit_fullscreen": "Zmenšit",
-    "ctx_error_text": "Spuštění selhalo",
-    "ctx_action_label": "Akce",
-    "acd_test_version": "Otestovat v{v}",
-    "vc_loading_versions": "Načítám verze...",
-    "vc_no_previous_versions": "Žádné starší verze",
-    "vc_error_text": "Došlo k chybě",
-    "vc_label_initial": "První verze",
-    "vc_label_update": "Aktualizace scaffoldu",
-    "vc_label_agent": "Úprava AI",
-    "vc_label_main_branch": "Hlavní linie",
-    "vc_label_alternate_direction": "Alternativní směr",
-    "vc_version_singular": "verze",
-    "vc_version_plural": "verze",
-    "polish_greeting_morning": "Dobré ráno!",
-    "polish_greeting_day": "Dobrý den!",
-    "polish_greeting_evening": "Dobrý večer!",
-    "polish_undo": "Zpět",
-    "attachments_upload_failed": "Soubor se nepodařilo nahrát.",
-    "scan_error": "Skenování selhalo",
-    "scan_header_sub": "Rozumí fotkám, dokumentům i textu a všechno za tebe vyplní",
-    "scan_analyzing": "AI analyzuje...",
-    "scan_analyzing_sub": "Pole se vyplní automaticky",
-    "scan_success": "Pole vyplněna!",
-    "scan_success_sub": "Zkontroluj hodnoty a případně je uprav",
-    "scan_upload": "Přetáhni sem fotku nebo dokument, nebo vyber soubor",
-    "scan_camera_btn": "Kamera",
-    "scan_file_btn": "Vybrat fotku",
-    "scan_doc_btn": "Dokument",
-    "useinfo_label": "AI asistent smí použít i informace o mé osobě",
-    "useinfo_more": "více informací",
-    "useinfo_loading": "Načítám...",
-    "useinfo_error": "Profil se nepodařilo načíst",
-    "profile_preamble": "AI může využít tyto informace o tobě:",
-    "scan_text_placeholder": "Napiš nebo vlož text, např. poznámky, e-maily, popisy...",
-    "scan_text_analyze": "Analyzovat",
-    "smart_fill": "Vyplnit s AI",
-    "missing_required": "Vyplň prosím označená povinná pole.",
-    "paste": "Vložit",
-    "bulk_edit_title": "Upravit pole u vybraných záznamů",
-    "details": "Podrobnosti",
-    "relations": "Propojeno",
-    "not_found": "Záznam nenalezen",
-    "required_hint": "Povinné pole"
   }
 };
 
 // Structure labels (app names, field labels, lookup option labels):
 type AppLabels = {
   name: string;
+  app_id?: string;
   fields: Record<string, string>;
   lookups: Record<string, Record<string, string>>;
 };
 type LabelBundle = { appgroup: string; apps: Record<string, AppLabels> };
-export const LABELS: Record<Locale, LabelBundle> = {
+export const LABELS: Record<CoreLocale, LabelBundle> = {
   "de": {
     "appgroup": "Skateboard Events",
     "apps": {
       "skateparks_spots": {
         "name": "Skateparks & Spots",
+        "app_id": "6a56741a9ef9a79ac692ad70",
         "fields": {
           "name": "Name des Ortes",
           "strasse": "Straße",
@@ -1183,16 +1036,17 @@ export const LABELS: Record<Locale, LabelBundle> = {
         },
         "lookups": {
           "untergrundtyp": {
-            "beton": "Beton",
             "asphalt": "Asphalt",
             "holz": "Holz",
             "fliesen": "Fliesen",
-            "sonstiges": "Sonstiges"
+            "sonstiges": "Sonstiges",
+            "beton": "Beton"
           }
         }
       },
       "event_verwaltung": {
         "name": "Event-Verwaltung",
+        "app_id": "6a56741f84d8dce105858830",
         "fields": {
           "titel": "Titel des Events",
           "kategorie": "Kategorie",
@@ -1205,7 +1059,8 @@ export const LABELS: Record<Locale, LabelBundle> = {
           "kontakt_email": "Kontakt-E-Mail",
           "event_website": "Website des Events",
           "flyer": "Flyer / Bild",
-          "kontakt_telefon": "Kontakt-Telefonnummer"
+          "kontakt_telefon": "Kontakt-Telefonnummer",
+          "notizen": "Notizen"
         },
         "lookups": {
           "kategorie": {
@@ -1216,15 +1071,16 @@ export const LABELS: Record<Locale, LabelBundle> = {
             "sonstiges": "Sonstiges"
           },
           "skill_level": {
+            "anfaenger": "Anfänger",
             "fortgeschritten": "Fortgeschritten",
             "profi": "Profi",
-            "alle_levels": "Alle Levels",
-            "anfaenger": "Anfänger"
+            "alle_levels": "Alle Levels"
           }
         }
       },
       "anmeldungen": {
         "name": "Anmeldungen",
+        "app_id": "6a5674227925510842ea49d7",
         "fields": {
           "event": "Event",
           "vorname": "Vorname",
@@ -1239,9 +1095,9 @@ export const LABELS: Record<Locale, LabelBundle> = {
         },
         "lookups": {
           "skill_level": {
+            "anfaenger": "Anfänger",
             "fortgeschritten": "Fortgeschritten",
-            "profi": "Profi",
-            "anfaenger": "Anfänger"
+            "profi": "Profi"
           },
           "board_stil": {
             "street": "Street",
@@ -1259,6 +1115,7 @@ export const LABELS: Record<Locale, LabelBundle> = {
     "apps": {
       "skateparks_spots": {
         "name": "Skateparks & Spots",
+        "app_id": "6a56741a9ef9a79ac692ad70",
         "fields": {
           "name": "Venue Name",
           "strasse": "Street",
@@ -1272,16 +1129,17 @@ export const LABELS: Record<Locale, LabelBundle> = {
         },
         "lookups": {
           "untergrundtyp": {
-            "beton": "Concrete",
             "asphalt": "Asphalt",
             "holz": "Wood",
             "fliesen": "Tiles",
-            "sonstiges": "Other"
+            "sonstiges": "Other",
+            "beton": "Concrete"
           }
         }
       },
       "event_verwaltung": {
         "name": "Event Management",
+        "app_id": "6a56741f84d8dce105858830",
         "fields": {
           "titel": "Event Title",
           "kategorie": "Category",
@@ -1294,7 +1152,8 @@ export const LABELS: Record<Locale, LabelBundle> = {
           "kontakt_email": "Contact Email",
           "event_website": "Event Website",
           "flyer": "Flyer / Image",
-          "kontakt_telefon": "Contact Phone Number"
+          "kontakt_telefon": "Contact Phone Number",
+          "notizen": "Notes"
         },
         "lookups": {
           "kategorie": {
@@ -1305,15 +1164,16 @@ export const LABELS: Record<Locale, LabelBundle> = {
             "sonstiges": "Other"
           },
           "skill_level": {
-            "fortgeschritten": "Advanced",
+            "anfaenger": "Beginner",
+            "fortgeschritten": "Intermediate",
             "profi": "Pro",
-            "alle_levels": "All Levels",
-            "anfaenger": "Beginner"
+            "alle_levels": "All Levels"
           }
         }
       },
       "anmeldungen": {
         "name": "Registrations",
+        "app_id": "6a5674227925510842ea49d7",
         "fields": {
           "event": "Event",
           "vorname": "First Name",
@@ -1323,103 +1183,14 @@ export const LABELS: Record<Locale, LabelBundle> = {
           "telefon": "Phone Number",
           "skill_level": "Skill Level",
           "board_stil": "Board Style",
-          "anmerkungen": "Notes",
-          "teilnahmebedingungen": "I agree to the terms and conditions"
+          "anmerkungen": "Comments",
+          "teilnahmebedingungen": "I agree to the terms and conditions of participation"
         },
         "lookups": {
           "skill_level": {
-            "fortgeschritten": "Advanced",
-            "profi": "Pro",
-            "anfaenger": "Beginner"
-          },
-          "board_stil": {
-            "street": "Street",
-            "park": "Park",
-            "vert": "Vert",
-            "bowl": "Bowl",
-            "freestyle": "Freestyle"
-          }
-        }
-      }
-    }
-  },
-  "cs": {
-    "appgroup": "Skateboardové akce",
-    "apps": {
-      "skateparks_spots": {
-        "name": "Skateparky a místa",
-        "fields": {
-          "name": "Název místa",
-          "strasse": "Ulice",
-          "hausnummer": "Číslo popisné",
-          "postleitzahl": "PSČ",
-          "stadt": "Město",
-          "beschreibung": "Popis",
-          "untergrundtyp": "Typ povrchu",
-          "standort": "Poloha na mapě",
-          "website": "Webová stránka"
-        },
-        "lookups": {
-          "untergrundtyp": {
-            "beton": "Beton",
-            "asphalt": "Asfalt",
-            "holz": "Dřevo",
-            "fliesen": "Dlaždice",
-            "sonstiges": "Ostatní"
-          }
-        }
-      },
-      "event_verwaltung": {
-        "name": "Správa akcí",
-        "fields": {
-          "titel": "Název akce",
-          "kategorie": "Kategorie",
-          "datum_uhrzeit": "Datum a čas",
-          "beschreibung": "Popis",
-          "skill_level": "Úroveň dovedností",
-          "max_teilnehmer": "Maximální počet účastníků",
-          "startgebuehr": "Startovné (€)",
-          "ort": "Místo",
-          "kontakt_email": "Kontaktní e-mail",
-          "event_website": "Webová stránka akce",
-          "flyer": "Leták / obrázek",
-          "kontakt_telefon": "Kontaktní telefonní číslo"
-        },
-        "lookups": {
-          "kategorie": {
-            "contest": "Závod",
-            "jam": "Jam Session",
-            "demo": "Demo",
-            "workshop": "Workshop",
-            "sonstiges": "Ostatní"
-          },
-          "skill_level": {
-            "fortgeschritten": "Pokročilý",
-            "profi": "Profesionál",
-            "alle_levels": "Všechny úrovně",
-            "anfaenger": "Začátečník"
-          }
-        }
-      },
-      "anmeldungen": {
-        "name": "Přihlášky",
-        "fields": {
-          "event": "Akce",
-          "vorname": "Jméno",
-          "nachname": "Příjmení",
-          "geburtsdatum": "Datum narození",
-          "email": "E-mailová adresa",
-          "telefon": "Telefonní číslo",
-          "skill_level": "Úroveň dovedností",
-          "board_stil": "Styl ježdění",
-          "anmerkungen": "Poznámky",
-          "teilnahmebedingungen": "Souhlasím s podmínkami účasti"
-        },
-        "lookups": {
-          "skill_level": {
-            "fortgeschritten": "Pokročilý",
-            "profi": "Profesionál",
-            "anfaenger": "Začátečník"
+            "anfaenger": "Beginner",
+            "fortgeschritten": "Intermediate",
+            "profi": "Pro"
           },
           "board_stil": {
             "street": "Street",
@@ -1434,42 +1205,107 @@ export const LABELS: Record<Locale, LabelBundle> = {
   }
 };
 
-// ── Locale state ───────────────────────────────────────────────────
-function readStored(): Locale | null {
+// ── Overlay locales (added post-deploy, no rebuild) ────────────────
+// Contract: locales/{lang}.json next to the bundle —
+//   { "v": 1, "lang": "ru", "ui": {catalogKey: text},
+//     "labels": {appgroup, apps:{key:{name,app_id,fields,lookups}}},
+//     "pages": {enSourceText: translatedText} }
+// Sections are optional; unknown fields are ignored (tolerant consumer).
+type Overlay = {
+  v?: number;
+  ui?: Record<string, string>;
+  labels?: Partial<LabelBundle>;
+  pages?: Record<string, string>;
+};
+const overlays: Record<string, Overlay | null | undefined> = {};
+
+function isCore(l: string): l is CoreLocale {
+  return (CORE_LOCALES as string[]).includes(l);
+}
+
+async function ensureOverlay(lang: string): Promise<Overlay | null> {
+  if (overlays[lang] !== undefined) return overlays[lang] ?? null;
   try {
-    const v = localStorage.getItem(STORAGE_KEY);
-    return (LOCALES as string[]).includes(v ?? '') ? (v as Locale) : null;
+    const r = await fetch(`./locales/${encodeURIComponent(lang)}.json`, { cache: 'no-cache' });
+    overlays[lang] = r.ok ? ((await r.json()) as Overlay) : null;
+  } catch {
+    overlays[lang] = null;
+  }
+  return overlays[lang] ?? null;
+}
+
+function overlayFor(l: string): Overlay | null {
+  return overlays[l] ?? null;
+}
+
+// ── Page-text catalog (runtime artifact) ───────────────────────────
+// tx source texts resolve through locales/pages.json next to the bundle —
+// written by the pipeline, updated WITHOUT a rebuild (a translation change
+// never touches the bundle; only code changes do). Absent file = the texts
+// render in the build language (fail-open). Fetched once, on demand: only a
+// non-build locale ever needs it.
+type PagesCatalog = Record<string, Record<string, string>>;
+let pagesCatalog: PagesCatalog | null = null;
+let pagesRequested = false;
+function ensurePages(): void {
+  if (pagesRequested) return;
+  pagesRequested = true;
+  void (async () => {
+    try {
+      const r = await fetch('./locales/pages.json', { cache: 'no-cache' });
+      if (!r.ok) return;
+      const data = (await r.json()) as { pages?: PagesCatalog };
+      if (data && typeof data.pages === 'object' && data.pages) {
+        pagesCatalog = data.pages;
+        listeners.forEach((fn) => fn());
+      }
+    } catch { /* offline/absent — texts render in the build language */ }
+  })();
+}
+
+// ── Locale state ───────────────────────────────────────────────────
+function normalizeLang(raw: string | null | undefined): string | null {
+  const lang = (raw ?? '').split(/[-_]/)[0].toLowerCase();
+  return /^[a-z]{2,3}$/.test(lang) ? lang : null;
+}
+
+function readStored(): string | null {
+  try {
+    return normalizeLang(localStorage.getItem(STORAGE_KEY));
   } catch {
     return null;
   }
 }
 
-function htmlLang(): Locale | null {
-  const raw = (document.documentElement.getAttribute('lang') ?? '')
-    .split(/[-_]/)[0]
-    .toLowerCase();
-  return (LOCALES as string[]).includes(raw) ? (raw as Locale) : null;
+function htmlLang(): string | null {
+  return normalizeLang(document.documentElement.getAttribute('lang'));
 }
 
-// The PLATFORM header owns the language switcher. Its contract is
-// <html lang> (the la-widget library resolves and observes the same
-// attribute): adopt it at load when present, keep it in sync otherwise.
+// The PLATFORM header owns the language switcher for the core languages. Its
+// contract is <html lang> (the la-widget library resolves and observes the
+// same attribute): adopt it at load when present, keep it in sync otherwise.
 export let locale: Locale = htmlLang() ?? readStored() ?? BUILD_LOCALE;
+// Baked chrome (widget dictionaries) exists only in the core languages —
+// non-core locales read their chrome via the overlay/en fallback chains.
+export let coreLocale: CoreLocale = isCore(locale) ? locale : 'en';
 document.documentElement.lang = locale;
-
-// Follow platform-initiated switches LIVE — same MutationObserver contract
-// the la-widgets use. applyLocale is a no-op for our own writes (same value).
-if (typeof MutationObserver !== 'undefined') {
-  new MutationObserver(() => {
-    const next = htmlLang();
-    if (next && next !== locale) {
-      try { localStorage.setItem(STORAGE_KEY, next); } catch { /* private mode */ }
-      applyLocale(next);
+if (!isCore(locale)) {
+  // Overlay locale from a previous session: load it, then re-render; if it
+  // is gone, fall back to the build locale and clean the stale cache.
+  void ensureOverlay(locale).then((ov) => {
+    if (ov) listeners.forEach((fn) => fn());
+    else if (!isCore(locale)) {
+      try { localStorage.setItem(STORAGE_KEY, BUILD_LOCALE); } catch { /* private mode */ }
+      applyLocale(BUILD_LOCALE);
     }
-  }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  });
 }
 
 const listeners = new Set<() => void>();
+
+// Boot in a non-build locale (stored choice, profile): the page catalog is
+// needed right away — the fetch re-renders via the listeners when it lands.
+if (locale !== BUILD_LOCALE) ensurePages();
 
 export function onLocaleChange(fn: () => void): () => void {
   listeners.add(fn);
@@ -1479,29 +1315,88 @@ export function onLocaleChange(fn: () => void): () => void {
 function applyLocale(next: Locale) {
   if (next === locale) return;
   locale = next;
+  coreLocale = isCore(next) ? next : 'en';
+  if (next !== BUILD_LOCALE) ensurePages();
   document.documentElement.lang = next;
   listeners.forEach((fn) => fn());
 }
 
-export function setLocale(next: Locale) {
-  try { localStorage.setItem(STORAGE_KEY, next); } catch { /* private mode */ }
+// Accept a locale request: core applies immediately, overlay locales apply
+// once their file is confirmed to exist (an unknown language is ignored —
+// it "exists" only after the service uploaded its overlay).
+async function requestLocale(next: string): Promise<boolean> {
+  if (isCore(next)) {
+    applyLocale(next);
+    return true;
+  }
+  const ov = await ensureOverlay(next);
+  if (!ov) return false;
   applyLocale(next);
-  void persistProfileLanguage(next);
+  return true;
 }
 
-// The LA profile is the single source of truth for the user's language:
-// the switcher PATCHes it, and on load (authenticated app only — LocaleGate
-// calls this) the profile wins. localStorage is only the fast-boot cache
-// that avoids a wrong-language first paint.
+export function setLocale(next: Locale) {
+  void (async () => {
+    if (!(await requestLocale(next))) return;
+    try { localStorage.setItem(STORAGE_KEY, next); } catch { /* private mode */ }
+    void persistProfileLanguage(next);
+  })();
+}
+
+// Follow platform-initiated switches LIVE — same MutationObserver contract
+// the la-widgets use. applyLocale is a no-op for our own writes (same value).
+if (typeof MutationObserver !== 'undefined') {
+  new MutationObserver(() => {
+    const next = htmlLang();
+    if (next && next !== locale) {
+      void (async () => {
+        if (await requestLocale(next)) {
+          try { localStorage.setItem(STORAGE_KEY, next); } catch { /* private mode */ }
+        }
+      })();
+    }
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+}
+
+// The /user response fetched below also carries the profile's first name —
+// captured for the personalized greeting (gruss() in @/lib/polish). Stays
+// null for anonymous/offline visitors and on public routes (which never call
+// syncProfileLocale), so consumers must always have a nameless fallback.
+let firstname: string | null = null;
+const firstnameListeners = new Set<() => void>();
+export function profileFirstname(): string | null {
+  return firstname;
+}
+export function onProfileFirstname(fn: () => void): () => void {
+  firstnameListeners.add(fn);
+  return () => firstnameListeners.delete(fn);
+}
+
+// The LA profile is the language's source of truth AT REST: adopt it once
+// per page load (LocaleGate calls this on mount). It must NOT re-run on the
+// remount a language switch causes — that reverted every header-switcher
+// change back to the profile within a second (live-proven). Persisting a
+// switch into the profile is the switcher's job.
+let profileSyncDone = false;
 export async function syncProfileLocale(): Promise<void> {
+  if (profileSyncDone) return;
+  profileSyncDone = true;
+  const before = locale;
   try {
     const r = await fetch(`${LA_API_URL}/user`, { credentials: 'include' });
     if (!r.ok) return;
-    const raw = (await r.json()) as { lang?: unknown };
-    const lang = String(raw?.lang ?? '').slice(0, 2).toLowerCase();
-    if (!(LOCALES as string[]).includes(lang)) return;
-    try { localStorage.setItem(STORAGE_KEY, lang); } catch { /* private mode */ }
-    applyLocale(lang as Locale);
+    const raw = (await r.json()) as { lang?: unknown; firstname?: unknown };
+    if (typeof raw?.firstname === 'string' && raw.firstname.trim()) {
+      firstname = raw.firstname.trim();
+      firstnameListeners.forEach((fn) => fn());
+    }
+    const lang = normalizeLang(typeof raw?.lang === 'string' ? raw.lang : null);
+    if (!lang) return;
+    // A switch that happened while we fetched wins over the profile.
+    if (locale !== before) return;
+    if (await requestLocale(lang)) {
+      try { localStorage.setItem(STORAGE_KEY, lang); } catch { /* private mode */ }
+    }
   } catch { /* offline/anonymous — keep the current locale */ }
 }
 
@@ -1524,50 +1419,117 @@ async function persistProfileLanguage(next: Locale): Promise<void> {
 // persistence — a public visitor must not pin the operator's dashboard
 // locale). Call once when mounting a public route.
 export function initPublicLocale() {
-  const nav = (navigator.language || '').toLowerCase();
-  const match = LOCALES.find((l) => nav === l || nav.startsWith(l + '-'));
-  locale = match ?? BUILD_LOCALE;
+  const nav = normalizeLang(typeof navigator !== 'undefined' ? navigator.language : null);
+  if (nav && isCore(nav)) {
+    locale = nav;
+    coreLocale = nav;
+  } else {
+    locale = BUILD_LOCALE;
+    coreLocale = BUILD_LOCALE;
+  }
+  if (locale !== BUILD_LOCALE) ensurePages();
   document.documentElement.lang = locale;
 }
 
 // ── Text lookup ────────────────────────────────────────────────────
-export function t(key: string, params?: Record<string, string | number>): string {
-  const table = UI_CATALOG[locale] ?? UI_CATALOG.en;
-  let text = table[key] ?? UI_CATALOG.en[key] ?? key;
-  if (params) {
-    for (const [k, v] of Object.entries(params)) {
-      text = text.split(`{${k}}`).join(String(v));
-    }
+// Accepts optional values because makeT does — `String(undefined)` renders
+// exactly what `${undefined}` in a template literal rendered, so the
+// mechanical rewrite stays faithful.
+function interpolate(text: string, params?: Record<string, string | number | null | undefined>): string {
+  if (!params) return text;
+  let out = text;
+  for (const [k, v] of Object.entries(params)) {
+    out = out.split(`{${k}}`).join(String(v));
   }
-  return text;
+  return out;
 }
 
-// Page-local text for agent-written pages (overview, intent pages, bespoke
-// public pages): define EVERY locale once, read at render time. The returned
-// function behaves like t() (current locale, {param} interpolation, fallback
-// chain locale → build locale → en → key).
-//
-//   const tt = makeT({
-//     de: { title: 'Auslastung', hint: '{n} offene Aufträge' },
-//     en: { title: 'Utilization', hint: '{n} open orders' },
-//     cs: { title: 'Vytížení', hint: '{n} otevřených zakázek' },
-//   });
-//   ... <h2>{tt('title')}</h2>
-export function makeT<K extends string>(table: Record<Locale, Record<K, string>>) {
-  return (key: K, params?: Record<string, string | number>): string => {
-    let text: string =
-      table[locale]?.[key] ?? table[BUILD_LOCALE]?.[key] ?? table.en?.[key] ?? key;
-    if (params) {
-      for (const [k, v] of Object.entries(params)) {
-        text = text.split(`{${k}}`).join(String(v));
-      }
+function uiText(key: string): string | undefined {
+  if (isCore(locale)) return UI_CATALOG[locale][key];
+  return overlayFor(locale)?.ui?.[key] ?? UI_CATALOG.en[key];
+}
+
+export function t(key: string, params?: Record<string, string | number>): string {
+  return interpolate(uiText(key) ?? UI_CATALOG.en[key] ?? key, params);
+}
+
+// Plural-aware chrome text: define key_one/key_few/key_many/key_other in the
+// catalog (subset ok; key_other is the required base form). `n` is always
+// available as {n} in the text.
+export function tp(key: string, n: number, params?: Record<string, string | number>): string {
+  let category = 'other';
+  try {
+    category = new Intl.PluralRules(localeTag()).select(n);
+  } catch { /* very old runtime — 'other' */ }
+  const text = uiText(`${key}_${category}`) ?? uiText(`${key}_other`) ?? uiText(key) ?? key;
+  return interpolate(text, { n, ...(params ?? {}) });
+}
+
+// ── Page text: tx (the contract for agent-written pages) ───────────
+// The SOURCE TEXT is the key. The build language resolves to itself; the
+// other core language reads locales/pages.json (runtime catalog, see above);
+// overlay locales read locales/{lang}.json. Missing entries fall back to the
+// source text — a failed translation degrades, never breaks.
+function resolvePage(key: string): string {
+  if (locale === BUILD_LOCALE) return key;
+  if (isCore(locale)) return pagesCatalog?.[locale]?.[key] ?? key;
+  return (
+    overlayFor(locale)?.pages?.[key] ??
+    pagesCatalog?.[BUILD_LOCALE === 'en' ? 'de' : 'en']?.[key] ??
+    key
+  );
+}
+
+// String form: tx('Auslastung') or tx('Hallo {name}', { name }).
+// Tagged form:  tx`${n} Tiere im System` — the STATIC parts form the key
+// ('{0} Tiere im System'), the expressions stay values, so a translation can
+// reorder them. Params accept null/undefined on purpose: a record field is
+// `string | undefined`, and `String(undefined)` renders exactly what the
+// template literal it replaces rendered.
+export function tx(text: string, params?: Record<string, string | number | null | undefined>): string;
+export function tx(text: TemplateStringsArray, ...values: Array<string | number | null | undefined>): string;
+export function tx(text: string | TemplateStringsArray, ...values: unknown[]): string {
+  if (typeof text === 'string') {
+    return interpolate(
+      resolvePage(text),
+      values[0] as Record<string, string | number | null | undefined> | undefined,
+    );
+  }
+  let key = text[0];
+  for (let i = 1; i < text.length; i++) key += `{${i - 1}}` + text[i];
+  return resolvePage(key).replace(/\{(\d+)\}/g, (m, i) =>
+    Number(i) < values.length ? String(values[Number(i)]) : m,
+  );
+}
+
+// LEGACY page-local tables ({de,en} defined in the page, rendered via
+// tt('key')). Older dashboards carry these; new pages use tx above.
+// Overlay locales resolve via the en source text — no code change needed
+// when a language is added post-deploy.
+export function makeT<K extends string>(
+  table: Record<CoreLocale, Record<K, string>> & Partial<Record<string, Record<K, string>>>
+) {
+  // Optional params are accepted on purpose: the mechanical migration turns
+  // `${r.fields.gast_vorname}` into `p0: r.fields.gast_vorname`, and a record
+  // field is `string | undefined`. A template literal took that happily, so
+  // rejecting it here made a faithful rewrite fail tsc (live: TS2322 in a
+  // Restaurant dashboard). interpolate() renders exactly what the template
+  // literal did.
+  return (key: K, params?: Record<string, string | number | null | undefined>): string => {
+    let text: string | undefined = table[locale]?.[key];
+    if (text === undefined && !isCore(locale)) {
+      const source = table.en?.[key];
+      text = source !== undefined ? overlayFor(locale)?.pages?.[source] ?? source : undefined;
     }
-    return text;
+    text = text ?? table[BUILD_LOCALE]?.[key] ?? table.en?.[key] ?? key;
+    return interpolate(text, params);
   };
 }
 
-function bundle(): LabelBundle {
-  return LABELS[locale] ?? LABELS[BUILD_LOCALE];
+// ── Structure labels ───────────────────────────────────────────────
+function bundle(): Partial<LabelBundle> {
+  if (isCore(locale)) return LABELS[locale];
+  return overlayFor(locale)?.labels ?? LABELS[BUILD_LOCALE];
 }
 
 export function appgroupLabel(): string {
@@ -1575,12 +1537,12 @@ export function appgroupLabel(): string {
 }
 
 export function appLabel(app: string): string {
-  return bundle().apps[app]?.name ?? LABELS[BUILD_LOCALE].apps[app]?.name ?? app;
+  return bundle().apps?.[app]?.name ?? LABELS[BUILD_LOCALE].apps[app]?.name ?? app;
 }
 
 export function fieldLabel(app: string, field: string): string {
   return (
-    bundle().apps[app]?.fields?.[field] ??
+    bundle().apps?.[app]?.fields?.[field] ??
     LABELS[BUILD_LOCALE].apps[app]?.fields?.[field] ??
     field
   );
@@ -1590,7 +1552,7 @@ export function fieldLabel(app: string, field: string): string {
 export function fieldLabels(app: string): Record<string, string> {
   return {
     ...LABELS[BUILD_LOCALE].apps[app]?.fields,
-    ...bundle().apps[app]?.fields,
+    ...bundle().apps?.[app]?.fields,
   };
 }
 
@@ -1599,20 +1561,57 @@ export function fieldLabels(app: string): Record<string, string> {
 export function lookupLabel(app: string, field: string, key: string | null | undefined): string | null {
   if (key == null) return null;
   return (
-    bundle().apps[app]?.lookups?.[field]?.[key] ??
+    bundle().apps?.[app]?.lookups?.[field]?.[key] ??
     LABELS[BUILD_LOCALE].apps[app]?.lookups?.[field]?.[key] ??
     null
   );
 }
 
-// ── Locale-dependent formatting ────────────────────────────────────
-export function localeTag(): string {
-  return locale === 'de' ? 'de-DE' : locale === 'cs' ? 'cs-CZ' : 'en-US';
+// Public pages know their target app only by app_id (their runtime config
+// carries no app key) — resolve via the id → key map and fall back to the
+// config's stored label when the id is unknown (pages of apps that predate
+// the bundle, or foreign apps).
+const APP_KEY_BY_ID: Record<string, string> = {};
+for (const [appKey, entry] of Object.entries(LABELS[BUILD_LOCALE].apps)) {
+  if (entry.app_id) APP_KEY_BY_ID[entry.app_id] = appKey;
 }
 
-// date-fns needs an explicit locale object for non-English month/weekday names.
+export function fieldLabelByAppId(appId: string | null | undefined, field: string): string | null {
+  const appKey = appId ? APP_KEY_BY_ID[appId] : undefined;
+  if (!appKey) return null;
+  return (
+    bundle().apps?.[appKey]?.fields?.[field] ??
+    LABELS[BUILD_LOCALE].apps[appKey]?.fields?.[field] ??
+    null
+  );
+}
+
+export function lookupLabelByAppId(appId: string | null | undefined, field: string, key: string | null | undefined): string | null {
+  const appKey = appId ? APP_KEY_BY_ID[appId] : undefined;
+  return appKey ? lookupLabel(appKey, field, key) : null;
+}
+
+// ── Locale-dependent formatting ────────────────────────────────────
+export function localeName(l: Locale): string {
+  if (LOCALE_NAMES[l]) return LOCALE_NAMES[l];
+  try {
+    return new Intl.DisplayNames([l], { type: 'language' }).of(l) ?? l;
+  } catch {
+    return l;
+  }
+}
+
+export function localeTag(): string {
+  if (locale === 'de') return 'de-DE';
+  if (locale === 'en') return 'en-US';
+  return locale; // bare BCP-47 language code — Intl accepts it
+}
+
+// date-fns needs an explicit locale object for non-English month/weekday
+// names. Overlay locales fall back to the en default (honest degradation —
+// the date-fns locale data is not shippable via JSON overlay).
 export function dateFnsLocale(): DateFnsLocale | undefined {
-  return locale === 'de' ? dfDe : locale === 'cs' ? dfCs : undefined;
+  return locale === 'de' ? dfDe : undefined;
 }
 
 export function dateFormat(): string {

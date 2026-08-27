@@ -147,7 +147,8 @@
  *     weekStartsOn?          0 | 1   (default 1 = Monday)
  *     weekDays?              5 | 7   (day axis, WEEK range only: 5 = working week, Sat+Sun hidden.
  *                                     2weeks/month always show all days. Default 7)
- *     locale?                date-fns Locale  (pass `de` for German names)
+ *     locale?                date-fns Locale  (pass dateFnsLocale() from '@/i18n' — never
+ *                            pin a fixed locale like `de`; dates must follow the language switch)
  *     onEventClick?          (event: ResourceEvent) => void              — open a <RecordOverlay>
  *     onEmptyClick?          (date: Date, group?: string) => void        — click EMPTY space: open a PREFILLED create dialog.
  *                                                                    `group` is the resource's opaque key — this widget ALWAYS
@@ -255,7 +256,7 @@ import {
 } from './primitives';
 // `Locale` above is date-fns' (the consumer's date-format locale) — the UI
 // language is a separate axis and comes from the runtime layer.
-import { locale as i18nLocale, type Locale as UiLocale } from '@/i18n';
+import { coreLocale as i18nLocale, type CoreLocale as UiLocale } from '@/i18n';
 
 /** The closed tone palette as a referenceable array (don't transcribe the union).
  *  ResourceTone is derived from it, so the array and the type can never drift. */
@@ -642,7 +643,6 @@ function rangeColFloorPx(range: ResourceRange): number {
 const RANGE_LABELS: Record<UiLocale, Record<ResourceRange, string>> = {
   de: { week: 'Woche', '2weeks': '2 Wochen', month: 'Monat' },
   en: { week: 'Week', '2weeks': '2 weeks', month: 'Month' },
-  cs: { week: 'Týden', '2weeks': '2 týdny', month: 'Měsíc' },
 };
 
 // The widget's OWN chrome strings. Indexed at RENDER time (`RT_TEXTS[i18nLocale]`)
@@ -650,14 +650,12 @@ const RANGE_LABELS: Record<UiLocale, Record<ResourceRange, string>> = {
 const RT_TEXTS: Record<UiLocale, { prev: string; next: string; today: string; dismiss: string }> = {
   de: { prev: 'Zurück', next: 'Weiter', today: 'Heute', dismiss: 'Meldung schließen' },
   en: { prev: 'Back', next: 'Forward', today: 'Today', dismiss: 'Dismiss message' },
-  cs: { prev: 'Zpět', next: 'Dále', today: 'Dnes', dismiss: 'Zavřít hlášení' },
 };
 
 // Nights are a COUNTED noun: German has two forms, Czech three (1 noc,
 // 2–4 noci, 5+ nocí) — so the plural rule lives in a function, not in a dict.
 function nightsLabel(n: number, l: UiLocale): string {
   if (l === 'en') return `${n} ${n === 1 ? 'night' : 'nights'}`;
-  if (l === 'cs') return `${n} ${n === 1 ? 'noc' : n < 5 ? 'noci' : 'nocí'}`;
   return `${n} ${n === 1 ? 'Nacht' : 'Nächte'}`;
 }
 
