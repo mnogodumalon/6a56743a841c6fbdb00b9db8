@@ -1,0 +1,26 @@
+{
+  "entities": {
+    "Skateparks & Spots": {
+      "placeholders_set": 7,
+      "defaults_keys": [],
+      "computed_keys": [],
+      "reason": "Reine Stammdaten zu Orten ohne numerische Felder, daher keine Formeln."
+    },
+    "Anmeldungen": {
+      "placeholders_set": 6,
+      "defaults_keys": [
+        "skill_level"
+      ],
+      "computed_keys": [],
+      "reason": "Keine Formel, da die Anmeldung keine Mengen oder Datumspaare enthält und die Startgebühr des Events ohne Anzahl kein Gesamtbetrag-Feld speist."
+    },
+    "Event-Verwaltung": {
+      "placeholders_set": 9,
+      "defaults_keys": [
+        "datum_uhrzeit"
+      ],
+      "computed_keys": [],
+      "reason": "Keine Formel, da es kein Datumspaar und keine Mengen-Preis-Kette gibt; Startgebühr und Teilnehmerzahl sind unabhängige Werte."
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "pages": {
+    "en": {
+      "+ Anmeldung": "+ Registration",
+      "Aktuell sind keine kommenden Events geplant.": "No upcoming events are currently scheduled.",
+      "Alle Events haben Anmeldungen": "All events have registrations",
+      "Als Nächstes: {0} ({1}) mit {2} Anmeldungen.": "Next up: {0} ({1}) with {2} registrations.",
+      "Anmeldungen": "Registrations",
+      "Event anlegen": "Create Event",
+      "Event anpassen": "Edit Event",
+      "In den nächsten 7 Tagen: {0}.": "In the next 7 days: {0}.",
+      "Keine kommenden Events.": "No upcoming events.",
+      "Kommende Events": "Upcoming Events",
+      "Neues Event": "New Event",
+      "Noch keine Orte angelegt.": "No venues created yet.",
+      "Noch keine Teilnehmer": "No participants yet",
+      "Noch nichts geplant": "Nothing scheduled yet",
+      "Nächste Events": "Next Events",
+      "Nächstes: {0}": "Next: {0}",
+      "Ohne Anmeldung": "No registrations",
+      "Ort anlegen": "Create Venue",
+      "Plätze belegt": "Spots taken",
+      "heute": "today",
+      "kommende Events": "upcoming events",
+      "{0} verschoben": "{0} postponed",
+      "{0} von {1} Plätzen": "{0} of {1} spots",
+      "{0} überbucht — mehr Anmeldungen als Plätze.": "{0} overbooked — more registrations than spots."
+    }
+  },
+  "v": 1
+}

@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "language": "de",
+  "understanding": {
+    "summary": "Die Anwendung verwaltet Skateboard-Events: Orte (Skateparks und Spots), die Events selbst und die Anmeldungen der Teilnehmer. Die gewünschten Felder Telefon und Notizen im Bereich „Kontakt & Medien“ der Event-Verwaltung sind in der Struktur bereits vorhanden (Kontakt-Telefonnummer und Notizen). Dafür muss nichts Neues gebaut werden.",
+    "roles": [
+      "Event-Organisator",
+      "Teammitglied"
+    ],
+    "main_tasks": [
+      "Events anlegen und pflegen",
+      "Orte verwalten",
+      "Anmeldungen der Teilnehmer einsehen",
+      "Kontaktdaten und Notizen zu Events pflegen"
+    ],
+    "platform_roles": [
+      {
+        "persona": "Event-Organisator",
+        "role": "administrator",
+        "apps": [
+          "event_verwaltung",
+          "skateparks_spots",
+          "anmeldungen"
+        ]
+      },
+      {
+        "persona": "Teammitglied",
+        "role": "standard",
+        "apps": [
+          "event_verwaltung",
+          "anmeldungen",
+          "skateparks_spots"
+        ]
+      }
+    ]
+  },
+  "flows": [],
+  "public_pages": [],
+  "tools": [],
+  "covered_by_platform": [
+    {
+      "wish": "Bei Kontakt & Medien noch ein Feld Telefon dazu",
+      "feature": "record_form"
+    },
+    {
+      "wish": "Bei Event-Verwaltung noch ein Feld Notizen bei Kontakt & Medien",
+      "feature": "record_form"
+    }
+  ],
+  "ownership": {},
+  "dashboard": {
+    "focus": [
+      "Kommende Events",
+      "Anmeldungen pro Event",
+      "Orte"
+    ],
+    "hints": [
+      "Das Feld Kontakt-Telefonnummer und das Feld Notizen gibt es bereits in der Event-Verwaltung.",
+      "Neue Felder ändert der Struktur-Assistent, nicht dieser Plan."
+    ],
+    "wishes": []
+  }
+}
