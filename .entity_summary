@@ -30,7 +30,7 @@ prescribed them cost every lane a gate round (live 07.09.2026 — wrong vSQL
 and a `createRecordUrl` call copied into three flows). A brief carries the
 domain: steps, eligible records, fields as `name![type: keys]`, sentences.
   @/types/app                            entity types, APP_IDS, LOOKUP_OPTIONS
-  @/types/enriched                       EnrichedAnmeldungen, EnrichedEventVerwaltung — the COMPLETE list, no other Enriched* type exists
+  @/types/enriched                       EnrichedEventVerwaltung, EnrichedAnmeldungen — the COMPLETE list, no other Enriched* type exists
   @/lib/enrich                           the enrich functions — exact fields and signatures on the `✚` line of each entity below; every listed map is REQUIRED, and no other enriched field exists
   @/services/livingAppsService           LivingAppsService, createRecordUrl, extractRecordId — dashboard overview only; a flow writes through its plan (create) or `updates: id` (update), never through the service (gate 3z)
   @/hooks/useDashboardData               useDashboardData — DASHBOARD OVERVIEW ONLY: the RAW arrays (one per entity, camelCase), their setters, loading, error, fetchAll. Never in a flow page (gate 3y): a flow reads through the journey layer (useRecordSearch, useOccupancy, x.recordOf) + eventVerwaltungMap, skateparksSpotsMap; it carries NO enriched arrays — build those with the `✚` call below
@@ -56,14 +56,7 @@ createRecordUrl from the service. Note the lowercase `l` in the service path.
   · website: An URL value according to RFC 3986 (or `null`/`None`).
   ◈ untergrundtyp → choice (5 options, ChoiceGroup)
   ⚙ getSkateparksSpots() · getSkateparksSpot(id) · createSkateparksSpot(fields) · updateSkateparksSpot(id, fields) · deleteSkateparksSpot(id) · querySkateparksSpots({ filter, orderby, limit, offset, fields }) · countSkateparksSpots(filter?)
-- Anmeldungen (anmeldungen): event![applookup/select], vorname!^[string/text], nachname!^[string/text], geburtsdatum[date/date], email!^[string/email] "E-Mail-Adresse", telefon[string/tel] "Telefonnummer", skill_level![lookup/select: anfaenger|fortgeschritten|profi], board_stil[multiplelookup/checkbox: street|park|vert|bowl|freestyle], anmerkungen[string/textarea], teilnahmebedingungen![bool] "Ich stimme den Teilnahmebedingungen zu"
-  ≡ 3 records at build time
-  · board_stil: Arbitrary number of selected options out of multiple available ones. The available options are defined in the `lookup_data` attribute of this control. The field value will be a list of keys from this `lookup_data` attribute. Displayed as multiple checkbox fields in HTML pages.
-  ◈ skill_level → choice (3 options, ChoiceGroup) · event → record (event_verwaltung, EntitySelectStep)
-  ⚙ getAnmeldungen() · getAnmeldungenEntry(id) · createAnmeldungenEntry(fields) · updateAnmeldungenEntry(id, fields) · deleteAnmeldungenEntry(id) · queryAnmeldungen({ filter, orderby, limit, offset, fields }) · countAnmeldungen(filter?)
-  ✚ EnrichedAnmeldungen adds ONLY eventName — via enrichAnmeldungen(anmeldungen, { eventVerwaltungMap }), all maps required
-  → event links to app_id 6a56741f84d8dce105858830
-- Event-Verwaltung (event_verwaltung): titel!^[string/text] "Titel des Events", kategorie![lookup/select: contest|jam=Jam Session|demo|workshop|sonstiges], datum_uhrzeit![date/datetimeminute] "Datum und Uhrzeit", beschreibung[string/textarea], skill_level[lookup/select: anfaenger|fortgeschritten|profi|alle_levels], max_teilnehmer[number] "Maximale Teilnehmerzahl", startgebuehr[number], ort![applookup/select], kontakt_email[string/email] "Kontakt-E-Mail", event_website[string/url] "Website des Events", flyer[file] "Flyer / Bild", kontakt_telefon^[string/tel] "Kontakt-Telefonnummer", notizen[string/textarea]
+- Event-Verwaltung (event_verwaltung): titel!^[string/text] "Titel des Events", kategorie![lookup/select: jam=Jam Session|demo|workshop|sonstiges|contest], datum_uhrzeit![date/datetimeminute] "Datum und Uhrzeit", beschreibung[string/textarea], skill_level[lookup/select: anfaenger|fortgeschritten|profi|alle_levels], max_teilnehmer[number] "Maximale Teilnehmerzahl", startgebuehr[number], ort![applookup/select], kontakt_email[string/email] "Kontakt-E-Mail", event_website[string/url] "Website des Events", flyer[file] "Flyer / Bild", kontakt_telefon^[string/tel] "Kontakt-Telefonnummer"
   ≡ 3 records at build time
   · datum_uhrzeit: A specific moment in time consisting of year, month, day, hour and minute (or `null`/`None`) The field value will be a string in the format `<YYYY>-<MM>-<DD>T<HH>:<MM>` (or `null`/`None`). For example: `2000-02-29T11:30`. For `POST`/`PUT`/`PATCH` requests the REST API uses a liberal parsing approach so that strings like `2026`, `February 29, 2000 12:34 MEST`, `letztes Jahr` etc. will be accepted as value datetime values. However this runs the risk of parsing ambiguous values incorrectly. To ensure reliable parsing it is best to use the canonical format specified above.
   · event_website: An URL value according to RFC 3986 (or `null`/`None`).
@@ -71,3 +64,10 @@ createRecordUrl from the service. Note the lowercase `l` in the service path.
   ⚙ getEventVerwaltung() · getEventVerwaltungEntry(id) · createEventVerwaltungEntry(fields) · updateEventVerwaltungEntry(id, fields) · deleteEventVerwaltungEntry(id) · queryEventVerwaltung({ filter, orderby, limit, offset, fields }) · countEventVerwaltung(filter?)
   ✚ EnrichedEventVerwaltung adds ONLY ortName — via enrichEventVerwaltung(eventVerwaltung, { skateparksSpotsMap }), all maps required
   → ort links to app_id 6a56741a9ef9a79ac692ad70
+- Anmeldungen (anmeldungen): event![applookup/select], vorname!^[string/text], nachname!^[string/text], geburtsdatum[date/date], email!^[string/email] "E-Mail-Adresse", telefon[string/tel] "Telefonnummer", skill_level![lookup/select: anfaenger|fortgeschritten|profi], board_stil[multiplelookup/checkbox: street|park|vert|bowl|freestyle], anmerkungen[string/textarea], teilnahmebedingungen![bool] "Ich stimme den Teilnahmebedingungen zu"
+  ≡ 3 records at build time
+  · board_stil: Arbitrary number of selected options out of multiple available ones. The available options are defined in the `lookup_data` attribute of this control. The field value will be a list of keys from this `lookup_data` attribute. Displayed as multiple checkbox fields in HTML pages.
+  ◈ skill_level → choice (3 options, ChoiceGroup) · event → record (event_verwaltung, EntitySelectStep)
+  ⚙ getAnmeldungen() · getAnmeldungenEntry(id) · createAnmeldungenEntry(fields) · updateAnmeldungenEntry(id, fields) · deleteAnmeldungenEntry(id) · queryAnmeldungen({ filter, orderby, limit, offset, fields }) · countAnmeldungen(filter?)
+  ✚ EnrichedAnmeldungen adds ONLY eventName — via enrichAnmeldungen(anmeldungen, { eventVerwaltungMap }), all maps required
+  → event links to app_id 6a56741f84d8dce105858830

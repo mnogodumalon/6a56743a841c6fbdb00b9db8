@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "changes": [
+    {
+      "kind": "field_removed",
+      "entity": "event_verwaltung",
+      "field": "notizen",
+      "fulltype": "string/textarea",
+      "label": "Notizen"
+    }
+  ],
+  "counts": {
+    "field_removed": 1
+  },
+  "harmless_only": false
+}

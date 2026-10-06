@@ -352,7 +352,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
         <Label htmlFor="event">{fieldLabel('anmeldungen', 'event')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Combobox
           id="event"
-          placeholder="Welches Event?"
+          placeholder=""
           items={eventVerwaltungListAll.map(r => ({
             id: r.record_id,
             label: String(r.fields.titel ?? r.record_id),
@@ -372,7 +372,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
         <Label htmlFor="vorname">{fieldLabel('anmeldungen', 'vorname')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="vorname"
-          placeholder="z. B. Max"
+          placeholder=""
           value={fields.vorname ?? ''}
           onChange={e => setFields(f => ({ ...f, vorname: e.target.value }))}
           required
@@ -387,7 +387,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
         <Label htmlFor="nachname">{fieldLabel('anmeldungen', 'nachname')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="nachname"
-          placeholder="z. B. Mustermann"
+          placeholder=""
           value={fields.nachname ?? ''}
           onChange={e => setFields(f => ({ ...f, nachname: e.target.value }))}
           required
@@ -402,7 +402,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
         <Label htmlFor="geburtsdatum">{fieldLabel('anmeldungen', 'geburtsdatum')}</Label>
         <DatePicker
           id="geburtsdatum"
-          placeholder="Wann wurdest du geboren?"
+          placeholder=""
           mode="date"
           value={fields.geburtsdatum ?? null}
           onChange={v => setFields(f => ({ ...f, geburtsdatum: v ?? undefined }))}
@@ -416,7 +416,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
           id="email"
           type="email"
           inputMode="email"
-          placeholder="z. B. max@beispiel.de"
+          placeholder=""
           value={fields.email ?? ''}
           onChange={e => setFields(f => ({ ...f, email: e.target.value }))}
           required
@@ -570,7 +570,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
         <Label htmlFor="anmerkungen">{fieldLabel('anmeldungen', 'anmerkungen')}</Label>
         <Textarea
           id="anmerkungen"
-          placeholder="Gibt es etwas zu beachten?"
+          placeholder=""
           value={fields.anmerkungen ?? ''}
           onChange={e => setFields(f => ({ ...f, anmerkungen: e.target.value }))}
           rows={3}
@@ -613,7 +613,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
   // eine Map { lookupKey: label } für ALLE Felder des Target-Schemas. Wird
   // beim Render-Walk gefiltert auf die in der computed-Formel tatsächlich
   // referenzierten lookupKeys (siehe applookupRefs unten).
-  const APPLOOKUP_LABELS: Record<string, Record<string, string>> = {"event": {"titel": "Titel des Events", "kategorie": "Kategorie", "datum_uhrzeit": "Datum und Uhrzeit", "beschreibung": "Beschreibung", "skill_level": "Skill-Level", "max_teilnehmer": "Maximale Teilnehmerzahl", "startgebuehr": "Startgebühr (€)", "ort": "Ort", "kontakt_email": "Kontakt-E-Mail", "event_website": "Website des Events", "flyer": "Flyer / Bild", "kontakt_telefon": "Kontakt-Telefonnummer", "notizen": "Notizen"}};
+  const APPLOOKUP_LABELS: Record<string, Record<string, string>> = {"event": {"titel": "Titel des Events", "kategorie": "Kategorie", "datum_uhrzeit": "Datum und Uhrzeit", "beschreibung": "Beschreibung", "skill_level": "Skill-Level", "max_teilnehmer": "Maximale Teilnehmerzahl", "startgebuehr": "Startgebühr (€)", "ort": "Ort", "kontakt_email": "Kontakt-E-Mail", "event_website": "Website des Events", "flyer": "Flyer / Bild", "kontakt_telefon": "Kontakt-Telefonnummer"}};
   const inputFields = useMemo(() => flattenFieldOrder(orderedFields), [orderedFieldsKey]);
   const backendFieldSet = useMemo(() => new Set(inputFields), [inputFields.join(',')]);
   const virtualComputed = useMemo(

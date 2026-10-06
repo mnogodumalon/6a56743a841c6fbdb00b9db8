@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { SkateparksSpots, Anmeldungen, EventVerwaltung } from '@/types/app';
+import type { SkateparksSpots, EventVerwaltung, Anmeldungen } from '@/types/app';
 import { LivingAppsService } from '@/services/livingAppsService';
 import { t } from '@/i18n';
 
@@ -14,7 +14,7 @@ import { t } from '@/i18n';
  *  There is no other mechanism (no `__optimistic`, no `mutate`).
  */
 /** Entities this hook can load — the same keys the journey layer uses. */
-export type DashboardEntity = 'skateparks_spots' | 'anmeldungen' | 'event_verwaltung';
+export type DashboardEntity = 'skateparks_spots' | 'event_verwaltung' | 'anmeldungen';
 
 export interface DashboardDataOptions {
   /** Entities this page does NOT need (picked through useRecordSearch instead).
@@ -29,8 +29,8 @@ export function useDashboardData(options: DashboardDataOptions = {}) {
   // on every render and would restart the fetch forever.
   const omitKey = (options.omit ?? []).slice().sort().join('|');
   const [skateparksSpots, setSkateparksSpots] = useState<SkateparksSpots[]>([]);
-  const [anmeldungen, setAnmeldungen] = useState<Anmeldungen[]>([]);
   const [eventVerwaltung, setEventVerwaltung] = useState<EventVerwaltung[]>([]);
+  const [anmeldungen, setAnmeldungen] = useState<Anmeldungen[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   /** Lists the signed-in user may not read (403 on the platform). They load as
@@ -51,8 +51,8 @@ export function useDashboardData(options: DashboardDataOptions = {}) {
       return null;
     };
     { const rows = pick<SkateparksSpots>(0, 'skateparks_spots'); if (rows) setSkateparksSpots(rows); }
-    { const rows = pick<Anmeldungen>(1, 'anmeldungen'); if (rows) setAnmeldungen(rows); }
-    { const rows = pick<EventVerwaltung>(2, 'event_verwaltung'); if (rows) setEventVerwaltung(rows); }
+    { const rows = pick<EventVerwaltung>(1, 'event_verwaltung'); if (rows) setEventVerwaltung(rows); }
+    { const rows = pick<Anmeldungen>(2, 'anmeldungen'); if (rows) setAnmeldungen(rows); }
     setForbidden(prev => (prev.join('|') === denied.join('|') ? prev : denied));
     return failure;
   }, []);
@@ -63,8 +63,8 @@ export function useDashboardData(options: DashboardDataOptions = {}) {
     try {
       const failure = settle(await Promise.allSettled([
         omit.has('skateparks_spots') ? Promise.resolve([] as SkateparksSpots[]) : LivingAppsService.getSkateparksSpots(),
-        omit.has('anmeldungen') ? Promise.resolve([] as Anmeldungen[]) : LivingAppsService.getAnmeldungen(),
         omit.has('event_verwaltung') ? Promise.resolve([] as EventVerwaltung[]) : LivingAppsService.getEventVerwaltung(),
+        omit.has('anmeldungen') ? Promise.resolve([] as Anmeldungen[]) : LivingAppsService.getAnmeldungen(),
       ]));
       if (failure) throw failure;
     } catch (err) {
@@ -85,8 +85,8 @@ export function useDashboardData(options: DashboardDataOptions = {}) {
         // replaces what loaded or was refused
         settle(await Promise.allSettled([
           omit.has('skateparks_spots') ? Promise.resolve([] as SkateparksSpots[]) : LivingAppsService.getSkateparksSpots(),
-          omit.has('anmeldungen') ? Promise.resolve([] as Anmeldungen[]) : LivingAppsService.getAnmeldungen(),
           omit.has('event_verwaltung') ? Promise.resolve([] as EventVerwaltung[]) : LivingAppsService.getEventVerwaltung(),
+          omit.has('anmeldungen') ? Promise.resolve([] as Anmeldungen[]) : LivingAppsService.getAnmeldungen(),
         ]));
       } catch {
         // silently ignore — stale data is better than no data
@@ -113,7 +113,7 @@ export function useDashboardData(options: DashboardDataOptions = {}) {
     return m;
   }, [eventVerwaltung]);
 
-  return { skateparksSpots, setSkateparksSpots, anmeldungen, setAnmeldungen, eventVerwaltung, setEventVerwaltung, loading, error, fetchAll, forbidden, skateparksSpotsMap, eventVerwaltungMap };
+  return { skateparksSpots, setSkateparksSpots, eventVerwaltung, setEventVerwaltung, anmeldungen, setAnmeldungen, loading, error, fetchAll, forbidden, skateparksSpotsMap, eventVerwaltungMap };
 }
 
 /** The hook's return — the `data` prop of DashboardOverview in the Ready-Wrapper form. */

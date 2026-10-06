@@ -42,15 +42,15 @@
  * Overlay content per entity (the host renders these — you never compose
  * Details blocks yourself):
  *   skateparks_spots: name, strasse, hausnummer, postleitzahl, stadt, beschreibung, untergrundtyp, standort, …  ·  ← event_verwaltung (list + contextual +)
- *   anmeldungen: event, vorname, nachname, geburtsdatum, email, telefon, skill_level, board_stil, …  ·  → event_verwaltung
  *   event_verwaltung: titel, kategorie, datum_uhrzeit, beschreibung, skill_level, max_teilnehmer, startgebuehr, ort, …  ·  → skateparks_spots · ← anmeldungen (list + contextual +)
+ *   anmeldungen: event, vorname, nachname, geburtsdatum, email, telefon, skill_level, board_stil, …  ·  → event_verwaltung
  */
 import { useState, useMemo, type ReactNode } from 'react';
-import type { SkateparksSpots, Anmeldungen, EventVerwaltung } from '@/types/app';
+import type { SkateparksSpots, EventVerwaltung, Anmeldungen } from '@/types/app';
 import { APP_IDS } from '@/types/app';
 import { LivingAppsService, createRecordUrl } from '@/services/livingAppsService';
-import { enrichAnmeldungen, enrichEventVerwaltung } from '@/lib/enrich';
-import type { EnrichedAnmeldungen, EnrichedEventVerwaltung } from '@/types/enriched';
+import { enrichEventVerwaltung, enrichAnmeldungen } from '@/lib/enrich';
+import type { EnrichedEventVerwaltung, EnrichedAnmeldungen } from '@/types/enriched';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import {
   useRecordOverlayStack, RecordOverlayHost, RecordHeader,
@@ -58,10 +58,10 @@ import {
 } from '@/components/widgets/RecordView';
 import { SkateparksSpotsDialog, type SkateparksSpotsDialogDefaults } from '@/components/dialogs/SkateparksSpotsDialog';
 import { SkateparksSpotsDetails } from '@/components/details/SkateparksSpotsDetails';
-import { AnmeldungenDialog, type AnmeldungenDialogDefaults } from '@/components/dialogs/AnmeldungenDialog';
-import { AnmeldungenDetails } from '@/components/details/AnmeldungenDetails';
 import { EventVerwaltungDialog, type EventVerwaltungDialogDefaults } from '@/components/dialogs/EventVerwaltungDialog';
 import { EventVerwaltungDetails } from '@/components/details/EventVerwaltungDetails';
+import { AnmeldungenDialog, type AnmeldungenDialogDefaults } from '@/components/dialogs/AnmeldungenDialog';
+import { AnmeldungenDetails } from '@/components/details/AnmeldungenDetails';
 import { AI_PHOTO_SCAN, AI_PHOTO_LOCATION } from '@/config/ai-features';
 import { t, appLabel } from '@/i18n';
 import { undoToast } from '@/lib/polish';
@@ -74,8 +74,8 @@ import { formatDate } from '@/lib/formatters';
 // The host resolves enrichment itself; pages pass raw records everywhere.
 export type OverlayItem =
   | { type: 'skateparksSpots'; record: SkateparksSpots }
-  | { type: 'anmeldungen'; record: EnrichedAnmeldungen }
-  | { type: 'eventVerwaltung'; record: EnrichedEventVerwaltung };
+  | { type: 'eventVerwaltung'; record: EnrichedEventVerwaltung }
+  | { type: 'anmeldungen'; record: EnrichedAnmeldungen };
 
 /** The useDashboardData() return — pass it in, never re-fetch inside. */
 export type EntityCrudData = ReturnType<typeof useDashboardData>;
@@ -106,12 +106,12 @@ export interface EntityCrud {
   /** Render ONCE at the end of the page JSX — all dialogs + the overlay host. */
   surfaces: ReactNode;
   skateparksSpots: EntityCrudApi<SkateparksSpots, SkateparksSpotsDialogDefaults>;
-  anmeldungen: EntityCrudApi<Anmeldungen, AnmeldungenDialogDefaults>;
   eventVerwaltung: EntityCrudApi<EventVerwaltung, EventVerwaltungDialogDefaults>;
+  anmeldungen: EntityCrudApi<Anmeldungen, AnmeldungenDialogDefaults>;
   /** The display-ready array per entity: Enriched* where an enrich function
    *  exists, the raw array otherwise. One key per entity so no page has to
    *  know which is which. Reuse these; never re-enrich in the page. */
-  enriched: { skateparksSpots: SkateparksSpots[]; anmeldungen: EnrichedAnmeldungen[]; eventVerwaltung: EnrichedEventVerwaltung[] };
+  enriched: { skateparksSpots: SkateparksSpots[]; eventVerwaltung: EnrichedEventVerwaltung[]; anmeldungen: EnrichedAnmeldungen[] };
 }
 
 export function useEntityCrud(data: EntityCrudData, options?: EntityCrudOptions): EntityCrud {
@@ -120,10 +120,10 @@ export function useEntityCrud(data: EntityCrudData, options?: EntityCrudOptions)
   const perms = usePermissions();
   const refuse = () => { toast.error(t('perm_denied_title'), { description: t('perm_denied_desc') }); };
   const [skateparksSpotsDialog, setSkateparksSpotsDialog] = useState<{ defaults?: SkateparksSpotsDialogDefaults; editing?: SkateparksSpots } | null>(null);
-  const [anmeldungenDialog, setAnmeldungenDialog] = useState<{ defaults?: AnmeldungenDialogDefaults; editing?: Anmeldungen } | null>(null);
   const [eventVerwaltungDialog, setEventVerwaltungDialog] = useState<{ defaults?: EventVerwaltungDialogDefaults; editing?: EventVerwaltung } | null>(null);
-  const enrichedAnmeldungen = useMemo(() => enrichAnmeldungen(data.anmeldungen, { eventVerwaltungMap: data.eventVerwaltungMap }), [data.anmeldungen, data.eventVerwaltungMap]);
+  const [anmeldungenDialog, setAnmeldungenDialog] = useState<{ defaults?: AnmeldungenDialogDefaults; editing?: Anmeldungen } | null>(null);
   const enrichedEventVerwaltung = useMemo(() => enrichEventVerwaltung(data.eventVerwaltung, { skateparksSpotsMap: data.skateparksSpotsMap }), [data.eventVerwaltung, data.skateparksSpotsMap]);
+  const enrichedAnmeldungen = useMemo(() => enrichAnmeldungen(data.anmeldungen, { eventVerwaltungMap: data.eventVerwaltungMap }), [data.anmeldungen, data.eventVerwaltungMap]);
 
   function detailSkateparksSpots(record: SkateparksSpots, push = false) {
     const item: OverlayItem = { type: 'skateparksSpots', record };
@@ -148,35 +148,6 @@ export function useEntityCrud(data: EntityCrudData, options?: EntityCrudOptions)
     } else {
       await LivingAppsService.createSkateparksSpot(fields);
       undoToast(`${appLabel('skateparks_spots')} — ${t('crud_created')}`);
-      data.fetchAll();
-    }
-  }
-
-  function detailAnmeldungen(record: Anmeldungen, push = false) {
-    const rec = enrichedAnmeldungen.find(r => r.record_id === record.record_id);
-    if (!rec) return;
-    const item: OverlayItem = { type: 'anmeldungen', record: rec };
-    if (push) overlay.push(item); else overlay.replace(item);
-  }
-
-  async function submitAnmeldungen(fields: Anmeldungen['fields']) {
-    const editing = anmeldungenDialog?.editing;
-    if (editing) {
-      const prev = editing;
-      data.setAnmeldungen(list => list.map(r => (r.record_id === editing.record_id ? { ...r, fields } : r)));
-      try {
-        await LivingAppsService.updateAnmeldungenEntry(editing.record_id, fields);
-      } catch (err) {
-        data.fetchAll();
-        throw err;
-      }
-      undoToast(`${appLabel('anmeldungen')} — ${t('crud_updated')}`, async () => {
-        data.setAnmeldungen(list => list.map(r => (r.record_id === prev.record_id ? prev : r)));
-        try { await LivingAppsService.updateAnmeldungenEntry(prev.record_id, prev.fields); } catch { data.fetchAll(); }
-      });
-    } else {
-      await LivingAppsService.createAnmeldungenEntry(fields);
-      undoToast(`${appLabel('anmeldungen')} — ${t('crud_created')}`);
       data.fetchAll();
     }
   }
@@ -210,6 +181,35 @@ export function useEntityCrud(data: EntityCrudData, options?: EntityCrudOptions)
     }
   }
 
+  function detailAnmeldungen(record: Anmeldungen, push = false) {
+    const rec = enrichedAnmeldungen.find(r => r.record_id === record.record_id);
+    if (!rec) return;
+    const item: OverlayItem = { type: 'anmeldungen', record: rec };
+    if (push) overlay.push(item); else overlay.replace(item);
+  }
+
+  async function submitAnmeldungen(fields: Anmeldungen['fields']) {
+    const editing = anmeldungenDialog?.editing;
+    if (editing) {
+      const prev = editing;
+      data.setAnmeldungen(list => list.map(r => (r.record_id === editing.record_id ? { ...r, fields } : r)));
+      try {
+        await LivingAppsService.updateAnmeldungenEntry(editing.record_id, fields);
+      } catch (err) {
+        data.fetchAll();
+        throw err;
+      }
+      undoToast(`${appLabel('anmeldungen')} — ${t('crud_updated')}`, async () => {
+        data.setAnmeldungen(list => list.map(r => (r.record_id === prev.record_id ? prev : r)));
+        try { await LivingAppsService.updateAnmeldungenEntry(prev.record_id, prev.fields); } catch { data.fetchAll(); }
+      });
+    } else {
+      await LivingAppsService.createAnmeldungenEntry(fields);
+      undoToast(`${appLabel('anmeldungen')} — ${t('crud_created')}`);
+      data.fetchAll();
+    }
+  }
+
   const surfaces = (
     <>
       <SkateparksSpotsDialog
@@ -221,16 +221,6 @@ export function useEntityCrud(data: EntityCrudData, options?: EntityCrudOptions)
         enablePhotoScan={AI_PHOTO_SCAN['SkateparksSpots']}
         enablePhotoLocation={AI_PHOTO_LOCATION['SkateparksSpots']}
       />
-      <AnmeldungenDialog
-        open={anmeldungenDialog !== null}
-        onClose={() => setAnmeldungenDialog(null)}
-        onSubmit={submitAnmeldungen}
-        defaultValues={anmeldungenDialog?.defaults}
-        recordId={anmeldungenDialog?.editing?.record_id}
-        eventVerwaltungList={data.eventVerwaltung}
-        enablePhotoScan={AI_PHOTO_SCAN['Anmeldungen']}
-        enablePhotoLocation={AI_PHOTO_LOCATION['Anmeldungen']}
-      />
       <EventVerwaltungDialog
         open={eventVerwaltungDialog !== null}
         onClose={() => setEventVerwaltungDialog(null)}
@@ -240,6 +230,16 @@ export function useEntityCrud(data: EntityCrudData, options?: EntityCrudOptions)
         skateparksSpotsList={data.skateparksSpots}
         enablePhotoScan={AI_PHOTO_SCAN['EventVerwaltung']}
         enablePhotoLocation={AI_PHOTO_LOCATION['EventVerwaltung']}
+      />
+      <AnmeldungenDialog
+        open={anmeldungenDialog !== null}
+        onClose={() => setAnmeldungenDialog(null)}
+        onSubmit={submitAnmeldungen}
+        defaultValues={anmeldungenDialog?.defaults}
+        recordId={anmeldungenDialog?.editing?.record_id}
+        eventVerwaltungList={data.eventVerwaltung}
+        enablePhotoScan={AI_PHOTO_SCAN['Anmeldungen']}
+        enablePhotoLocation={AI_PHOTO_LOCATION['Anmeldungen']}
       />
       <RecordOverlayHost
         overlay={overlay}
@@ -260,18 +260,6 @@ export function useEntityCrud(data: EntityCrudData, options?: EntityCrudOptions)
               </>
             );
           }
-          if (top.type === 'anmeldungen') {
-            return (
-              <>
-                <RecordHeader title={top.record.fields.vorname ?? appLabel('anmeldungen')} subtitle={top.record.fields.geburtsdatum ? formatDate(top.record.fields.geburtsdatum) : undefined} />
-                <AnmeldungenDetails
-                  record={top.record}
-                  eventVerwaltungList={data.eventVerwaltung}
-                  onOpenEventVerwaltung={(r) => detailEventVerwaltung(r, true)}
-                />
-              </>
-            );
-          }
           if (top.type === 'eventVerwaltung') {
             return (
               <>
@@ -287,19 +275,31 @@ export function useEntityCrud(data: EntityCrudData, options?: EntityCrudOptions)
               </>
             );
           }
+          if (top.type === 'anmeldungen') {
+            return (
+              <>
+                <RecordHeader title={top.record.fields.vorname ?? appLabel('anmeldungen')} subtitle={top.record.fields.geburtsdatum ? formatDate(top.record.fields.geburtsdatum) : undefined} />
+                <AnmeldungenDetails
+                  record={top.record}
+                  eventVerwaltungList={data.eventVerwaltung}
+                  onOpenEventVerwaltung={(r) => detailEventVerwaltung(r, true)}
+                />
+              </>
+            );
+          }
           return null;
         }}
         canEdit={(top) => {
           if (top.type === 'skateparksSpots') return perms.canWrite('skateparks_spots');
-          if (top.type === 'anmeldungen') return perms.canWrite('anmeldungen');
           if (top.type === 'eventVerwaltung') return perms.canWrite('event_verwaltung');
+          if (top.type === 'anmeldungen') return perms.canWrite('anmeldungen');
           return true;
         }}
         onEdit={(top) => {
           overlay.close();
           if (top.type === 'skateparksSpots') setSkateparksSpotsDialog({ editing: top.record, defaults: top.record.fields });
-          if (top.type === 'anmeldungen') setAnmeldungenDialog({ editing: top.record, defaults: top.record.fields });
           if (top.type === 'eventVerwaltung') setEventVerwaltungDialog({ editing: top.record, defaults: top.record.fields });
+          if (top.type === 'anmeldungen') setAnmeldungenDialog({ editing: top.record, defaults: top.record.fields });
         }}
       />
     </>
@@ -314,18 +314,18 @@ export function useEntityCrud(data: EntityCrudData, options?: EntityCrudOptions)
       openDetail: (record: SkateparksSpots) => detailSkateparksSpots(record, false),
       canWrite: perms.canWrite('skateparks_spots'),
     },
-    anmeldungen: {
-      openCreate: (defaults?: AnmeldungenDialogDefaults) => (perms.canWrite('anmeldungen') ? setAnmeldungenDialog({ defaults }) : refuse()),
-      openEdit: (record: Anmeldungen) => (perms.canWrite('anmeldungen') ? setAnmeldungenDialog({ editing: record, defaults: record.fields }) : refuse()),
-      openDetail: (record: Anmeldungen) => detailAnmeldungen(record, false),
-      canWrite: perms.canWrite('anmeldungen'),
-    },
     eventVerwaltung: {
       openCreate: (defaults?: EventVerwaltungDialogDefaults) => (perms.canWrite('event_verwaltung') ? setEventVerwaltungDialog({ defaults }) : refuse()),
       openEdit: (record: EventVerwaltung) => (perms.canWrite('event_verwaltung') ? setEventVerwaltungDialog({ editing: record, defaults: record.fields }) : refuse()),
       openDetail: (record: EventVerwaltung) => detailEventVerwaltung(record, false),
       canWrite: perms.canWrite('event_verwaltung'),
     },
-    enriched: { skateparksSpots: data.skateparksSpots, anmeldungen: enrichedAnmeldungen, eventVerwaltung: enrichedEventVerwaltung },
+    anmeldungen: {
+      openCreate: (defaults?: AnmeldungenDialogDefaults) => (perms.canWrite('anmeldungen') ? setAnmeldungenDialog({ defaults }) : refuse()),
+      openEdit: (record: Anmeldungen) => (perms.canWrite('anmeldungen') ? setAnmeldungenDialog({ editing: record, defaults: record.fields }) : refuse()),
+      openDetail: (record: Anmeldungen) => detailAnmeldungen(record, false),
+      canWrite: perms.canWrite('anmeldungen'),
+    },
+    enriched: { skateparksSpots: data.skateparksSpots, eventVerwaltung: enrichedEventVerwaltung, anmeldungen: enrichedAnmeldungen },
   };
 }

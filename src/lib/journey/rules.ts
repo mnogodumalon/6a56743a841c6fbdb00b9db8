@@ -13,14 +13,14 @@ import { appLabel, fieldLabel, lookupLabel } from '@/i18n';
 import { policyLabel } from './policy';
 import { LOOKUP_OPTIONS } from '@/types/app';
 
-export type EntityKey = 'skateparks_spots' | 'anmeldungen' | 'event_verwaltung';
+export type EntityKey = 'skateparks_spots' | 'event_verwaltung' | 'anmeldungen';
 
 /** The text fields of each entity — what a search may run over (generated;
  *  `never` for an entity without text of its own, e.g. a link table). */
 export interface StringFields {
   "skateparks_spots": "name" | "strasse" | "hausnummer" | "postleitzahl" | "stadt" | "beschreibung" | "website";
+  "event_verwaltung": "titel" | "beschreibung" | "kontakt_email" | "event_website" | "kontakt_telefon";
   "anmeldungen": "vorname" | "nachname" | "email" | "telefon" | "anmerkungen";
-  "event_verwaltung": "titel" | "beschreibung" | "kontakt_email" | "event_website" | "kontakt_telefon" | "notizen";
 }
 export type StringFieldKey<E extends EntityKey> = E extends keyof StringFields ? StringFields[E] : never;
 
@@ -29,8 +29,8 @@ export type StringFieldKey<E extends EntityKey> = E extends keyof StringFields ?
  *  (`StepForm.set`), because the review would otherwise show the id. */
 export interface RecordFields {
   "skateparks_spots": never;
-  "anmeldungen": "event";
   "event_verwaltung": "ort";
+  "anmeldungen": "event";
 }
 export type RecordFieldKey<E extends EntityKey> = E extends keyof RecordFields ? RecordFields[E] : never;
 
@@ -101,19 +101,19 @@ export const ENTITIES: Record<EntityKey, EntityInfo> = {
     "pascal": "SkateparksSpots",
     "single": "SkateparksSpot"
   },
-  "anmeldungen": {
-    "key": "anmeldungen",
-    "appId": "6a5674227925510842ea49d7",
-    "label": "Anmeldungen",
-    "pascal": "Anmeldungen",
-    "single": "AnmeldungenEntry"
-  },
   "event_verwaltung": {
     "key": "event_verwaltung",
     "appId": "6a56741f84d8dce105858830",
     "label": "Event-Verwaltung",
     "pascal": "EventVerwaltung",
     "single": "EventVerwaltungEntry"
+  },
+  "anmeldungen": {
+    "key": "anmeldungen",
+    "appId": "6a5674227925510842ea49d7",
+    "label": "Anmeldungen",
+    "pascal": "Anmeldungen",
+    "single": "AnmeldungenEntry"
   }
 };
 
@@ -207,6 +207,124 @@ export const FIELD_RULES: Record<EntityKey, Record<string, FieldRule>> = {
       "label": "Website",
       "writable": true,
       "autoComplete": "url"
+    }
+  },
+  "event_verwaltung": {
+    "titel": {
+      "key": "titel",
+      "fulltype": "string/text",
+      "kind": "text",
+      "required": true,
+      "label": "Titel des Events",
+      "writable": true,
+      "maxLength": 4000
+    },
+    "kategorie": {
+      "key": "kategorie",
+      "fulltype": "lookup/select",
+      "kind": "lookup",
+      "required": true,
+      "label": "Kategorie",
+      "writable": true,
+      "options": [
+        "jam",
+        "demo",
+        "workshop",
+        "sonstiges",
+        "contest"
+      ]
+    },
+    "datum_uhrzeit": {
+      "key": "datum_uhrzeit",
+      "fulltype": "date/datetimeminute",
+      "kind": "datetime",
+      "required": true,
+      "label": "Datum und Uhrzeit",
+      "writable": true
+    },
+    "beschreibung": {
+      "key": "beschreibung",
+      "fulltype": "string/textarea",
+      "kind": "textarea",
+      "required": false,
+      "label": "Beschreibung",
+      "writable": true
+    },
+    "skill_level": {
+      "key": "skill_level",
+      "fulltype": "lookup/select",
+      "kind": "lookup",
+      "required": false,
+      "label": "Skill-Level",
+      "writable": true,
+      "options": [
+        "anfaenger",
+        "fortgeschritten",
+        "profi",
+        "alle_levels"
+      ]
+    },
+    "max_teilnehmer": {
+      "key": "max_teilnehmer",
+      "fulltype": "number",
+      "kind": "number",
+      "required": false,
+      "label": "Maximale Teilnehmerzahl",
+      "writable": true
+    },
+    "startgebuehr": {
+      "key": "startgebuehr",
+      "fulltype": "number",
+      "kind": "number",
+      "required": false,
+      "label": "Startgebühr (€)",
+      "writable": true,
+      "format": "currency"
+    },
+    "ort": {
+      "key": "ort",
+      "fulltype": "applookup/select",
+      "kind": "record",
+      "required": true,
+      "label": "Ort",
+      "writable": true,
+      "targetAppId": "6a56741a9ef9a79ac692ad70",
+      "targetEntity": "skateparks_spots"
+    },
+    "kontakt_email": {
+      "key": "kontakt_email",
+      "fulltype": "string/email",
+      "kind": "email",
+      "required": false,
+      "label": "Kontakt-E-Mail",
+      "writable": true,
+      "autoComplete": "email"
+    },
+    "event_website": {
+      "key": "event_website",
+      "fulltype": "string/url",
+      "kind": "url",
+      "required": false,
+      "label": "Website des Events",
+      "writable": true,
+      "autoComplete": "url"
+    },
+    "flyer": {
+      "key": "flyer",
+      "fulltype": "file",
+      "kind": "file",
+      "required": false,
+      "label": "Flyer / Bild",
+      "writable": false
+    },
+    "kontakt_telefon": {
+      "key": "kontakt_telefon",
+      "fulltype": "string/tel",
+      "kind": "tel",
+      "required": false,
+      "label": "Kontakt-Telefonnummer",
+      "writable": true,
+      "autoComplete": "tel"
     }
   },
   "anmeldungen": {
@@ -311,132 +429,6 @@ export const FIELD_RULES: Record<EntityKey, Record<string, FieldRule>> = {
       "label": "Ich stimme den Teilnahmebedingungen zu",
       "writable": true
     }
-  },
-  "event_verwaltung": {
-    "titel": {
-      "key": "titel",
-      "fulltype": "string/text",
-      "kind": "text",
-      "required": true,
-      "label": "Titel des Events",
-      "writable": true,
-      "maxLength": 4000
-    },
-    "kategorie": {
-      "key": "kategorie",
-      "fulltype": "lookup/select",
-      "kind": "lookup",
-      "required": true,
-      "label": "Kategorie",
-      "writable": true,
-      "options": [
-        "contest",
-        "jam",
-        "demo",
-        "workshop",
-        "sonstiges"
-      ]
-    },
-    "datum_uhrzeit": {
-      "key": "datum_uhrzeit",
-      "fulltype": "date/datetimeminute",
-      "kind": "datetime",
-      "required": true,
-      "label": "Datum und Uhrzeit",
-      "writable": true
-    },
-    "beschreibung": {
-      "key": "beschreibung",
-      "fulltype": "string/textarea",
-      "kind": "textarea",
-      "required": false,
-      "label": "Beschreibung",
-      "writable": true
-    },
-    "skill_level": {
-      "key": "skill_level",
-      "fulltype": "lookup/select",
-      "kind": "lookup",
-      "required": false,
-      "label": "Skill-Level",
-      "writable": true,
-      "options": [
-        "anfaenger",
-        "fortgeschritten",
-        "profi",
-        "alle_levels"
-      ]
-    },
-    "max_teilnehmer": {
-      "key": "max_teilnehmer",
-      "fulltype": "number",
-      "kind": "number",
-      "required": false,
-      "label": "Maximale Teilnehmerzahl",
-      "writable": true
-    },
-    "startgebuehr": {
-      "key": "startgebuehr",
-      "fulltype": "number",
-      "kind": "number",
-      "required": false,
-      "label": "Startgebühr (€)",
-      "writable": true,
-      "format": "currency"
-    },
-    "ort": {
-      "key": "ort",
-      "fulltype": "applookup/select",
-      "kind": "record",
-      "required": true,
-      "label": "Ort",
-      "writable": true,
-      "targetAppId": "6a56741a9ef9a79ac692ad70",
-      "targetEntity": "skateparks_spots"
-    },
-    "kontakt_email": {
-      "key": "kontakt_email",
-      "fulltype": "string/email",
-      "kind": "email",
-      "required": false,
-      "label": "Kontakt-E-Mail",
-      "writable": true,
-      "autoComplete": "email"
-    },
-    "event_website": {
-      "key": "event_website",
-      "fulltype": "string/url",
-      "kind": "url",
-      "required": false,
-      "label": "Website des Events",
-      "writable": true,
-      "autoComplete": "url"
-    },
-    "flyer": {
-      "key": "flyer",
-      "fulltype": "file",
-      "kind": "file",
-      "required": false,
-      "label": "Flyer / Bild",
-      "writable": false
-    },
-    "kontakt_telefon": {
-      "key": "kontakt_telefon",
-      "fulltype": "string/tel",
-      "kind": "tel",
-      "required": false,
-      "label": "Kontakt-Telefonnummer",
-      "writable": true,
-      "autoComplete": "tel"
-    },
-    "notizen": {
-      "key": "notizen",
-      "fulltype": "string/textarea",
-      "kind": "textarea",
-      "required": false,
-      "label": "Notizen",
-      "writable": true
-    }
   }
 };
 
@@ -446,18 +438,6 @@ export const SHAPES: Record<EntityKey, Shape[]> = {
       "kind": "choice",
       "field": "untergrundtyp",
       "count": 5
-    }
-  ],
-  "anmeldungen": [
-    {
-      "kind": "choice",
-      "field": "skill_level",
-      "count": 3
-    },
-    {
-      "kind": "record",
-      "field": "event",
-      "targetEntity": "event_verwaltung"
     }
   ],
   "event_verwaltung": [
@@ -476,6 +456,18 @@ export const SHAPES: Record<EntityKey, Shape[]> = {
       "field": "ort",
       "targetEntity": "skateparks_spots"
     }
+  ],
+  "anmeldungen": [
+    {
+      "kind": "choice",
+      "field": "skill_level",
+      "count": 3
+    },
+    {
+      "kind": "record",
+      "field": "event",
+      "targetEntity": "event_verwaltung"
+    }
   ]
 };
 
@@ -487,12 +479,12 @@ export const DISPLAY_FIELDS: Record<EntityKey, string[]> = {
   "skateparks_spots": [
     "name"
   ],
+  "event_verwaltung": [
+    "titel"
+  ],
   "anmeldungen": [
     "vorname",
     "nachname"
-  ],
-  "event_verwaltung": [
-    "titel"
   ]
 };
 

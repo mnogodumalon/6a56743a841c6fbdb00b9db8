@@ -19,33 +19,33 @@ type RawMutation = { record_id: string; fields?: Record<string, unknown>; create
 
 const listers: Record<EntityKey, () => Promise<RawRecord[]>> = {
   'skateparks_spots': () => LivingAppsService.getSkateparksSpots() as Promise<RawRecord[]>,
-  'anmeldungen': () => LivingAppsService.getAnmeldungen() as Promise<RawRecord[]>,
   'event_verwaltung': () => LivingAppsService.getEventVerwaltung() as Promise<RawRecord[]>,
+  'anmeldungen': () => LivingAppsService.getAnmeldungen() as Promise<RawRecord[]>,
 };
 
 /** The query/count half — the REST parameters the plain listers never send. */
 const queriers: Record<EntityKey, (q: RecordQuery) => Promise<RawRecord[]>> = {
   'skateparks_spots': q => LivingAppsService.querySkateparksSpots(q) as Promise<RawRecord[]>,
-  'anmeldungen': q => LivingAppsService.queryAnmeldungen(q) as Promise<RawRecord[]>,
   'event_verwaltung': q => LivingAppsService.queryEventVerwaltung(q) as Promise<RawRecord[]>,
+  'anmeldungen': q => LivingAppsService.queryAnmeldungen(q) as Promise<RawRecord[]>,
 };
 
 const counters: Record<EntityKey, (filter?: string, signal?: AbortSignal) => Promise<number>> = {
   'skateparks_spots': (filter, signal) => LivingAppsService.countSkateparksSpots(filter, signal),
-  'anmeldungen': (filter, signal) => LivingAppsService.countAnmeldungen(filter, signal),
   'event_verwaltung': (filter, signal) => LivingAppsService.countEventVerwaltung(filter, signal),
+  'anmeldungen': (filter, signal) => LivingAppsService.countAnmeldungen(filter, signal),
 };
 
 const creators: Record<EntityKey, (fields: Record<string, unknown>) => Promise<RawMutation>> = {
   'skateparks_spots': fields => LivingAppsService.createSkateparksSpot(fields as never),
-  'anmeldungen': fields => LivingAppsService.createAnmeldungenEntry(fields as never),
   'event_verwaltung': fields => LivingAppsService.createEventVerwaltungEntry(fields as never),
+  'anmeldungen': fields => LivingAppsService.createAnmeldungenEntry(fields as never),
 };
 
 const updaters: Record<EntityKey, (id: string, fields: Record<string, unknown>) => Promise<RawMutation>> = {
   'skateparks_spots': (id, fields) => LivingAppsService.updateSkateparksSpot(id, fields as never),
-  'anmeldungen': (id, fields) => LivingAppsService.updateAnmeldungenEntry(id, fields as never),
   'event_verwaltung': (id, fields) => LivingAppsService.updateEventVerwaltungEntry(id, fields as never),
+  'anmeldungen': (id, fields) => LivingAppsService.updateAnmeldungenEntry(id, fields as never),
 };
 
 function toJourneyRecord(r: RawRecord): JourneyRecord {

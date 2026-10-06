@@ -1622,6 +1622,39 @@ export const LABELS: Record<CoreLocale, LabelBundle> = {
           }
         }
       },
+      "event_verwaltung": {
+        "name": "Event-Verwaltung",
+        "app_id": "6a56741f84d8dce105858830",
+        "fields": {
+          "titel": "Titel des Events",
+          "kategorie": "Kategorie",
+          "datum_uhrzeit": "Datum und Uhrzeit",
+          "beschreibung": "Beschreibung",
+          "skill_level": "Skill-Level",
+          "max_teilnehmer": "Maximale Teilnehmerzahl",
+          "startgebuehr": "Startgebühr (€)",
+          "ort": "Ort",
+          "kontakt_email": "Kontakt-E-Mail",
+          "event_website": "Website des Events",
+          "flyer": "Flyer / Bild",
+          "kontakt_telefon": "Kontakt-Telefonnummer"
+        },
+        "lookups": {
+          "kategorie": {
+            "jam": "Jam Session",
+            "demo": "Demo",
+            "workshop": "Workshop",
+            "sonstiges": "Sonstiges",
+            "contest": "Contest"
+          },
+          "skill_level": {
+            "anfaenger": "Anfänger",
+            "fortgeschritten": "Fortgeschritten",
+            "profi": "Profi",
+            "alle_levels": "Alle Levels"
+          }
+        }
+      },
       "anmeldungen": {
         "name": "Anmeldungen",
         "app_id": "6a5674227925510842ea49d7",
@@ -1651,40 +1684,6 @@ export const LABELS: Record<CoreLocale, LabelBundle> = {
             "freestyle": "Freestyle"
           }
         }
-      },
-      "event_verwaltung": {
-        "name": "Event-Verwaltung",
-        "app_id": "6a56741f84d8dce105858830",
-        "fields": {
-          "titel": "Titel des Events",
-          "kategorie": "Kategorie",
-          "datum_uhrzeit": "Datum und Uhrzeit",
-          "beschreibung": "Beschreibung",
-          "skill_level": "Skill-Level",
-          "max_teilnehmer": "Maximale Teilnehmerzahl",
-          "startgebuehr": "Startgebühr (€)",
-          "ort": "Ort",
-          "kontakt_email": "Kontakt-E-Mail",
-          "event_website": "Website des Events",
-          "flyer": "Flyer / Bild",
-          "kontakt_telefon": "Kontakt-Telefonnummer",
-          "notizen": "Notizen"
-        },
-        "lookups": {
-          "kategorie": {
-            "contest": "Contest",
-            "jam": "Jam Session",
-            "demo": "Demo",
-            "workshop": "Workshop",
-            "sonstiges": "Sonstiges"
-          },
-          "skill_level": {
-            "anfaenger": "Anfänger",
-            "fortgeschritten": "Fortgeschritten",
-            "profi": "Profi",
-            "alle_levels": "Alle Levels"
-          }
-        }
       }
     }
   },
@@ -1695,7 +1694,7 @@ export const LABELS: Record<CoreLocale, LabelBundle> = {
         "name": "Skateparks & Spots",
         "app_id": "6a56741a9ef9a79ac692ad70",
         "fields": {
-          "name": "Name of Location",
+          "name": "Venue Name",
           "strasse": "Street",
           "hausnummer": "House Number",
           "postleitzahl": "Postal Code",
@@ -1712,6 +1711,39 @@ export const LABELS: Record<CoreLocale, LabelBundle> = {
             "holz": "Wood",
             "fliesen": "Tiles",
             "sonstiges": "Other"
+          }
+        }
+      },
+      "event_verwaltung": {
+        "name": "Event Management",
+        "app_id": "6a56741f84d8dce105858830",
+        "fields": {
+          "titel": "Event Title",
+          "kategorie": "Category",
+          "datum_uhrzeit": "Date and Time",
+          "beschreibung": "Description",
+          "skill_level": "Skill Level",
+          "max_teilnehmer": "Maximum Number of Participants",
+          "startgebuehr": "Entry Fee (€)",
+          "ort": "Location",
+          "kontakt_email": "Contact Email",
+          "event_website": "Event Website",
+          "flyer": "Flyer / Image",
+          "kontakt_telefon": "Contact Phone Number"
+        },
+        "lookups": {
+          "kategorie": {
+            "jam": "Jam Session",
+            "demo": "Demo",
+            "workshop": "Workshop",
+            "sonstiges": "Other",
+            "contest": "Contest"
+          },
+          "skill_level": {
+            "anfaenger": "Beginner",
+            "fortgeschritten": "Advanced",
+            "profi": "Pro",
+            "alle_levels": "All Levels"
           }
         }
       },
@@ -1733,7 +1765,7 @@ export const LABELS: Record<CoreLocale, LabelBundle> = {
         "lookups": {
           "skill_level": {
             "anfaenger": "Beginner",
-            "fortgeschritten": "Intermediate",
+            "fortgeschritten": "Advanced",
             "profi": "Pro"
           },
           "board_stil": {
@@ -1742,40 +1774,6 @@ export const LABELS: Record<CoreLocale, LabelBundle> = {
             "vert": "Vert",
             "bowl": "Bowl",
             "freestyle": "Freestyle"
-          }
-        }
-      },
-      "event_verwaltung": {
-        "name": "Event Management",
-        "app_id": "6a56741f84d8dce105858830",
-        "fields": {
-          "titel": "Event Title",
-          "kategorie": "Category",
-          "datum_uhrzeit": "Date and Time",
-          "beschreibung": "Description",
-          "skill_level": "Skill Level",
-          "max_teilnehmer": "Maximum Number of Participants",
-          "startgebuehr": "Entry Fee (€)",
-          "ort": "Location",
-          "kontakt_email": "Contact Email",
-          "event_website": "Event Website",
-          "flyer": "Flyer / Image",
-          "kontakt_telefon": "Contact Phone Number",
-          "notizen": "Notes"
-        },
-        "lookups": {
-          "kategorie": {
-            "contest": "Contest",
-            "jam": "Jam Session",
-            "demo": "Demo",
-            "workshop": "Workshop",
-            "sonstiges": "Other"
-          },
-          "skill_level": {
-            "anfaenger": "Beginner",
-            "fortgeschritten": "Intermediate",
-            "profi": "Pro",
-            "alle_levels": "All Levels"
           }
         }
       }

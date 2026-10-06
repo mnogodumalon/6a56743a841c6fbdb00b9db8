@@ -13,8 +13,8 @@
  *
  * Facts from the metadata — candidates, NOT decisions:
  *   - skateparks_spots: lookups untergrundtyp[beton|asphalt|holz|fliesen|sonstiges]
+ *   - event_verwaltung: applookups ort→skateparks_spots · lookups kategorie[jam|demo|workshop|sonstiges|contest], skill_level[anfaenger|fortgeschritten|profi|alle_levels]
  *   - anmeldungen: applookups event→event_verwaltung · lookups skill_level[anfaenger|fortgeschritten|profi]
- *   - event_verwaltung: applookups ort→skateparks_spots · lookups kategorie[contest|jam|demo|workshop|sonstiges], skill_level[anfaenger|fortgeschritten|profi|alle_levels]
  */
 import type { EntityKey } from '@/lib/journey/rules';
 

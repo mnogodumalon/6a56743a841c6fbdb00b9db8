@@ -278,7 +278,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         }
       }
       const photoContext = contextParts.length ? contextParts.join('\n') : undefined;
-      const schema = `{\n  "titel": string | null, // Titel des Events\n  "kategorie": LookupValue | null, // Kategorie (select one key: "contest" | "jam" | "demo" | "workshop" | "sonstiges") mapping: contest=Contest, jam=Jam Session, demo=Demo, workshop=Workshop, sonstiges=Sonstiges\n  "datum_uhrzeit": string | null, // YYYY-MM-DDTHH:MM\n  "beschreibung": string | null, // Beschreibung\n  "skill_level": LookupValue | null, // Skill-Level (select one key: "anfaenger" | "fortgeschritten" | "profi" | "alle_levels") mapping: anfaenger=Anfänger, fortgeschritten=Fortgeschritten, profi=Profi, alle_levels=Alle Levels\n  "max_teilnehmer": number | null, // Maximale Teilnehmerzahl\n  "startgebuehr": number | null, // Startgebühr (€)\n  "ort": string | null, // Display name from Skateparks & Spots (see <available-records>)\n  "kontakt_email": string | null, // Kontakt-E-Mail\n  "event_website": string | null, // Website des Events\n  "kontakt_telefon": string | null, // Kontakt-Telefonnummer\n  "notizen": string | null, // Notizen\n}`;
+      const schema = `{\n  "titel": string | null, // Titel des Events\n  "kategorie": LookupValue | null, // Kategorie (select one key: "jam" | "demo" | "workshop" | "sonstiges" | "contest") mapping: jam=Jam Session, demo=Demo, workshop=Workshop, sonstiges=Sonstiges, contest=Contest\n  "datum_uhrzeit": string | null, // YYYY-MM-DDTHH:MM\n  "beschreibung": string | null, // Beschreibung\n  "skill_level": LookupValue | null, // Skill-Level (select one key: "anfaenger" | "fortgeschritten" | "profi" | "alle_levels") mapping: anfaenger=Anfänger, fortgeschritten=Fortgeschritten, profi=Profi, alle_levels=Alle Levels\n  "max_teilnehmer": number | null, // Maximale Teilnehmerzahl\n  "startgebuehr": number | null, // Startgebühr (€)\n  "ort": string | null, // Display name from Skateparks & Spots (see <available-records>)\n  "kontakt_email": string | null, // Kontakt-E-Mail\n  "event_website": string | null, // Website des Events\n  "kontakt_telefon": string | null, // Kontakt-Telefonnummer\n}`;
       const raw = await extractFromInput<Record<string, unknown>>(schema, {
         dataUri: uri,
         userText: aiText.trim() || undefined,
@@ -362,7 +362,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="titel">{fieldLabel('event_verwaltung', 'titel')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="titel"
-          placeholder="z. B. Summer Street Contest"
+          placeholder=""
           value={fields.titel ?? ''}
           onChange={e => setFields(f => ({ ...f, titel: e.target.value }))}
           required
@@ -376,19 +376,6 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
       <div key="kategorie" className="space-y-1.5">
         <Label htmlFor="kategorie">{fieldLabel('event_verwaltung', 'kategorie')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <div role="radiogroup" className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={lookupKey(fields.kategorie) === 'contest'}
-            onClick={() => setFields(f => ({ ...f, kategorie: (lookupKey(f.kategorie) === 'contest' ? undefined : 'contest') as any }))}
-            className={`inline-flex items-center justify-center min-h-9 max-sm:min-h-11 max-sm:px-4 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-              lookupKey(fields.kategorie) === 'contest'
-                ? 'bg-foreground text-background border-foreground'
-                : 'bg-background text-foreground border-input hover:bg-accent'
-            }`}
-          >
-            {lookupLabel('event_verwaltung', 'kategorie', 'contest') ?? 'Contest'}
-          </button>
           <button
             type="button"
             role="radio"
@@ -441,6 +428,19 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
           >
             {lookupLabel('event_verwaltung', 'kategorie', 'sonstiges') ?? 'Sonstiges'}
           </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={lookupKey(fields.kategorie) === 'contest'}
+            onClick={() => setFields(f => ({ ...f, kategorie: (lookupKey(f.kategorie) === 'contest' ? undefined : 'contest') as any }))}
+            className={`inline-flex items-center justify-center min-h-9 max-sm:min-h-11 max-sm:px-4 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+              lookupKey(fields.kategorie) === 'contest'
+                ? 'bg-foreground text-background border-foreground'
+                : 'bg-background text-foreground border-input hover:bg-accent'
+            }`}
+          >
+            {lookupLabel('event_verwaltung', 'kategorie', 'contest') ?? 'Contest'}
+          </button>
         </div>
         {showErrors && !fields.kategorie && (
           <p className="text-xs text-destructive mt-1" role="alert">{requiredMessage('event_verwaltung', 'kategorie')}</p>
@@ -452,7 +452,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="datum_uhrzeit">{fieldLabel('event_verwaltung', 'datum_uhrzeit')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <DatePicker
           id="datum_uhrzeit"
-          placeholder="Wann startet das Event?"
+          placeholder=""
           mode="datetime"
           value={fields.datum_uhrzeit ?? null}
           onChange={v => setFields(f => ({ ...f, datum_uhrzeit: v ?? undefined }))}
@@ -468,7 +468,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="beschreibung">{fieldLabel('event_verwaltung', 'beschreibung')}</Label>
         <Textarea
           id="beschreibung"
-          placeholder="Was erwartet die Teilnehmer?"
+          placeholder=""
           value={fields.beschreibung ?? ''}
           onChange={e => setFields(f => ({ ...f, beschreibung: e.target.value }))}
           rows={3}
@@ -543,7 +543,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
           inputMode="decimal"
           step="any"
           {...numberInputProps(formEnhancements, 'max_teilnehmer')}
-          placeholder="z. B. 50"
+          placeholder=""
           value={fields.max_teilnehmer !== undefined ? fields.max_teilnehmer : (computedValues['max_teilnehmer'] ?? '')}
           onChange={e => setFields(f => ({ ...f, max_teilnehmer: clampNumberValue(formEnhancements, 'max_teilnehmer', e.target.value) }))}
         />
@@ -558,7 +558,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
           inputMode="decimal"
           step="any"
           {...numberInputProps(formEnhancements, 'startgebuehr')}
-          placeholder="z. B. 15"
+          placeholder=""
           value={fields.startgebuehr !== undefined ? fields.startgebuehr : (computedValues['startgebuehr'] ?? '')}
           onChange={e => setFields(f => ({ ...f, startgebuehr: clampNumberValue(formEnhancements, 'startgebuehr', e.target.value) }))}
         />
@@ -569,7 +569,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="ort">{fieldLabel('event_verwaltung', 'ort')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Combobox
           id="ort"
-          placeholder="Welcher Skatepark?"
+          placeholder=""
           items={skateparksSpotsListAll.map(r => ({
             id: r.record_id,
             label: String(r.fields.name ?? r.record_id),
@@ -591,7 +591,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
           id="kontakt_email"
           type="email"
           inputMode="email"
-          placeholder="z. B. info@skate-event.de"
+          placeholder=""
           value={fields.kontakt_email ?? ''}
           onChange={e => setFields(f => ({ ...f, kontakt_email: e.target.value }))}
         />
@@ -604,7 +604,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
           id="event_website"
           type="url"
           inputMode="url"
-          placeholder="z. B. https://skate-event.de"
+          placeholder=""
           value={fields.event_website ?? ''}
           onChange={e => setFields(f => ({ ...f, event_website: e.target.value }))}
         />
@@ -693,18 +693,6 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         />
       </div>
     ),
-    'notizen': (
-      <div key="notizen" className="space-y-1.5">
-        <Label htmlFor="notizen">{fieldLabel('event_verwaltung', 'notizen')}</Label>
-        <Textarea
-          id="notizen"
-          placeholder="Interne Hinweise zum Event"
-          value={fields.notizen ?? ''}
-          onChange={e => setFields(f => ({ ...f, notizen: e.target.value }))}
-          rows={3}
-        />
-      </div>
-    ),
   };
   const orderedFields = applyFieldOrder(Object.keys(fieldBlocks), formEnhancements.fieldOrder);
   const orderedFieldsKey = orderedFields.map((it) => typeof it === 'string' ? it : it.row.join('+')).join(',');
@@ -719,7 +707,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
   //     kein passendes Backend-Feld in orderedFields) erscheinen NICHT als
   //     Input, sondern unten als kompakte 'Berechnungen'-Übersicht oder als
   //     Inline-Hint unter dem letzten beitragenden Input.
-  const FIELD_LABELS: Record<string, string> = {"titel": "Titel des Events", "kategorie": "Kategorie", "datum_uhrzeit": "Datum und Uhrzeit", "beschreibung": "Beschreibung", "skill_level": "Skill-Level", "max_teilnehmer": "Maximale Teilnehmerzahl", "startgebuehr": "Startgebühr (€)", "ort": "Ort", "kontakt_email": "Kontakt-E-Mail", "event_website": "Website des Events", "flyer": "Flyer / Bild", "kontakt_telefon": "Kontakt-Telefonnummer", "notizen": "Notizen"};
+  const FIELD_LABELS: Record<string, string> = {"titel": "Titel des Events", "kategorie": "Kategorie", "datum_uhrzeit": "Datum und Uhrzeit", "beschreibung": "Beschreibung", "skill_level": "Skill-Level", "max_teilnehmer": "Maximale Teilnehmerzahl", "startgebuehr": "Startgebühr (€)", "ort": "Ort", "kontakt_email": "Kontakt-E-Mail", "event_website": "Website des Events", "flyer": "Flyer / Bild", "kontakt_telefon": "Kontakt-Telefonnummer"};
   const CURRENCY_KEYS = new Set<string>(["startgebuehr"]);
   // Applookup-Referenz-Labels: pro applookup-Feld in dieser Form (ownKey)
   // eine Map { lookupKey: label } für ALLE Felder des Target-Schemas. Wird

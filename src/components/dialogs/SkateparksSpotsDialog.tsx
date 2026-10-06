@@ -405,7 +405,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="name">{fieldLabel('skateparks_spots', 'name')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="name"
-          placeholder="z. B. Skatepark Südpark"
+          placeholder=""
           value={fields.name ?? ''}
           onChange={e => setFields(f => ({ ...f, name: e.target.value }))}
           required
@@ -420,7 +420,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="strasse">{fieldLabel('skateparks_spots', 'strasse')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="strasse"
-          placeholder="z. B. Parkweg"
+          placeholder=""
           value={fields.strasse ?? ''}
           onChange={e => onAddressFieldChange("strasse", e.target.value)}
           required
@@ -435,7 +435,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="hausnummer">{fieldLabel('skateparks_spots', 'hausnummer')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="hausnummer"
-          placeholder="z. B. 12a"
+          placeholder=""
           value={fields.hausnummer ?? ''}
           onChange={e => onAddressFieldChange("hausnummer", e.target.value)}
           required
@@ -450,7 +450,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="postleitzahl">{fieldLabel('skateparks_spots', 'postleitzahl')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="postleitzahl"
-          placeholder="z. B. 80331"
+          placeholder=""
           value={fields.postleitzahl ?? ''}
           onChange={e => onAddressFieldChange("postleitzahl", e.target.value)}
           required
@@ -465,7 +465,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="stadt">{fieldLabel('skateparks_spots', 'stadt')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="stadt"
-          placeholder="z. B. München"
+          placeholder=""
           value={fields.stadt ?? ''}
           onChange={e => onAddressFieldChange("stadt", e.target.value)}
           required
@@ -480,7 +480,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
         <Label htmlFor="beschreibung">{fieldLabel('skateparks_spots', 'beschreibung')}</Label>
         <Textarea
           id="beschreibung"
-          placeholder="Was macht den Ort besonders?"
+          placeholder=""
           value={fields.beschreibung ?? ''}
           onChange={e => setFields(f => ({ ...f, beschreibung: e.target.value }))}
           rows={3}
@@ -624,7 +624,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
           id="website"
           type="url"
           inputMode="url"
-          placeholder="z. B. https://skatepark.de"
+          placeholder=""
           value={fields.website ?? ''}
           onChange={e => setFields(f => ({ ...f, website: e.target.value }))}
         />

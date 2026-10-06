@@ -2,7 +2,7 @@
 import { APP_IDS, LOOKUP_OPTIONS, FIELD_TYPES } from '@/types/app';
 import { ensureUploadableImage } from '@/lib/ai';
 import { REST_URL } from '@/lib/origin';
-import type { SkateparksSpots, Anmeldungen, EventVerwaltung, CreateSkateparksSpots, CreateAnmeldungen, CreateEventVerwaltung } from '@/types/app';
+import type { SkateparksSpots, EventVerwaltung, Anmeldungen, CreateSkateparksSpots, CreateEventVerwaltung, CreateAnmeldungen } from '@/types/app';
 
 // Base Configuration — the host is a RUNTIME fact (lib/origin.ts):
 // a bundle copied to another LA instance must talk to THAT instance.
@@ -473,44 +473,6 @@ export class LivingAppsService {
     return callApi('DELETE', `/apps/${APP_IDS.SKATEPARKS_SPOTS}/records/${id}`);
   }
 
-  // --- ANMELDUNGEN ---
-  static async getAnmeldungen(): Promise<Anmeldungen[]> {
-    const data = await callApi('GET', `/apps/${APP_IDS.ANMELDUNGEN}/records`);
-    const records = Object.entries(data).map(([id, rec]: [string, any]) => ({
-      record_id: id, ...rec,
-      createdat: rec.created_at ?? '', updatedat: rec.updated_at ?? null,
-    })) as Anmeldungen[];
-    return hydrateRecords(records, 'anmeldungen');
-  }
-  static async queryAnmeldungen(q: RecordQuery = {}): Promise<Anmeldungen[]> {
-    const data = await callApi('GET', `/apps/${APP_IDS.ANMELDUNGEN}/records${recordQueryString(q)}`, undefined, { signal: q.signal });
-    const records = Object.entries(data).map(([id, rec]: [string, any]) => ({
-      record_id: id, ...rec,
-      createdat: rec.created_at ?? '', updatedat: rec.updated_at ?? null,
-    })) as Anmeldungen[];
-    return hydrateRecords(records, 'anmeldungen');
-  }
-  static async countAnmeldungen(filter?: string, signal?: AbortSignal): Promise<number> {
-    const data = await callApi('GET', `/apps/${APP_IDS.ANMELDUNGEN}/aggregate_records${recordQueryString({ filter })}${filter ? '&' : '?'}value=count()`, undefined, { signal, silent: true });
-    return parseAggregateCount(data);
-  }
-  static async getAnmeldungenEntry(id: string): Promise<Anmeldungen | undefined> {
-    const data = await callApi('GET', `/apps/${APP_IDS.ANMELDUNGEN}/records/${id}`);
-    const record = { record_id: data.id, ...data, createdat: data.created_at ?? '', updatedat: data.updated_at ?? null } as Anmeldungen;
-    return hydrateRecords([record], 'anmeldungen')[0];
-  }
-  static async createAnmeldungenEntry(fields: CreateAnmeldungen): Promise<MutationResult> {
-    const data = await callApi('POST', `/apps/${APP_IDS.ANMELDUNGEN}/records`, { fields: cleanFieldsForApi(fields as any, 'anmeldungen') });
-    return { ...data, record_id: data.id };
-  }
-  static async updateAnmeldungenEntry(id: string, fields: Partial<CreateAnmeldungen>): Promise<MutationResult> {
-    const data = await callApi('PATCH', `/apps/${APP_IDS.ANMELDUNGEN}/records/${id}`, { fields: cleanFieldsForApi(fields as any, 'anmeldungen') });
-    return { ...data, record_id: data.id };
-  }
-  static async deleteAnmeldungenEntry(id: string) {
-    return callApi('DELETE', `/apps/${APP_IDS.ANMELDUNGEN}/records/${id}`);
-  }
-
   // --- EVENT_VERWALTUNG ---
   static async getEventVerwaltung(): Promise<EventVerwaltung[]> {
     const data = await callApi('GET', `/apps/${APP_IDS.EVENT_VERWALTUNG}/records`);
@@ -547,6 +509,44 @@ export class LivingAppsService {
   }
   static async deleteEventVerwaltungEntry(id: string) {
     return callApi('DELETE', `/apps/${APP_IDS.EVENT_VERWALTUNG}/records/${id}`);
+  }
+
+  // --- ANMELDUNGEN ---
+  static async getAnmeldungen(): Promise<Anmeldungen[]> {
+    const data = await callApi('GET', `/apps/${APP_IDS.ANMELDUNGEN}/records`);
+    const records = Object.entries(data).map(([id, rec]: [string, any]) => ({
+      record_id: id, ...rec,
+      createdat: rec.created_at ?? '', updatedat: rec.updated_at ?? null,
+    })) as Anmeldungen[];
+    return hydrateRecords(records, 'anmeldungen');
+  }
+  static async queryAnmeldungen(q: RecordQuery = {}): Promise<Anmeldungen[]> {
+    const data = await callApi('GET', `/apps/${APP_IDS.ANMELDUNGEN}/records${recordQueryString(q)}`, undefined, { signal: q.signal });
+    const records = Object.entries(data).map(([id, rec]: [string, any]) => ({
+      record_id: id, ...rec,
+      createdat: rec.created_at ?? '', updatedat: rec.updated_at ?? null,
+    })) as Anmeldungen[];
+    return hydrateRecords(records, 'anmeldungen');
+  }
+  static async countAnmeldungen(filter?: string, signal?: AbortSignal): Promise<number> {
+    const data = await callApi('GET', `/apps/${APP_IDS.ANMELDUNGEN}/aggregate_records${recordQueryString({ filter })}${filter ? '&' : '?'}value=count()`, undefined, { signal, silent: true });
+    return parseAggregateCount(data);
+  }
+  static async getAnmeldungenEntry(id: string): Promise<Anmeldungen | undefined> {
+    const data = await callApi('GET', `/apps/${APP_IDS.ANMELDUNGEN}/records/${id}`);
+    const record = { record_id: data.id, ...data, createdat: data.created_at ?? '', updatedat: data.updated_at ?? null } as Anmeldungen;
+    return hydrateRecords([record], 'anmeldungen')[0];
+  }
+  static async createAnmeldungenEntry(fields: CreateAnmeldungen): Promise<MutationResult> {
+    const data = await callApi('POST', `/apps/${APP_IDS.ANMELDUNGEN}/records`, { fields: cleanFieldsForApi(fields as any, 'anmeldungen') });
+    return { ...data, record_id: data.id };
+  }
+  static async updateAnmeldungenEntry(id: string, fields: Partial<CreateAnmeldungen>): Promise<MutationResult> {
+    const data = await callApi('PATCH', `/apps/${APP_IDS.ANMELDUNGEN}/records/${id}`, { fields: cleanFieldsForApi(fields as any, 'anmeldungen') });
+    return { ...data, record_id: data.id };
+  }
+  static async deleteAnmeldungenEntry(id: string) {
+    return callApi('DELETE', `/apps/${APP_IDS.ANMELDUNGEN}/records/${id}`);
   }
 
 }

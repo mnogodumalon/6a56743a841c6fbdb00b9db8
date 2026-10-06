@@ -12,20 +12,6 @@ function resolveDisplay(url: unknown, map: Map<string, any>, ...fields: string[]
   return fields.map(f => String(r.fields[f] ?? '')).join(' ').trim();
 }
 
-interface AnmeldungenMaps {
-  eventVerwaltungMap: Map<string, EventVerwaltung>;
-}
-
-export function enrichAnmeldungen(
-  anmeldungen: Anmeldungen[],
-  maps: AnmeldungenMaps
-): EnrichedAnmeldungen[] {
-  return anmeldungen.map(r => ({
-    ...r,
-    eventName: resolveDisplay(r.fields.event, maps.eventVerwaltungMap, 'titel'),
-  }));
-}
-
 interface EventVerwaltungMaps {
   skateparksSpotsMap: Map<string, SkateparksSpots>;
 }
@@ -37,5 +23,19 @@ export function enrichEventVerwaltung(
   return eventVerwaltung.map(r => ({
     ...r,
     ortName: resolveDisplay(r.fields.ort, maps.skateparksSpotsMap, 'name'),
+  }));
+}
+
+interface AnmeldungenMaps {
+  eventVerwaltungMap: Map<string, EventVerwaltung>;
+}
+
+export function enrichAnmeldungen(
+  anmeldungen: Anmeldungen[],
+  maps: AnmeldungenMaps
+): EnrichedAnmeldungen[] {
+  return anmeldungen.map(r => ({
+    ...r,
+    eventName: resolveDisplay(r.fields.event, maps.eventVerwaltungMap, 'titel'),
   }));
 }

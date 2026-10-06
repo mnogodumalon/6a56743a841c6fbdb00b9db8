@@ -17,8 +17,8 @@
  *
  * Required fields per entity (from the base view):
  *   - skateparks_spots: name (Name des Ortes), strasse (Straße), hausnummer (Hausnummer), postleitzahl (Postleitzahl), stadt (Stadt)
- *   - anmeldungen: event (Event), vorname (Vorname), nachname (Nachname), email (E-Mail-Adresse), skill_level (Skill-Level), teilnahmebedingungen (Ich stimme den Teilnahmebedingungen zu)
  *   - event_verwaltung: titel (Titel des Events), kategorie (Kategorie), datum_uhrzeit (Datum und Uhrzeit), ort (Ort)
+ *   - anmeldungen: event (Event), vorname (Vorname), nachname (Nachname), email (E-Mail-Adresse), skill_level (Skill-Level), teilnahmebedingungen (Ich stimme den Teilnahmebedingungen zu)
  */
 import { t, tx } from '@/i18n';
 import { labelOf, type EntityKey } from './rules';
@@ -26,8 +26,8 @@ import { labelOf, type EntityKey } from './rules';
 /** The writable fields of each entity — the keys a message may address (generated). */
 export interface MessageFields {
   "skateparks_spots": "name" | "strasse" | "hausnummer" | "postleitzahl" | "stadt" | "beschreibung" | "untergrundtyp" | "standort" | "website";
+  "event_verwaltung": "titel" | "kategorie" | "datum_uhrzeit" | "beschreibung" | "skill_level" | "max_teilnehmer" | "startgebuehr" | "ort" | "kontakt_email" | "event_website" | "kontakt_telefon";
   "anmeldungen": "event" | "vorname" | "nachname" | "geburtsdatum" | "email" | "telefon" | "skill_level" | "board_stil" | "anmerkungen" | "teilnahmebedingungen";
-  "event_verwaltung": "titel" | "kategorie" | "datum_uhrzeit" | "beschreibung" | "skill_level" | "max_teilnehmer" | "startgebuehr" | "ort" | "kontakt_email" | "event_website" | "kontakt_telefon" | "notizen";
 }
 export type MessageFieldKey<E extends EntityKey> = E extends keyof MessageFields ? MessageFields[E] : never;
 
