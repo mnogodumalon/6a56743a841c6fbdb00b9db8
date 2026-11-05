@@ -9,6 +9,17 @@ import { entityLabel, type EntityKey } from '@/lib/journey/rules';
 import type { JourneyPort, JourneyRecord } from '@/lib/journey/port';
 import type { FormValues } from '@/lib/journey/useStepForm';
 import { t, tp } from '@/i18n';
+import { formatDate, formatDateTime } from '@/lib/formatters';
+
+// A card never shows a raw ISO date (J-10, Abnahme 6: event cards read
+// „2026-11-07T18:30:00“) — a mapper that passed the field's stored value gets
+// the formatted day/time, wherever it stands in title, subtitle or a stat.
+const ISO_IN_TEXT = /\b\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?\b/g;
+function readableDates<T>(v: T): T {
+  if (typeof v !== 'string' || !ISO_IN_TEXT.test(v)) return v;
+  ISO_IN_TEXT.lastIndex = 0;
+  return v.replace(ISO_IN_TEXT, iso => (iso.length > 10 ? formatDateTime(iso) : formatDate(iso))) as T;
+}
 import { useWizard } from '@/components/blocks/IntentWizardShell';
 
 /**
@@ -219,7 +230,7 @@ function useServerSearch(onSearch: EntitySelectStepProps['onSearch'], query: str
 }
 
 export function EntitySelectStep({
-  items,
+  items: rawItems,
   onSelect,
   selectedId,
   onToggle,
@@ -251,6 +262,12 @@ export function EntitySelectStep({
   hint = null,
   avatar = 'initials',
 }: EntitySelectStepProps) {
+  const items = useMemo(() => rawItems.map(it => ({
+    ...it,
+    title: readableDates(it.title),
+    subtitle: readableDates(it.subtitle),
+    stats: it.stats?.map(st => ({ ...st, value: readableDates(st.value) })),
+  })), [rawItems]);
   const [search, setSearch] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
   // The keyboard cursor of the combobox list is only painted once the user

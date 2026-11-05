@@ -16,8 +16,9 @@
  * SuccessStep accepts, so the success screen can never render from a refetched
  * list or a half-written journey. The draft is cleared at that moment.
  */
-import { useCallback, useRef, useState } from 'react';
-import { clearJourneyDraft } from './draft';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { clearJourneyDraft, journeyDraftClaimed, readJourneyExtra, writeJourneyExtra } from './draft';
+import { isEmptyValue } from './rules';
 import { JourneyPortError, canUpdate, type JourneyPort, type JourneyRecord } from './port';
 import type { EntityKey } from './rules';
 import type { FormValues, StepForm, SummaryItem } from './useStepForm';
@@ -56,6 +57,11 @@ export interface PlanStep {
    *  policy) as review rows with the link that changes them — shown under
    *  "Setzt der Ablauf", so nobody wonders where the status came from. */
   settings?: () => SummaryItem[];
+  /** The answers of a step that has no form of its own — one entry of a list
+   *  the flow creates several records from („1. Termin: 5.11., 14:00“). The
+   *  review shows them among the answers, the success page among the facts;
+   *  `step` on a row is where „Ändern“ leads. */
+  review?: () => SummaryItem[];
   /** The planner's minor assumptions that first ACT in this flow (the invoice
    *  number on the first invoice). The review shows each once — „Passt“ marks it
    *  seen on the plan, „ändern“ leads to its line on „Deine Anwendung“. */
@@ -102,6 +108,10 @@ export interface JourneySubmit {
   readonly submitting: boolean;
   readonly done: boolean;
   readonly error: Error | null;
+  /** The last attempt failed for want of a network (P-14): the entries and the
+   *  done steps are kept, the runner sends again by itself once the browser
+   *  is back online. */
+  readonly offline: boolean;
   readonly result: JourneyResult | null;
   readonly status: Record<string, PlanStepStatus>;
   readonly failedStep: string | null;
@@ -162,12 +172,70 @@ export function useJourneySubmit(
   const [error, setError] = useState<Error | null>(null);
   const [result, setResult] = useState<JourneyResult | null>(null);
   const [failedStep, setFailedStep] = useState<string | null>(null);
+  const [offline, setOffline] = useState(false);
   const [status, setStatus] = useState<Record<string, PlanStepStatus>>({});
 
   const planRef = useRef(plan);
   planRef.current = plan;
   const optionsRef = useRef(options);
   optionsRef.current = options;
+
+  // J-5 (04.11.2026): the steps that already succeeded live in the draft's
+  // side data, not only in memory — a reload after „Gast angelegt, Buchung
+  // fehlgeschlagen“ no longer creates the guest a second time. Cleared with
+  // the draft on success and on reset.
+  const SUBMIT_KEY = 'submit';
+  const persistDone = () => {
+    const dk = optionsRef.current.draftKey;
+    if (!dk) return;
+    const done = Object.keys(doneRef.current).length ? { done: doneRef.current, completed: [...completedRef.current] } : null;
+    writeJourneyExtra(dk, SUBMIT_KEY, done);
+  };
+  useEffect(() => {
+    const dk = optionsRef.current.draftKey;
+    if (!dk) return;
+    const saved = readJourneyExtra<{ done: Record<string, JourneyRecord>; completed: string[] }>(dk, SUBMIT_KEY);
+    if (!saved || !saved.done || typeof saved.done !== 'object') return;
+    doneRef.current = { ...saved.done };
+    completedRef.current = new Set(Array.isArray(saved.completed) ? saved.completed : Object.keys(saved.done));
+    setStatus(Object.fromEntries([...completedRef.current].map(k => [k, 'done' as PlanStepStatus])));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per mount
+  }, []);
+
+  // K10a/P-14 (Abnahme 7): a page WITHOUT IntentWizardShell (a one-screen public
+  // form) kept no form values at all — the participant's text was gone after a
+  // reload although the page passed a draftKey. The plan's forms are kept here
+  // under the draft's side data unless a shell claims the key (it keeps them
+  // itself). Read per key before anything is saved; the restoring commit's save
+  // is skipped; cleared with the draft on success.
+  const FORMS_KEY = 'forms';
+  const formsRestoredFor = useRef<string | null>(null);
+  const formsJustRestored = useRef(false);
+  const dkNow = options.draftKey;
+  useEffect(() => {
+    if (!dkNow || formsRestoredFor.current === dkNow) return;
+    formsRestoredFor.current = dkNow;
+    if (journeyDraftClaimed(dkNow)) return;
+    const saved = readJourneyExtra<Record<string, FormValues>>(dkNow, FORMS_KEY);
+    if (!saved || typeof saved !== 'object') return;
+    for (const step of planRef.current) {
+      const vals = step.form ? saved[step.key] : undefined;
+      if (step.form && vals && typeof vals === 'object') { step.form.reset(vals); formsJustRestored.current = true; }
+    }
+  }, [dkNow]);
+  const formsSignature = JSON.stringify(plan.map(s => (s.form ? s.form.values : null)));
+  useEffect(() => {
+    if (!dkNow || formsRestoredFor.current !== dkNow || journeyDraftClaimed(dkNow) || result) return;
+    if (formsJustRestored.current) { formsJustRestored.current = false; return; }
+    const data: Record<string, FormValues> = {};
+    let any = false;
+    for (const step of planRef.current) {
+      if (!step.form) continue;
+      data[step.key] = step.form.values;
+      if (Object.values(step.form.values).some(v => !isEmptyValue(v))) any = true;
+    }
+    writeJourneyExtra(dkNow, FORMS_KEY, any ? data : null);
+  }, [dkNow, formsSignature, result]);
 
   const setStepStatus = (key: string, s: PlanStepStatus) =>
     setStatus(prev => (prev[key] === s ? prev : { ...prev, [key]: s }));
@@ -178,6 +246,7 @@ export function useJourneySubmit(
     busyRef.current = true;
     setSubmitting(true);
     setError(null);
+    setOffline(false);
     setFailedStep(null);
     const steps = planRef.current;
     const ctx: PlanContext = { port, done: doneRef.current };
@@ -194,6 +263,7 @@ export function useJourneySubmit(
         if (record) doneRef.current[step.key] = record;
         completedRef.current.add(step.key);
         setStepStatus(step.key, 'done');
+        persistDone();
       }
       const primaryStep = steps.find(s => s.primary) ?? steps.find(s => doneRef.current[s.key]);
       // A journey that only UPDATES (return a tool, check a guest out) yields no
@@ -208,6 +278,8 @@ export function useJourneySubmit(
       return out;
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
+      // no network: the browser says so, or fetch rejected without an answer
+      setOffline((typeof navigator !== 'undefined' && navigator.onLine === false) || (err.name === 'TypeError' && /fetch|network|load failed/i.test(err.message)));
       const failing = steps.find(s => !completedRef.current.has(s.key));
       if (failing) setStepStatus(failing.key, 'failed');
       setFailedStep(failing?.key ?? null);
@@ -219,6 +291,14 @@ export function useJourneySubmit(
     }
   }, [port, result]);
 
+  // P-14: offline at submit → send again by itself when the browser is back online
+  useEffect(() => {
+    if (!offline) return;
+    const back = () => { void run(); };
+    window.addEventListener('online', back);
+    return () => window.removeEventListener('online', back);
+  }, [offline, run]);
+
   const remember = useCallback((rows: SummaryItem[]) => {
     rowsRef.current = rows;
   }, []);
@@ -227,12 +307,17 @@ export function useJourneySubmit(
     rowsRef.current = [];
     doneRef.current = {};
     completedRef.current = new Set();
+    if (optionsRef.current.draftKey) {
+      writeJourneyExtra(optionsRef.current.draftKey, SUBMIT_KEY, null);
+      writeJourneyExtra(optionsRef.current.draftKey, FORMS_KEY, null);
+    }
     busyRef.current = false;
     setSubmitting(false);
     setError(null);
     setResult(null);
     setFailedStep(null);
     setStatus({});
+    setOffline(false);
   }, []);
 
   return {
@@ -243,6 +328,7 @@ export function useJourneySubmit(
     submitting,
     done: result !== null,
     error,
+    offline,
     result,
     status,
     failedStep,

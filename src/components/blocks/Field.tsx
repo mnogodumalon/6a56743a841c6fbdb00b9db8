@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, type ReactNode } from 'react';
 import { Label } from '@/components/ui/label';
 import { labelOf } from '@/lib/journey/rules';
 import { isHiddenByPolicy } from '@/lib/journey/policy';
@@ -49,6 +49,8 @@ export function Field({ form, name, label, hint, hideLabel = false, children, cl
   usePolicyVersion();
   const id = form.fieldId(name);
   const error = form.error(name);
+  // the review and the missing list read this label back (J-6)
+  useEffect(() => { if (typeof label === 'string' && label.trim()) form.title(name, label); }, [form, name, label]);
   // The owner hid this field (public page policy): no label, no control, no
   // error — and useStepForm already keeps it out of validation and payload.
   if (isHiddenByPolicy(form.entity, name)) return null;

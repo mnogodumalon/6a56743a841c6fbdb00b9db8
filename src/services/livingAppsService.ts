@@ -1,7 +1,8 @@
 // AUTOMATICALLY GENERATED SERVICE
 import { APP_IDS, LOOKUP_OPTIONS, FIELD_TYPES } from '@/types/app';
 import { ensureUploadableImage } from '@/lib/ai';
-import { REST_URL } from '@/lib/origin';
+import { REST_URL, restFetch } from '@/lib/origin';
+import { reportFailedWrite } from '@/lib/sentry';
 import type { SkateparksSpots, EventVerwaltung, Anmeldungen, CreateSkateparksSpots, CreateEventVerwaltung, CreateAnmeldungen } from '@/types/app';
 
 // Base Configuration — the host is a RUNTIME fact (lib/origin.ts):
@@ -38,6 +39,9 @@ export function createRecordUrl(appId: string, recordId: string): string {
 export class LivingAppsApiError extends Error {
   status: number;
   type?: string;
+  /** Stable error type identifier — the last path segment of `type`
+   *  (v1: `…/rest/v1/docs/errors/<id>`, e.g. `no_app_permission`). */
+  code?: string;
   control_identifier?: string;
   control_type?: string;
   field_type?: string;
@@ -48,6 +52,7 @@ export class LivingAppsApiError extends Error {
     this.status = status;
     if (raw) {
       this.type = typeof raw.type === 'string' ? raw.type : undefined;
+      this.code = this.type ? this.type.replace(/\/+$/, '').split('/').pop() : undefined;
       this.control_identifier = typeof raw.control_identifier === 'string' ? raw.control_identifier : undefined;
       this.control_type = typeof raw.control_type === 'string' ? raw.control_type : undefined;
       this.field_type = typeof raw.field_type === 'string' ? raw.field_type : undefined;
@@ -89,6 +94,9 @@ export interface RecordQuery {
   /** Field projection (`field=` repeated). The record's `fields` then holds ONLY these keys. */
   fields?: string[];
   signal?: AbortSignal;
+  /** A read a display surface repeats (polling, a live board): a network failure
+ *  is no toast — the surface keeps its last state and says it is stale (S-9). */
+  silent?: boolean;
 }
 // URLSearchParams encodes spaces as `+` — the API accepts it (verified live
 // 2026-09-02: orderby=r.v_nachname+asc → 200, sorted; filter with + → 200).
@@ -123,11 +131,19 @@ export interface MutationResult {
   [key: string]: any;
 }
 
+/** The entity (APP_IDS key, lower case) a REST endpoint writes to — for the
+ *  failed-write report, which names the entity, never the record. */
+function entityOfEndpoint(endpoint: string): string | undefined {
+  const m = /\/apps\/([a-f0-9]{24})/.exec(endpoint);
+  if (!m) return undefined;
+  return (Object.keys(APP_IDS) as (keyof typeof APP_IDS)[]).find(k => APP_IDS[k] === m[1])?.toLowerCase();
+}
+
 async function callApi(method: string, endpoint: string, data?: any, options?: CallApiOptions) {
   const silent = options?.silent === true;
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    response = await restFetch(`${API_BASE_URL}${endpoint}`, {
       method,
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',  // Nutze Session Cookies für Auth
@@ -144,6 +160,7 @@ async function callApi(method: string, endpoint: string, data?: any, options?: C
         source: 'network', message, status: 0,
       } }));
     }
+    if (method !== 'GET') reportFailedWrite({ method, status: 0, entity: entityOfEndpoint(endpoint) });
     throw netErr;
   }
   if (!response.ok) {
@@ -166,6 +183,11 @@ async function callApi(method: string, endpoint: string, data?: any, options?: C
         message: err.message,
       } }));
     }
+    // A refused write goes to Sentry as well as to the toast: the user sees it,
+    // now we do too (27.10.2026 — not one failed save had ever reached Sentry).
+    if (method !== 'GET') {
+      reportFailedWrite({ method, status: err.status, code: err.code, field: err.control_identifier, entity: entityOfEndpoint(endpoint) });
+    }
     throw err;
   }
   // DELETE returns often empty body or simple status
@@ -181,7 +203,7 @@ export async function uploadFile(file: File | Blob, filename?: string): Promise<
   if (file instanceof File) file = await ensureUploadableImage(file);
   const formData = new FormData();
   formData.append('file', file, filename ?? (file instanceof File ? file.name : 'upload'));
-  const res = await fetch(`${API_BASE_URL}/files`, {
+  const res = await restFetch(`${API_BASE_URL}/files`, {
     method: 'POST',
     credentials: 'include',
     body: formData,
@@ -445,7 +467,7 @@ export class LivingAppsService {
     return hydrateRecords(records, 'skateparks_spots');
   }
   static async querySkateparksSpots(q: RecordQuery = {}): Promise<SkateparksSpots[]> {
-    const data = await callApi('GET', `/apps/${APP_IDS.SKATEPARKS_SPOTS}/records${recordQueryString(q)}`, undefined, { signal: q.signal });
+    const data = await callApi('GET', `/apps/${APP_IDS.SKATEPARKS_SPOTS}/records${recordQueryString(q)}`, undefined, { signal: q.signal, silent: q.silent });
     const records = Object.entries(data).map(([id, rec]: [string, any]) => ({
       record_id: id, ...rec,
       createdat: rec.created_at ?? '', updatedat: rec.updated_at ?? null,
@@ -483,7 +505,7 @@ export class LivingAppsService {
     return hydrateRecords(records, 'event_verwaltung');
   }
   static async queryEventVerwaltung(q: RecordQuery = {}): Promise<EventVerwaltung[]> {
-    const data = await callApi('GET', `/apps/${APP_IDS.EVENT_VERWALTUNG}/records${recordQueryString(q)}`, undefined, { signal: q.signal });
+    const data = await callApi('GET', `/apps/${APP_IDS.EVENT_VERWALTUNG}/records${recordQueryString(q)}`, undefined, { signal: q.signal, silent: q.silent });
     const records = Object.entries(data).map(([id, rec]: [string, any]) => ({
       record_id: id, ...rec,
       createdat: rec.created_at ?? '', updatedat: rec.updated_at ?? null,
@@ -521,7 +543,7 @@ export class LivingAppsService {
     return hydrateRecords(records, 'anmeldungen');
   }
   static async queryAnmeldungen(q: RecordQuery = {}): Promise<Anmeldungen[]> {
-    const data = await callApi('GET', `/apps/${APP_IDS.ANMELDUNGEN}/records${recordQueryString(q)}`, undefined, { signal: q.signal });
+    const data = await callApi('GET', `/apps/${APP_IDS.ANMELDUNGEN}/records${recordQueryString(q)}`, undefined, { signal: q.signal, silent: q.silent });
     const records = Object.entries(data).map(([id, rec]: [string, any]) => ({
       record_id: id, ...rec,
       createdat: rec.created_at ?? '', updatedat: rec.updated_at ?? null,

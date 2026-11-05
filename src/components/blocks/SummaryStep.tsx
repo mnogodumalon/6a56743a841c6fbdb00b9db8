@@ -5,8 +5,10 @@ import { IconAlertCircle, IconCheck, IconCircleDashed, IconLoader2, IconX } from
 import { t } from '@/i18n';
 import { planProvidedKeys } from '@/lib/journey/port';
 import { EMPTY_VALUE } from '@/lib/journey/format';
+import { withRecordNames } from '@/lib/journey/recordLabels';
 import { mergeSummaryRows } from '@/lib/journey/summary';
-import { entityLabel, isEmptyValue, labelOf } from '@/lib/journey/rules';
+import { useFailingLists } from '@/lib/journey/useLiveList';
+import { entityLabel, isUnfilled } from '@/lib/journey/rules';
 import type { StepForm, SummaryItem } from '@/lib/journey/useStepForm';
 import { stepVerb, type JourneySubmit, type PlanStep } from '@/lib/journey/useJourneySubmit';
 import { useWizard } from './IntentWizardShell';
@@ -33,6 +35,9 @@ export interface SummaryStepProps {
   /** One or two sentences: what happens after Confirm. */
   whatHappensNext?: ReactNode;
   confirmLabel?: string;
+  /** The ways the flow may END (PV-14): one button each, the first is the
+   *  default — from the plan via `variants={flow.actions}`. Without it: one confirm. */
+  variants?: Array<{ id: string; label: string; confirm: () => Promise<unknown> }>;
   /** Extra rows the forms do not know about (a computed total, a picked option). */
   items?: SummaryItem[];
   /** Override the jump: default uses the shell (goTo step + focus field + return here). */
@@ -53,6 +58,7 @@ export function SummaryStep({
   title,
   whatHappensNext,
   confirmLabel,
+  variants,
   items = [],
   onEdit,
   children,
@@ -81,7 +87,9 @@ export function SummaryStep({
   });
   // Page `items` refine, never double: an item covering a form field's keys
   // (or its label in the same step) replaces that form row.
-  const rows: SummaryItem[] = mergeSummaryRows([...targetRows, ...forms.flatMap(answered)], items);
+  // entries of a list (several records of one entity): their rows come from the plan step, not from a form
+  const listRows: SummaryItem[] = submit.plan.flatMap(s => s.review?.() ?? []);
+  const rows: SummaryItem[] = mergeSummaryRows([...targetRows, ...forms.flatMap(answered), ...listRows], items);
   const groups = new Map<number | undefined, SummaryItem[]>();
   for (const row of rows) {
     const list = groups.get(row.step) ?? [];
@@ -123,11 +131,13 @@ export function SummaryStep({
   // is nobody's input here: "Buchung anlegen" set status via plan values,
   // "Einchecken" updates a record whose room is already there — both blocked
   // the confirm with a link to nowhere (live-seen).
+  // EF-13: a list this page reads failed before it ever loaded — what it shows is no value
+  const failingLists = useFailingLists();
   const missing = forms.flatMap(f => {
     const provided = planProvidedKeys(submit.plan.find(s => s.form === f));
     return f.keys
-      .filter(k => f.bound(k) && f.required(k) && isEmptyValue(f.values[k]) && !provided.has(k))
-      .map(k => ({ label: labelOf(f.entity, k), fieldId: f.fieldId(k), step: f.stepOf(k) }));
+      .filter(k => f.bound(k) && f.required(k) && isUnfilled(f.entity, k, f.values[k]) && !provided.has(k))
+      .map(k => ({ label: f.titleOf(k), fieldId: f.fieldId(k), step: f.stepOf(k) }));
   });
 
   const edit = (step: number | undefined, fieldId?: string) => {
@@ -184,7 +194,7 @@ export function SummaryStep({
             {groupRows.map(row => (
               <div key={row.key} className="grid grid-cols-[minmax(0,1fr)_auto] @md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_auto] gap-x-4 gap-y-1 px-5 py-3 items-baseline">
                 <dt className="text-sm text-muted-foreground">{row.label}</dt>
-                <dd className="text-sm font-medium break-words min-w-0 col-span-2 @md:col-span-1 order-3 @md:order-none">{row.value}</dd>
+                <dd className="text-sm font-medium break-words min-w-0 col-span-2 @md:col-span-1 order-3 @md:order-none">{withRecordNames(row.value, t('v_record_unnamed'))}</dd>
                 <div className="justify-self-end">
                   {!groupEdit && canEdit(row.step) && (
                     <button
@@ -213,7 +223,7 @@ export function SummaryStep({
             {settingRows.map(row => (
               <div key={row.key} className="grid grid-cols-[minmax(0,1fr)_auto] @md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_auto] gap-x-4 gap-y-1 px-5 py-3 items-baseline">
                 <dt className="text-sm text-muted-foreground">{row.label}</dt>
-                <dd className="text-sm font-medium break-words min-w-0 col-span-2 @md:col-span-1 order-3 @md:order-none">{row.value}</dd>
+                <dd className="text-sm font-medium break-words min-w-0 col-span-2 @md:col-span-1 order-3 @md:order-none">{withRecordNames(row.value, t('v_record_unnamed'))}</dd>
                 <div className="justify-self-end">
                   {row.href && (
                     <a href={row.href} className="text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded" aria-label={`${t('ss_change')}: ${row.label}`}>
@@ -288,8 +298,10 @@ export function SummaryStep({
 
       {submit.error && (
         <div role="alert" className="rounded-2xl border border-destructive/40 bg-destructive/5 p-4 space-y-2">
-          <p className="font-semibold text-destructive">{t('ss_error_title')}</p>
-          <p className="text-sm text-muted-foreground break-words">{submit.error.message}</p>
+          <p className="font-semibold text-destructive">{submit.offline ? t('ss_offline_title') : t('ss_error_title')}</p>
+          <p className="text-sm text-muted-foreground break-words" data-journey-offline={submit.offline ? '' : undefined}>
+            {submit.offline ? t('ss_offline_text') : submit.error.message}
+          </p>
           {savedLabels.length > 0 && (
             <p className="text-sm">{t('ss_partial', { done: savedLabels.join(', ') })}</p>
           )}
@@ -299,18 +311,43 @@ export function SummaryStep({
         </div>
       )}
 
+      {failingLists.length > 0 && (
+        <div role="alert" data-journey-read-failed="" className="rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm">
+          {t('ss_read_failed', { what: [...new Set(failingLists)].map(e => entityLabel(e as never)).join(', ') })}
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 border-t border-border pt-4">
         {whatHappensNext && <p className="text-sm text-muted-foreground flex-1">{whatHappensNext}</p>}
+        {variants && variants.length > 0 ? (
+          <div className="flex flex-wrap gap-2 sm:ml-auto">
+            {variants.map((v, i) => (
+              <Button
+                key={v.id}
+                type="button"
+                variant={i === 0 ? 'default' : 'outline'}
+                onClick={() => { submit.remember(rows); void v.confirm(); }}
+                disabled={submit.submitting || missing.length > 0 || failingLists.length > 0}
+                className="gap-2"
+                data-journey-variant={v.id}
+                {...(i === 0 ? { 'data-journey-confirm': '' } : {})}
+              >
+                {i === 0 && submit.submitting && <IconLoader2 size={16} className="animate-spin" aria-hidden="true" />}
+                {i === 0 && submit.submitting ? t('ss_submitting') : v.label}
+              </Button>
+            ))}
+          </div>
+        ) : (
         <Button
           type="button"
           onClick={() => { submit.remember(rows); void submit.run(); }}
-          disabled={submit.submitting || missing.length > 0}
+          disabled={submit.submitting || missing.length > 0 || failingLists.length > 0}
           className="gap-2 sm:ml-auto"
           data-journey-confirm=""
         >
           {submit.submitting && <IconLoader2 size={16} className="animate-spin" aria-hidden="true" />}
           {submit.submitting ? t('ss_submitting') : (confirmLabel ?? t('ss_confirm'))}
         </Button>
+        )}
       </div>
     </div>
   );

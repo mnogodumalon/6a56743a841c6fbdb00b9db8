@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   IconWorld, IconCheck, IconLink, IconExternalLink, IconLoader2, IconAlertTriangle,
-  IconAdjustments, IconEye, IconTicket, IconPencil, IconTrash, IconPlus,
+  IconAdjustments, IconEye, IconTicket, IconPencil, IconTrash, IconPlus, IconQrcode,
 } from '@tabler/icons-react';
 import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import { JobStateBadge, JobStateRow } from '@/components/PageJobStatus';
 import { usePageJobs } from '@/hooks/usePageJobs';
 import { dismissPageJob, type PageOp, type PageJobRecord } from '@/lib/pageJobs';
 import { t } from '@/i18n';
+import { QrCode, qrSvgString } from '@/components/widgets/QrCode';
 
 // Owner-facing management of the dashboard's public pages. Same-origin fetch
 // to /claude carries the LA session automatically. Anonymous visitors never
@@ -75,6 +76,18 @@ export default function PublicPagesAdmin() {
   };
   const [linksLoading, setLinksLoading] = useState(false);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  // The QR of a link (S-7): a poster, a beamer, a flyer — scanning beats typing
+  // ~110 characters. One dialog for the page's own link and for a per-record link.
+  const [qr, setQr] = useState<{ url: string; label: string; file: string } | null>(null);
+  const downloadQr = () => {
+    if (!qr) return;
+    const blob = new Blob([qrSvgString(qr.url, { margin: 4 })], { type: 'image/svg+xml' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `qr-${qr.file}.svg`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
 
   const load = async () => {
     try {
@@ -201,6 +214,7 @@ export default function PublicPagesAdmin() {
                 </div>
                 <span className={`text-xs ${page.published ? 'text-primary' : 'text-muted-foreground'}`}>
                   {page.published ? t('ppa_status_published') : t('ppa_status_draft')}
+                  {!page.published && page.republish ? <span className="ml-2 text-destructive">{t('ppa_republish')}</span> : null}
                 </span>
               </div>
 
@@ -232,6 +246,17 @@ export default function PublicPagesAdmin() {
                     className="p-2 rounded-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
                   >
                     {copiedSlug === page.slug ? <IconCheck size={18} stroke={1.5} /> : <IconLink size={18} stroke={1.5} />}
+                  </button>
+                ) : null}
+                {page.published && !page.link_param ? (
+                  <button
+                    type="button"
+                    title={t('ppa_qr')}
+                    aria-label={t('ppa_qr')}
+                    onClick={() => setQr({ url: page.share_url, label: page.title, file: page.slug })}
+                    className="p-2 rounded-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                  >
+                    <IconQrcode size={18} stroke={1.5} />
                   </button>
                 ) : null}
               </div>
@@ -374,6 +399,15 @@ export default function PublicPagesAdmin() {
                   </a>
                   <button
                     type="button"
+                    title={t('ppa_qr')}
+                    aria-label={t('ppa_qr')}
+                    onClick={() => setQr({ url: link.url, label: link.label, file: `${linksSlug ?? 'seite'}-${link.record_id}` })}
+                    className="shrink-0 p-2 rounded-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                  >
+                    <IconQrcode size={16} stroke={1.5} />
+                  </button>
+                  <button
+                    type="button"
                     title={copiedLink === link.record_id ? t('ppa_copied') : t('ppa_copy')}
                     aria-label={t('ppa_copy')}
                     onClick={() => copyLink(link)}
@@ -388,6 +422,25 @@ export default function PublicPagesAdmin() {
             </div>
           )}
           <p className="pt-2 text-xs text-muted-foreground">{t('ppa_links_hint')}</p>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!qr} onOpenChange={v => !v && setQr(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('ppa_qr_title')}</DialogTitle>
+            <DialogDescription>{qr?.label}</DialogDescription>
+          </DialogHeader>
+          {qr ? (
+            <div className="flex flex-col items-center gap-3">
+              <QrCode value={qr.url} size={240} title={qr.label} />
+              <p className="break-all text-center text-xs text-muted-foreground">{qr.url}</p>
+            </div>
+          ) : null}
+          <p className="text-xs text-muted-foreground">{t('ppa_qr_intro')}</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={downloadQr}>{t('ppa_qr_download')}</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </PageShell>

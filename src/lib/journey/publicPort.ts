@@ -15,6 +15,7 @@
 import {
   createPublicRecord,
   listPublicRecords,
+  prepareChallenge,
   recordRef,
   type PublicPageConfig,
   type PublicPagesConfig,
@@ -59,6 +60,16 @@ function appIdOf(entity: EntityKey): string {
 }
 
 export function createPublicPort(cfg: PublicPagesConfig, page: PublicPageConfig): JourneyPort {
+  // The proof-of-work for every create is solved while the visitor reads and
+  // types, not when they press „Senden“ (Abnahme 7: the confirmation took
+  // 1.8 s, most of it the challenge; PublicFormPage did this, the port did not).
+  // A token goes stale after 4 min — submit then solves a fresh one as before.
+  try {
+    const creates = (page.endpoints ?? []).filter(e => e.op === 'create' && e.app_id);
+    for (const ep of creates.length ? creates : [{ app_id: page.app_id }]) {
+      if (ep.app_id) prepareChallenge(cfg, page, 'POST', `/apps/${ep.app_id}/records`);
+    }
+  } catch { /* a pre-solve never blocks the page */ }
   const port: JourneyPort = {
     door: 'public',
     async list(entity, opts) {

@@ -1,10 +1,13 @@
-import type { ReactNode } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { DatePicker } from '@/components/DatePicker';
+// Lazy: the DatePicker (calendar, popover, date-fns locales — ~140 KB) loads only
+// where a date field renders; a public page without one never pays for it (P-3).
+const DatePicker = lazy(() => import('@/components/DatePicker').then(m => ({ default: m.DatePicker })));
 import { ChoiceGroup } from '@/components/blocks/ChoiceGroup';
+import { FileField } from '@/components/blocks/FileField';
 import { Field, useEnclosingField } from '@/components/blocks/Field';
 import { labelOf, type FieldKind } from '@/lib/journey/rules';
 import type { StepForm } from '@/lib/journey/useStepForm';
@@ -32,7 +35,7 @@ import type { StepForm } from '@/lib/journey/useStepForm';
  * <Field name="x"><Bound name="x" /></Field> is harmless: Bound sees the
  * enclosing Field (context) and renders only the control. One label, always.
  */
-export type BoundControl = 'input' | 'textarea' | 'date' | 'choice' | 'checkbox';
+export type BoundControl = 'input' | 'textarea' | 'date' | 'choice' | 'checkbox' | 'file';
 
 export interface BoundProps {
   form: StepForm;
@@ -58,6 +61,7 @@ export function controlFor(kind: FieldKind | undefined): BoundControl {
     case 'datetime': return 'date';
     case 'lookup': return 'choice';
     case 'bool': return 'checkbox';
+    case 'file': return 'file';
     default: return 'input';
   }
 }
@@ -92,10 +96,17 @@ export function Bound({ form, name, label, hint, placeholder, rows = 3, allowCle
       node = <Textarea {...form.field(name)} rows={rows} placeholder={placeholder} />;
       break;
     case 'date':
-      node = <DatePicker {...form.date(name)} placeholder={placeholder} />;
+      node = (
+        <Suspense fallback={<Input id={form.fieldId(name)} placeholder={placeholder} disabled />}>
+          <DatePicker {...form.date(name)} placeholder={placeholder} />
+        </Suspense>
+      );
       break;
     case 'choice':
       node = <ChoiceGroup {...form.choice(name)} allowClear={allowClear} />;
+      break;
+    case 'file':
+      node = <FileField {...form.file(name)} />;
       break;
     default:
       node = <Input {...(rule?.kind === 'number' ? form.number(name) : form.field(name))} placeholder={placeholder} />;

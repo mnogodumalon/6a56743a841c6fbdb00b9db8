@@ -82,7 +82,8 @@ export type EntityCrudData = ReturnType<typeof useDashboardData>;
 
 export interface EntityCrudOptions {
   /** Per-type overlay footer — the record's next workflow step. */
-  footer?: (top: OverlayItem) => ReactNode | { label: ReactNode; onClick: () => void } | undefined;
+  /** The action may return a sentence — the reason the step was NOT taken; the overlay shows it under the button. */
+  footer?: (top: OverlayItem) => ReactNode | { label: ReactNode; onClick: () => void | string | Promise<void | string> } | undefined;
   placement?: 'side' | 'center';
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }

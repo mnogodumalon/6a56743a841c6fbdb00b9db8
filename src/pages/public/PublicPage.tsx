@@ -1,6 +1,8 @@
-import { Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import PublicFormPage from '@/pages/public/PublicFormPage';
+// Lazy: the generic form renderer (and the DatePicker it carries) only loads
+// when a config-driven page needs it — a bespoke page never pays for it (P-2).
+const PublicFormPage = lazy(() => import('@/pages/public/PublicFormPage'));
 import { PUBLIC_PAGES } from '@/pages/public/registry';
 import { loadPublicPagesConfig, type PublicPagesConfig } from '@/lib/publicClient';
 import { initPublicLocale } from '@/i18n';
@@ -46,5 +48,5 @@ export default function PublicPage() {
       </Suspense>
     );
   }
-  return <PublicFormPage />;
+  return <Suspense fallback={null}><PublicFormPage /></Suspense>;
 }

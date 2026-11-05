@@ -27,3 +27,13 @@ export function recordLabelOf(value: unknown): string | undefined {
   const key = recordIdOf(value);
   return key ? registry.get(key) : undefined;
 }
+
+/** Every 24-hex record id inside a TEXT a page put together (a review row,
+ *  a success fact, an answer chip) replaced by the name the page learned,
+ *  else by „Eintrag“ — a raw id is never shown to a person (J-9, acceptance 4:
+ *  „Enthaltene Beiträge: 1. 6aeaf129cf…“ came from a row the page built). */
+export function withRecordNames(text: string, unnamed = '…'): string {
+  if (!text || !/[a-f0-9]{24}/i.test(text)) return text;
+  return text.replace(/(?:https?:\/\/\S*?\/records\/)?\b([a-f0-9]{24})\b/gi, (_m, id: string) => registry.get(id.toLowerCase()) ?? unnamed);
+}
+

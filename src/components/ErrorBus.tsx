@@ -171,6 +171,13 @@ export function ErrorBusProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // A visitor on a public page is not the owner: no „Dashboard reparieren“
+    // for them (audit 02.11.2026 — the offer started the repair agent with
+    // the service key from a page anyone can open).
+    if (window.location.hash.startsWith('#/public')) {
+      toast.error(t('repair_error_title'), { description: err.detail || err.message || t('toast_bug_desc'), duration: TOAST_DURATION_MS });
+      return;
+    }
     toast.error(t('repair_error_title'), {
       description: err.detail || err.message || t('toast_bug_desc'),
       action: {

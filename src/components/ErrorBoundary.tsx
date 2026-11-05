@@ -1,5 +1,6 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react';
 import * as Sentry from '@sentry/react';
+import { errorTags } from '@/lib/sentry';
 import { IconAlertTriangle, IconRefresh, IconTool, IconCheck } from '@tabler/icons-react';
 import { t } from '@/i18n';
 
@@ -47,6 +48,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
     Sentry.captureException(error, {
       contexts: { react: { componentStack: info.componentStack ?? '' } },
       tags: {
+        ...errorTags(),
         appgroup_id: APPGROUP_ID,
         source: 'error_boundary',
         surface: isPublicRoute() ? 'public' : 'app',

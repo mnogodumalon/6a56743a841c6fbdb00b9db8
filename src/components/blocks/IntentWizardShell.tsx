@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { usePublicWizardColumn } from '@/lib/journey/publicColumn';
 import { usePolicyVersion } from '@/lib/journey/usePolicy';
+import { withRecordNames } from '@/lib/journey/recordLabels';
 import { useSearchParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -32,11 +33,12 @@ import {
   DRAFT_CLEARED_EVENT,
   clearJourneyDraft,
   readJourneyDraft,
+  claimJourneyDraft,
   removeJourneyDraft,
   writeJourneyDraft,
 } from '@/lib/journey/draft';
-import { isEmptyValue, labelOf } from '@/lib/journey/rules';
-import { setActiveWizardStep, type StepForm } from '@/lib/journey/useStepForm';
+import { isEmptyValue, isUnfilled, labelOf } from '@/lib/journey/rules';
+import { onWizardStepRequest, setActiveWizardStep, type StepForm } from '@/lib/journey/useStepForm';
 import { FieldErrorSummary } from './FieldErrorSummary';
 
 /**
@@ -339,6 +341,13 @@ export function IntentWizardShell({
   const pendingFocusRef = useRef<string | null>(null);
   const mountedRef = useRef(false);
   const suspendedRef = useRef(false);
+  // the draft key this shell has READ — saving waits for it. A key that changes
+  // after mount (a public page's `beitrag-${frage ?? 'none'}` once the question
+  // loads) used to be read never and then OVERWRITTEN with the empty form, so a
+  // reload lost the participant's text (P-14, Abnahme 5).
+  const restoredKeyRef = useRef<string | null>(null);
+  // set by a restore: the save effect of the same commit still sees the empty forms
+  const justRestoredRef = useRef(false);
   const formsRef = useRef<StepForm[] | undefined>(forms);
   formsRef.current = forms;
 
@@ -378,6 +387,19 @@ export function IntentWizardShell({
     },
     [onStepChange],
   );
+
+  // a flow opened for one record starts after the steps that pick it (requestWizardStep)
+  const stepRef = useRef(currentStep);
+  stepRef.current = currentStep;
+  const enabledRef = useRef(enabledSteps);
+  enabledRef.current = enabledSteps;
+  useEffect(() => onWizardStepRequest(step => {
+    if (stepRef.current !== 1) return;          // the person moved already
+    const to = enabledRef.current.find(n => n >= step);
+    if (!to || to === 1) return;
+    setStarted(true);
+    onStepChange(to);
+  }), [onStepChange]);
 
   const next = useCallback(() => {
     if (returnTo !== null && returnTo !== currentStep) {
@@ -425,10 +447,18 @@ export function IntentWizardShell({
     setSearchParams(params, { replace: true });
   }, [currentStep, searchParams, setSearchParams]);
 
-  // Mount: restore the draft (wins over ?step=), else read the step from the URL.
+  // the shell keeps this key's form values — useJourneySubmit then leaves them alone
+  useEffect(() => (draftKey ? claimJourneyDraft(draftKey) : undefined), [draftKey]);
+
+  // Restore the draft (wins over ?step=) on mount AND whenever the key becomes
+  // another one; else read the step from the URL (first mount only).
   useEffect(() => {
+    const first = restoredKeyRef.current === null;
+    if (draftKey && restoredKeyRef.current === draftKey) return;
+    restoredKeyRef.current = draftKey ?? '';
     const draft = draftKey && formsRef.current ? readJourneyDraft(draftKey) : null;
     if (draft) {
+      justRestoredRef.current = true;
       formsRef.current?.forEach((f, i) => {
         if (draft.data[i]) f.reset(draft.data[i], draft.labels?.[i]);
       });
@@ -443,19 +473,20 @@ export function IntentWizardShell({
         const data = draft.data[i] ?? {};
         for (const key of f.keys) {
           const s = f.stepOf(key);
-          if (s !== undefined && s < target && f.required(key) && isEmptyValue(data[key])) target = s;
+          if (s !== undefined && s < target && f.required(key) && isUnfilled(f.entity, key, data[key])) target = s;
         }
       });
       if (target !== currentStep) onStepChange(target);
       return;
     }
+    if (!first) return;
     const urlStep = parseInt(searchParams.get('step') ?? '', 10);
     if (urlStep >= 1 && urlStep <= steps.length && urlStep !== currentStep) {
       setStarted(true);
       onStepChange(urlStep);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [draftKey]);
 
   // Save the draft on every change — suspended after a success cleared it,
   // until the wizard is back on step 1 (a success step must not re-write the
@@ -463,6 +494,8 @@ export function IntentWizardShell({
   const valuesSignature = forms ? JSON.stringify(forms.map(f => f.values)) : '';
   useEffect(() => {
     if (!draftKey || !forms) return;
+    if (restoredKeyRef.current !== draftKey) return;   // not read yet — never overwrite it
+    if (justRestoredRef.current) { justRestoredRef.current = false; return; }
     if (suspendedRef.current) {
       if (currentStep !== 1) return;
       suspendedRef.current = false;
@@ -741,7 +774,7 @@ export function IntentWizardShell({
                 title={t('ss_change')}
               >
                 <span className="text-muted-foreground">{c.label}:</span>
-                <span className="font-medium truncate max-w-[14rem]">{c.value}</span>
+                <span className="font-medium truncate max-w-[14rem]">{withRecordNames(c.value, t('v_record_unnamed'))}</span>
               </button>
             ))}
           </div>

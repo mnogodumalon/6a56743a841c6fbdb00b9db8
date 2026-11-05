@@ -159,7 +159,21 @@ async function loadPreviewConfig(slug: string): Promise<PublicPagesConfig | null
   }
 }
 
+// One request per page load: the route component and the page it renders both
+// ask for the config, and both got their own fetch (P-2, 03.11.2026).
+let artifactPromise: Promise<PublicPagesConfig | null> | null = null;
+
 async function loadArtifactConfig(): Promise<PublicPagesConfig | null> {
+  if (!artifactPromise) {
+    artifactPromise = fetchArtifactConfig().then(cfg => {
+      if (cfg === null) artifactPromise = null;   // a failed load is retried next time, not remembered
+      return cfg;
+    });
+  }
+  return artifactPromise;
+}
+
+async function fetchArtifactConfig(): Promise<PublicPagesConfig | null> {
   try {
     const base = window.location.href.split('#')[0];
     const res = await fetch(new URL('public-pages.json', base).toString(), { cache: 'no-store' });
@@ -181,6 +195,12 @@ async function loadArtifactConfig(): Promise<PublicPagesConfig | null> {
  * ALWAYS pass the slug. Without it a draft cannot be recognised and the page
  * is unavailable even to its owner.
  */
+/** Forget the page load's cached public-pages.json — the next load reads it fresh
+ *  (a page published while a beamer is open, S-24: the cache kept `{pages: {}}`). */
+export function forgetPublicPagesConfig(): void {
+  artifactPromise = null;
+}
+
 export async function loadPublicPagesConfig(slug?: string): Promise<PublicPagesConfig | null> {
   const artifact = await loadArtifactConfig();
   if (!slug) return artifact;
@@ -377,9 +397,11 @@ async function solveChallenge(ch: PowChallenge): Promise<string> {
 }
 
 // Pre-solve cache: pages call prepareChallenge() on the first field focus so
-// the token is usually ready before the user hits submit. One entry suffices —
-// a public page only ever targets one endpoint at a time.
-let prepared: { key: string; staleAt: number; tokenPromise: Promise<string> } | null = null;
+// the token is usually ready before the user hits submit. ONE ENTRY PER
+// METHOD+PATH (P-4, 04.11.2026): a page that lists (GET) and creates (POST)
+// used to drop the prepared POST token on every list request, so the submit
+// solved again and the visitor waited.
+const prepared = new Map<string, { staleAt: number; tokenPromise: Promise<string> }>();
 
 export function prepareChallenge(
   cfg: PublicPagesConfig,
@@ -390,14 +412,15 @@ export function prepareChallenge(
   // No grant in a preview, so nothing to pre-solve against.
   if (cfg.preview || page.challenge === 'none') return;
   const key = `${page.grant_id} ${method} ${path}`;
-  if (prepared && prepared.key === key && prepared.staleAt > Date.now()) return;
+  const have = prepared.get(key);
+  if (have && have.staleAt > Date.now()) return;
   const tokenPromise = fetchChallenge(cfg.public_api_base, page.grant_id, method, path).then(solveChallenge);
   // A failed pre-solve must not poison submit — drop it and let submit re-solve.
   tokenPromise.catch(() => {
-    if (prepared && prepared.tokenPromise === tokenPromise) prepared = null;
+    if (prepared.get(key)?.tokenPromise === tokenPromise) prepared.delete(key);
   });
   // Server TTL is 300s; treat the token as stale well before that.
-  prepared = { key, staleAt: Date.now() + 240_000, tokenPromise };
+  prepared.set(key, { staleAt: Date.now() + 240_000, tokenPromise });
 }
 
 async function takeToken(
@@ -407,16 +430,15 @@ async function takeToken(
   path: string,
 ): Promise<string> {
   const key = `${page.grant_id} ${method} ${path}`;
-  if (prepared && prepared.key === key && prepared.staleAt > Date.now()) {
-    const p = prepared.tokenPromise;
-    prepared = null;
+  const have = prepared.get(key);
+  prepared.delete(key);                        // a token is used once; other endpoints keep theirs
+  if (have && have.staleAt > Date.now()) {
     try {
-      return await p;
+      return await have.tokenPromise;
     } catch {
       // fall through to a fresh solve
     }
   }
-  prepared = null;
   const ch = await fetchChallenge(cfg.public_api_base, page.grant_id, method, path);
   return solveChallenge(ch);
 }
@@ -659,13 +681,24 @@ export async function createPublicRecord(
     if (!res.ok) await throwSubmitError(res);
     return (await res.json()) as PublicRecordResult;
   }
+  // EF-20: a 429 (on the challenge or the POST) is waited out — 3 s, 8 s, 15 s — before the
+  // visitor sees an error; the page keeps „Wird gesendet …“ meanwhile
+  let limited = 0;
   for (let attempt = 0; ; attempt++) {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
     };
     if (page.challenge !== 'none') {
-      headers['X-Captcha-Token'] = await takeToken(cfg, page, 'POST', path);
+      try {
+        headers['X-Captcha-Token'] = await takeToken(cfg, page, 'POST', path);
+      } catch (err) {
+        if (err instanceof RateLimitedError && limited < 3) {
+          await new Promise(r => setTimeout(r, [3000, 8000, 15_000][limited++]));
+          continue;
+        }
+        throw err;
+      }
     }
     let res: Response;
     try {
@@ -679,6 +712,12 @@ export async function createPublicRecord(
     }
     if (res.ok) return (await res.json()) as PublicRecordResult;
     if (res.status === 403 && attempt === 0 && page.challenge !== 'none') continue;
+    if (res.status === 429 && limited < 3) {
+      const after = Number(res.headers.get('Retry-After'));
+      await new Promise(r => setTimeout(r, Number.isFinite(after) && after > 0 ? Math.min(after * 1000, 20_000) : [3000, 8000, 15_000][limited]));
+      limited++;
+      continue;
+    }
     await throwSubmitError(res);
   }
 }

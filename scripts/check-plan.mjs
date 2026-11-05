@@ -46,7 +46,11 @@ const pages = Array.isArray(plan.public_pages) ? plan.public_pages : [];
 // ── Where does a flow slug live? App.tsx: <Route path="intents/<slug>" … <Intent<Component> …
 const appSrc = existsSync(APP) ? readFileSync(APP, 'utf8') : '';
 function fileForSlug(slug) {
-  const re = new RegExp(`<Route\\s+path=["']intents/${slug.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}["'][^>]*?<Intent([A-Za-z][A-Za-z0-9]*)\\b`, 's');
+  // wire-intent writes `<Route path="intents/<slug>" element={<Suspense fallback={<DashboardSkeleton />}><Intent… /></Suspense>} />`:
+  // the component sits behind another tag on the SAME line, so the search runs to the end of the
+  // line, not to the next `>` ([^>]*? stopped at `<Suspense …>` and called every wired flow "not
+  // built" — the binding check below never ran for a plan flow, 03.11.2026).
+  const re = new RegExp(`<Route\\s+path=["']intents/${slug.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}["'][^\\n]*?<Intent([A-Za-z][A-Za-z0-9]*)\\b`);
   const m = re.exec(appSrc);
   if (!m) return null;
   const file = `${INTENTS_DIR}/${m[1]}.tsx`;
@@ -162,6 +166,11 @@ if (pages.length && existsSync(SURFACE)) {
     const allowed = new Set([...(page.lists || []).map(l => `${l.entity}:list`), ...(page.creates || []).map(c => `${c.entity}:create`)]);
     for (const ep of sp.endpoints || []) {
       const key = `${ep.entity}:${ep.op}`;
+      // An availability read is Klar's own (intents_integration.add_availability_endpoints,
+      // from the occupancy decision): dates, resource, status of what is taken — never
+      // who. It is not a plan decision; rejecting it made the repair agent strip the
+      // calendar off a booking page (Pension Gästehaus 23.10.2026).
+      if (ep.op === 'list' && ep.purpose === 'availability') continue;
       if (!allowed.has(key)) {
         errors.push(`${file}: public page '${page.slug}' declares ${ep.op} on '${ep.entity}' — the plan allows only: ${[...allowed].join(', ') || 'nothing'}`);
       }

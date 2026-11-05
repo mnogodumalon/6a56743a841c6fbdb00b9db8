@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { t } from '@/i18n';
 
 /**
  * WorkList — the aside ACTION list (not a link list).
@@ -57,7 +58,10 @@ interface WorkListProps {
 }
 
 export function WorkList({ title, icon, items, onItemClick, empty, max = 5, className }: WorkListProps) {
-  const visible = items.slice(0, max);
+  // „+N weitere“ opens the rest — a cut list with no way to the hidden rows
+  // let a contribution vanish from the moderation (acceptance 4, S-15)
+  const [all, setAll] = useState(false);
+  const visible = all ? items : items.slice(0, max);
   const rest = items.length - visible.length;
   return (
     <section className={`rounded-[27px] bg-card p-5 shadow-lg overflow-hidden ${className ?? ''}`}>
@@ -113,7 +117,18 @@ export function WorkList({ title, icon, items, onItemClick, empty, max = 5, clas
             </li>
           ))}
           {rest > 0 ? (
-            <li className="px-2 py-2 text-xs text-muted-foreground">+{rest} weitere</li>
+            <li>
+              <button type="button" onClick={() => setAll(true)} data-worklist-more=""
+                className="w-full rounded-lg px-2 py-2 text-left text-xs font-medium text-primary hover:bg-muted transition-colors">
+                {t('wl_more', { n: rest })}
+              </button>
+            </li>
+          ) : all && items.length > max ? (
+            <li>
+              <button type="button" onClick={() => setAll(false)} className="w-full rounded-lg px-2 py-2 text-left text-xs text-muted-foreground hover:bg-muted transition-colors">
+                {t('wl_less')}
+              </button>
+            </li>
           ) : null}
         </ul>
       )}

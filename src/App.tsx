@@ -5,14 +5,18 @@ import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { locale, onLocaleChange, syncProfileLocale, t } from '@/i18n';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ErrorBusProvider } from '@/components/ErrorBus';
-import { Layout } from '@/components/Layout';
-import DashboardReady from '@/pages/DashboardReady';
-import PublicPagesAdmin from '@/pages/PublicPagesAdmin';
-import PublicPageFields from '@/pages/PublicPageFields';
-import IntentFields from '@/pages/IntentFields';
 import { IntentPolicyLoader } from '@/components/IntentPolicyLoader';
-import IntentsAdmin from '@/pages/IntentsAdmin';
-import AppMap from '@/pages/AppMap';
+// Lazy: the dashboard's chrome and pages load only when a dashboard route is
+// opened. A visitor on #/public/:slug paid for all of it (header, drawer,
+// overview, admin pages — 1068 KB main chunk, 3,8 s on a slow phone; P-2,
+// 03.11.2026) although the public page needs none of it.
+const Layout = lazy(() => import('@/components/Layout').then(m => ({ default: m.Layout })));
+const DashboardReady = lazy(() => import('@/pages/DashboardReady'));
+const PublicPagesAdmin = lazy(() => import('@/pages/PublicPagesAdmin'));
+const PublicPageFields = lazy(() => import('@/pages/PublicPageFields'));
+const IntentFields = lazy(() => import('@/pages/IntentFields'));
+const IntentsAdmin = lazy(() => import('@/pages/IntentsAdmin'));
+const AppMap = lazy(() => import('@/pages/AppMap'));
 // <custom:imports>
 // Lazy: public pages live outside <Layout> and only load on /#/public/:slug —
 // dashboard users never pay for them, anonymous visitors skip the dashboard.
@@ -93,7 +97,13 @@ export default function App() {
             <LocaleGate>
             <Routes>
               <Route path="public/:slug" element={<Suspense fallback={null}><PublicPage /></Suspense>} />
-              <Route element={<Layout />}>
+              {/* Routes WITHOUT the dashboard chrome (a beamer view, a kiosk page, a print
+                  sheet): header, drawer and assistant stay away, the route still runs inside
+                  the app (locale, error boundary, Sentry). Wired by
+                  `node scripts/wire-intent.mjs --bare`, kept across updates (S-2). */}
+              {/* <custom:bare-routes> */}
+              {/* </custom:bare-routes> */}
+              <Route element={<Suspense fallback={null}><Layout /></Suspense>}>
                 <Route index element={<DashboardReady />} />
                 <Route path="verwaltung/ablaeufe" element={<IntentsAdmin />} />
                 <Route path="verwaltung/anwendung" element={<AppMap />} />

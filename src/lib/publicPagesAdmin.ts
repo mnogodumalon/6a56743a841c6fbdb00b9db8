@@ -47,6 +47,8 @@ export interface PublicPageSummary {
   title: string;
   description: string;
   published: boolean;
+  /** The page was live and went back to draft because its rights changed (PV-11). */
+  republish?: { at: string; reason: string } | null;
   share_url: string;
   fields: PublicPageField[];
   endpoints?: PublicPageEndpoint[];

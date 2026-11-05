@@ -59,7 +59,8 @@ export interface FieldRule {
   required: boolean;
   /** Build-time label — `labelOf()` prefers the runtime i18n bundle. */
   label: string;
-  /** Whether a journey may write it (`file` is upload-only, never via a journey). */
+  /** Whether a journey may write it as a value. `file` is false: a file is UPLOADED
+   *  (`form.file(key)` → FileField; the chosen file travels in the create as a data URL). */
   writable: boolean;
   maxLength?: number;
   /** lookup / multilookup: the ONLY valid write values. */
@@ -227,11 +228,11 @@ export const FIELD_RULES: Record<EntityKey, Record<string, FieldRule>> = {
       "label": "Kategorie",
       "writable": true,
       "options": [
+        "contest",
         "jam",
         "demo",
         "workshop",
-        "sonstiges",
-        "contest"
+        "sonstiges"
       ]
     },
     "datum_uhrzeit": {
@@ -541,6 +542,15 @@ export function optionsOf(entity: EntityKey, key: string): Array<{ key: string; 
   if (generated && generated.length) return generated.map(o => ({ key: o.key, label: o.label }));
   const keys = ruleOf(entity, key)?.options ?? [];
   return keys.map(k => ({ key: k, label: lookupLabel(entity, key, k) ?? k }));
+}
+
+/** „Nicht ausgefüllt“ for a required field, by its kind: a checkbox that is
+ *  `false` is NOT filled — the person did not consent (live 03.11.2026: a
+ *  consent page validated with the box unticked and the grant took it). Every
+ *  other kind is isEmptyValue. */
+export function isUnfilled(entity: EntityKey, key: string, v: unknown): boolean {
+  if (ruleOf(entity, key)?.kind === 'bool') return v !== true;
+  return isEmptyValue(v);
 }
 
 export function isEmptyValue(v: unknown): boolean {

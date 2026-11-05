@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ComputedContext } from '@/config/form-enhancements/types';
-import { applyFieldOrder, flattenFieldOrder, applyDefaults, evalComputed, numberInputProps, clampNumberValue, classifyComputed, extractApplookupRefs, mergeApplookupRefs, resolveApplookupRef } from '@/config/form-enhancements/types';
+import { applyFieldOrder, flattenFieldOrder, applyDefaults, evalComputed, numberInputProps, clampNumberValue, classifyComputed, extractApplookupRefs, mergeApplookupRefs, resolveApplookupRef, dialogLabel, dropHidden } from '@/config/form-enhancements/types';
 import { formEnhancements, computedDeps, computedApplookupRefs } from '@/config/form-enhancements/EventVerwaltung';
 import { AttachmentsSection } from '@/components/AttachmentsSection';
 import { requiredMessage } from '@/lib/journey/messages';
@@ -122,6 +122,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
   }
   // Fields the plan assigns to a tool (empty without a plan).
   const SYSTEM_ASSIGNED: string[] = [];
+  const PLAN_CREATE_PRESETS: Record<string, unknown> = {};
   const [showErrors, setShowErrors] = useState(false);
   const REQUIRED_FIELDS = ['titel', 'kategorie', 'datum_uhrzeit', 'ort'] as const;
   const missingRequired = REQUIRED_FIELDS.filter(k => {
@@ -178,7 +179,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
 
   useEffect(() => {
     if (open) {
-      setFields(applyDefaults(normalizedDefaults ?? {}, formEnhancements.defaults) as Partial<EventVerwaltung['fields']>);
+      setFields(applyDefaults({ ...(recordId ? {} : normalizeDefaults(PLAN_CREATE_PRESETS)), ...(normalizedDefaults ?? {}) }, formEnhancements.defaults) as Partial<EventVerwaltung['fields']>);
       setPreview(null);
       setScanSuccess(false);
       setAiText('');
@@ -278,7 +279,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         }
       }
       const photoContext = contextParts.length ? contextParts.join('\n') : undefined;
-      const schema = `{\n  "titel": string | null, // Titel des Events\n  "kategorie": LookupValue | null, // Kategorie (select one key: "jam" | "demo" | "workshop" | "sonstiges" | "contest") mapping: jam=Jam Session, demo=Demo, workshop=Workshop, sonstiges=Sonstiges, contest=Contest\n  "datum_uhrzeit": string | null, // YYYY-MM-DDTHH:MM\n  "beschreibung": string | null, // Beschreibung\n  "skill_level": LookupValue | null, // Skill-Level (select one key: "anfaenger" | "fortgeschritten" | "profi" | "alle_levels") mapping: anfaenger=Anfänger, fortgeschritten=Fortgeschritten, profi=Profi, alle_levels=Alle Levels\n  "max_teilnehmer": number | null, // Maximale Teilnehmerzahl\n  "startgebuehr": number | null, // Startgebühr (€)\n  "ort": string | null, // Display name from Skateparks & Spots (see <available-records>)\n  "kontakt_email": string | null, // Kontakt-E-Mail\n  "event_website": string | null, // Website des Events\n  "kontakt_telefon": string | null, // Kontakt-Telefonnummer\n}`;
+      const schema = `{\n  "titel": string | null, // Titel des Events\n  "kategorie": LookupValue | null, // Kategorie (select one key: "contest" | "jam" | "demo" | "workshop" | "sonstiges") mapping: contest=Contest, jam=Jam Session, demo=Demo, workshop=Workshop, sonstiges=Sonstiges\n  "datum_uhrzeit": string | null, // YYYY-MM-DDTHH:MM\n  "beschreibung": string | null, // Beschreibung\n  "skill_level": LookupValue | null, // Skill-Level (select one key: "anfaenger" | "fortgeschritten" | "profi" | "alle_levels") mapping: anfaenger=Anfänger, fortgeschritten=Fortgeschritten, profi=Profi, alle_levels=Alle Levels\n  "max_teilnehmer": number | null, // Maximale Teilnehmerzahl\n  "startgebuehr": number | null, // Startgebühr (€)\n  "ort": string | null, // Display name from Skateparks & Spots (see <available-records>)\n  "kontakt_email": string | null, // Kontakt-E-Mail\n  "event_website": string | null, // Website des Events\n  "kontakt_telefon": string | null, // Kontakt-Telefonnummer\n}`;
       const raw = await extractFromInput<Record<string, unknown>>(schema, {
         dataUri: uri,
         userText: aiText.trim() || undefined,
@@ -352,14 +353,18 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     }
   }, []);
 
-  const DIALOG_INTENT = defaultValues
-    ? t('edit_entity', { entity: appLabel('event_verwaltung') })
-    : t('new_entity', { entity: appLabel('event_verwaltung') });
+  // EDIT is a record, not a prefill: openCreate(defaults) used to read „bearbeiten“
+  // (acceptance 4, L-42) because the title keyed on defaultValues
+  const DIALOG_INTENT = recordId
+    ? (formEnhancements.title?.edit ?? t('edit_entity', { entity: appLabel('event_verwaltung') }))
+    : (formEnhancements.title?.create ?? t('new_entity', { entity: appLabel('event_verwaltung') }));
+  // the dialog's word for a field — the config may rename it (S-3)
+  const labelFor = (k: string) => dialogLabel(formEnhancements, k, fieldLabel('event_verwaltung', k));
 
   const fieldBlocks: Record<string, React.ReactNode> = {
     'titel': (
       <div key="titel" className="space-y-1.5">
-        <Label htmlFor="titel">{fieldLabel('event_verwaltung', 'titel')} <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="titel">{labelFor('titel')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="titel"
           placeholder=""
@@ -374,8 +379,21 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'kategorie': (
       <div key="kategorie" className="space-y-1.5">
-        <Label htmlFor="kategorie">{fieldLabel('event_verwaltung', 'kategorie')} <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="kategorie">{labelFor('kategorie')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <div role="radiogroup" className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={lookupKey(fields.kategorie) === 'contest'}
+            onClick={() => setFields(f => ({ ...f, kategorie: (lookupKey(f.kategorie) === 'contest' ? undefined : 'contest') as any }))}
+            className={`inline-flex items-center justify-center min-h-9 max-sm:min-h-11 max-sm:px-4 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+              lookupKey(fields.kategorie) === 'contest'
+                ? 'bg-foreground text-background border-foreground'
+                : 'bg-background text-foreground border-input hover:bg-accent'
+            }`}
+          >
+            {lookupLabel('event_verwaltung', 'kategorie', 'contest') ?? 'Contest'}
+          </button>
           <button
             type="button"
             role="radio"
@@ -428,19 +446,6 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
           >
             {lookupLabel('event_verwaltung', 'kategorie', 'sonstiges') ?? 'Sonstiges'}
           </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={lookupKey(fields.kategorie) === 'contest'}
-            onClick={() => setFields(f => ({ ...f, kategorie: (lookupKey(f.kategorie) === 'contest' ? undefined : 'contest') as any }))}
-            className={`inline-flex items-center justify-center min-h-9 max-sm:min-h-11 max-sm:px-4 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-              lookupKey(fields.kategorie) === 'contest'
-                ? 'bg-foreground text-background border-foreground'
-                : 'bg-background text-foreground border-input hover:bg-accent'
-            }`}
-          >
-            {lookupLabel('event_verwaltung', 'kategorie', 'contest') ?? 'Contest'}
-          </button>
         </div>
         {showErrors && !fields.kategorie && (
           <p className="text-xs text-destructive mt-1" role="alert">{requiredMessage('event_verwaltung', 'kategorie')}</p>
@@ -449,7 +454,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'datum_uhrzeit': (
       <div key="datum_uhrzeit" className="space-y-1.5">
-        <Label htmlFor="datum_uhrzeit">{fieldLabel('event_verwaltung', 'datum_uhrzeit')} <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="datum_uhrzeit">{labelFor('datum_uhrzeit')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <DatePicker
           id="datum_uhrzeit"
           placeholder=""
@@ -465,7 +470,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'beschreibung': (
       <div key="beschreibung" className="space-y-1.5">
-        <Label htmlFor="beschreibung">{fieldLabel('event_verwaltung', 'beschreibung')}</Label>
+        <Label htmlFor="beschreibung">{labelFor('beschreibung')}</Label>
         <Textarea
           id="beschreibung"
           placeholder=""
@@ -477,7 +482,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'skill_level': (
       <div key="skill_level" className="space-y-1.5">
-        <Label htmlFor="skill_level">{fieldLabel('event_verwaltung', 'skill_level')}</Label>
+        <Label htmlFor="skill_level">{labelFor('skill_level')}</Label>
         <div role="radiogroup" className="flex flex-wrap gap-1.5">
           <button
             type="button"
@@ -536,7 +541,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'max_teilnehmer': (
       <div key="max_teilnehmer" className="space-y-1.5">
-        <Label htmlFor="max_teilnehmer">{fieldLabel('event_verwaltung', 'max_teilnehmer')}</Label>
+        <Label htmlFor="max_teilnehmer">{labelFor('max_teilnehmer')}</Label>
         <Input
           id="max_teilnehmer"
           type="number"
@@ -551,7 +556,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'startgebuehr': (
       <div key="startgebuehr" className="space-y-1.5">
-        <Label htmlFor="startgebuehr">{fieldLabel('event_verwaltung', 'startgebuehr')}</Label>
+        <Label htmlFor="startgebuehr">{labelFor('startgebuehr')}</Label>
         <Input
           id="startgebuehr"
           type="number"
@@ -566,7 +571,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'ort': (
       <div key="ort" className="space-y-1.5">
-        <Label htmlFor="ort">{fieldLabel('event_verwaltung', 'ort')} <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="ort">{labelFor('ort')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Combobox
           id="ort"
           placeholder=""
@@ -586,7 +591,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'kontakt_email': (
       <div key="kontakt_email" className="space-y-1.5">
-        <Label htmlFor="kontakt_email">{fieldLabel('event_verwaltung', 'kontakt_email')}</Label>
+        <Label htmlFor="kontakt_email">{labelFor('kontakt_email')}</Label>
         <Input
           id="kontakt_email"
           type="email"
@@ -599,7 +604,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'event_website': (
       <div key="event_website" className="space-y-1.5">
-        <Label htmlFor="event_website">{fieldLabel('event_verwaltung', 'event_website')}</Label>
+        <Label htmlFor="event_website">{labelFor('event_website')}</Label>
         <Input
           id="event_website"
           type="url"
@@ -612,7 +617,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'flyer': (
       <div key="flyer" className="space-y-1.5">
-        <Label htmlFor="flyer">{fieldLabel('event_verwaltung', 'flyer')}</Label>
+        <Label htmlFor="flyer">{labelFor('flyer')}</Label>
         {fields.flyer ? (
           <div className="flex items-center gap-3 rounded-lg border p-2">
             <div className="relative h-14 w-14 shrink-0 rounded-md bg-muted overflow-hidden">
@@ -682,7 +687,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'kontakt_telefon': (
       <div key="kontakt_telefon" className="space-y-1.5">
-        <Label htmlFor="kontakt_telefon">{fieldLabel('event_verwaltung', 'kontakt_telefon')}</Label>
+        <Label htmlFor="kontakt_telefon">{labelFor('kontakt_telefon')}</Label>
         <Input
           id="kontakt_telefon"
           type="tel"
@@ -694,7 +699,15 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
       </div>
     ),
   };
-  const orderedFields = applyFieldOrder(Object.keys(fieldBlocks), formEnhancements.fieldOrder);
+  // Fields this dialog never shows: the config's `hidden` and the fields the
+  // OVERVIEW changes with its own button (plan.dashboard.writes, how: button —
+  // a control, not a form value; S-3). A required field stays visible.
+  const DASHBOARD_BUTTON_FIELDS: string[] = [];
+  const ALWAYS_SHOWN: string[] = ['titel', 'kategorie', 'datum_uhrzeit', 'ort'];
+  // the values the plan's create flow sets itself (fixed:…): preset on create and
+  // not asked — the dialog is the record's door, the flow's rule still holds (S-12)
+  const HIDDEN = new Set<string>([...(formEnhancements.hidden ?? []), ...DASHBOARD_BUTTON_FIELDS, ...(recordId ? [] : Object.keys(PLAN_CREATE_PRESETS))].filter(k => !ALWAYS_SHOWN.includes(k)));
+  const orderedFields = dropHidden(applyFieldOrder(Object.keys(fieldBlocks), formEnhancements.fieldOrder), HIDDEN);
   const orderedFieldsKey = orderedFields.map((it) => typeof it === 'string' ? it : it.row.join('+')).join(',');
 
   // Render-Modell für Computed-Felder:
@@ -975,7 +988,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
                 if (SYSTEM_ASSIGNED.includes(k) && !recordId) {
                   return (
                     <div key={k} className="space-y-1.5 min-w-0">
-                      <Label>{fieldLabel('event_verwaltung', k)}</Label>
+                      <Label>{labelFor(k)}</Label>
                       <p className="text-sm text-muted-foreground">{t('assigned_by_system')}</p>
                     </div>
                   );

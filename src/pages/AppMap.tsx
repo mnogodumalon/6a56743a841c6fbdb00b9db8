@@ -5,8 +5,9 @@ import { PageShell } from '@/components/PageShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { t, localeTag } from '@/i18n';
+import { setPublished } from '@/lib/publicPagesAdmin';
 import {
-  acceptProposal, answerLine, answerLineWithFile, confirmLine, dismissJob, getAppMap, jobFor, openJobs, proposeChange, rejectProposal, undoChange,
+  acceptProposal, answerLine, answerLineWithFile, confirmLine, dismissJob, getAppMap, jobFor, openJobs, proposeChange, rejectProposal, sendOwnerReport, undoChange,
   type AppMapState, type ChangeAbout, type FilterCondition, type FilterValue, type LineJob, type MapGroup, type MapLine,
   type PlanChange, type Proposal,
 } from '@/lib/appMap';
@@ -298,6 +299,11 @@ export default function AppMap() {
           {t(/rollback/i.test(st.stale.reason ?? '') ? 'am_stale_rollback' : 'am_stale', { date: new Date(st.stale.at).toLocaleDateString(localeTag()) })}
         </p>
       )}
+      {map && st?.planningFailed && (
+        <p role="alert" data-planning-failed className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100">
+          {t(st.planningFailed.adopted ? 'am_planning_failed_adopted' : 'am_planning_failed', { date: new Date(st.planningFailed.at).toLocaleDateString(localeTag()) })}
+        </p>
+      )}
       {map && st && !st.canChange && (
         <p role="status" className="mb-4 rounded-2xl border border-border bg-secondary px-4 py-2.5 text-sm text-secondary-foreground">{t('am_readonly')}</p>
       )}
@@ -428,7 +434,7 @@ function MainView({ st, groups, lines, q, setQ, openGroups, setOpenGroups, dismi
               <div className="divide-y divide-border rounded-2xl border border-border bg-card">
                 {ls.map((l, i) => {
                   const firstOfTool = l.about.kind === 'tool' && ls.findIndex(o => o.about.kind === 'tool' && o.about.id === l.about.id) === i;
-                  return <LineRow key={l.id} line={l} more={firstOfTool && g.kind !== 'roles' && g.kind !== 'limits' && g.kind !== 'platform' && g.kind !== 'gaps'} flowLink />;
+                  return <LineRow key={l.id} line={l} more={firstOfTool && g.kind !== 'roles' && g.kind !== 'limits' && g.kind !== 'platform' && g.kind !== 'gaps' && g.kind !== 'understanding'} flowLink />;
                 })}
               </div>
             )}
@@ -451,6 +457,7 @@ function MainView({ st, groups, lines, q, setQ, openGroups, setOpenGroups, dismi
           <button type="button" onClick={goHistory} className="inline-flex min-h-11 items-center gap-0.5 font-semibold text-primary hover:underline sm:min-h-0">{t('am_history_link')}<IconChevronRight size={14} aria-hidden="true" /></button>
         </p>
       </footer>
+      <ReportBox />
     </div>
   );
 }
@@ -504,6 +511,7 @@ function LineRow({ line, card, more, flowLink }: { line: MapLine; card?: boolean
   const slow = speedOf(line) === 'minutes';
   const canEdit = c.canChange && !!e?.ready && !editing;
   const assumed = line.tag === 'assumed' && !line.answered;
+  const inferred = line.tag === 'inferred';
   const aboutTool: ChangeAbout | null = more ? { kind: 'tool', id: line.about.id, label: line.about.label ?? line.about.id } : null;
   const wishHere = !!aboutTool && c.wishKey === keyOf(aboutTool);
   const marked = !!c.focus && c.focus === line.id;
@@ -528,11 +536,21 @@ function LineRow({ line, card, more, flowLink }: { line: MapLine; card?: boolean
   const fileAction = line.actions?.find(a => a.id === 'file');
   // „Einrichten“ under „Fehlt noch“: the gap's sentence goes through the change door as the owner's wish
   const requestAction = c.canChange ? line.actions?.find(a => a.id === 'request') : undefined;
+  // „Veröffentlichen“ on a built page (PV-11): one click, the page goes live, the map reloads
+  const publishAction = c.canChange ? line.actions?.find(a => a.id === 'publish') : undefined;
+  const [publishing, setPublishing] = useState(false);
+  const publish = async () => {
+    if (!publishAction?.slug) return;
+    setPublishing(true);
+    try { await setPublished(publishAction.slug, true); c.toast(t('am_published')); c.reload(); }
+    catch (err) { c.toast(err instanceof Error ? err.message : String(err)); }
+    setPublishing(false);
+  };
   const [requesting, setRequesting] = useState(false);
   const request = async () => {
     setRequesting(true);
     try {
-      const proposal = await proposeChange(line.text, null, line.about.id);
+      const proposal = await proposeChange(requestAction?.text ?? line.text, null, requestAction?.gap ?? line.about.id);
       c.onChanged({ proposal });
       c.openWish(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -547,6 +565,7 @@ function LineRow({ line, card, more, flowLink }: { line: MapLine; card?: boolean
           <p className={card ? 'text-base' : 'text-sm'}>
             {rich(parts[0])}{slot && (control ?? chip)}{slot && rich(parts.slice(1).join(''))}
             {assumed && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 align-middle text-[11px] font-semibold text-amber-900 dark:bg-amber-900/30 dark:text-amber-100">{t('am_assumed_tag')}</span>}
+            {inferred && <span className="ml-2 rounded-full bg-secondary px-2 py-0.5 align-middle text-[11px] font-semibold text-secondary-foreground" title={t('am_inferred_hint')}>{t('am_inferred_tag')}</span>}
             {flowLink && line.about.kind === 'intent' && (
               <> <button type="button" onClick={() => c.navigate(`/intents/${line.about.id}`)} className="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline">{line.about.label ?? line.about.id}<IconChevronRight size={14} aria-hidden="true" /></button></>
             )}
@@ -556,6 +575,7 @@ function LineRow({ line, card, more, flowLink }: { line: MapLine; card?: boolean
         </div>
         <div className="flex flex-wrap items-center gap-1">
           {!card && requestAction && <Button type="button" size="sm" variant="ghost" disabled={requesting} onClick={request} className="min-h-11 gap-0.5 text-primary sm:min-h-8">{requestAction.label}<IconChevronRight size={14} aria-hidden="true" /></Button>}
+          {publishAction && <Button type="button" size="sm" disabled={publishing} onClick={publish} className="min-h-11 gap-1 sm:min-h-8"><IconCheck size={14} aria-hidden="true" />{publishAction.label}</Button>}
           {!card && c.canChange && assumed && !editing && <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => c.confirm(line)} className="min-h-11 sm:min-h-8">{t('am_fits')}</Button>}
           {!card && canEdit && <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => c.setEditing(line.id)} className="min-h-11 text-primary sm:min-h-8">{t('am_change')}</Button>}
           {editing && !armed && <Button type="button" size="sm" variant="ghost" onClick={cancel} className="min-h-11 sm:min-h-8">{t('am_confirm_cancel')}</Button>}
@@ -620,6 +640,38 @@ function LineRow({ line, card, more, flowLink }: { line: MapLine; card?: boolean
 }
 
 /* ── the sentence field bound to a flow or an automation ──────────────── */
+
+/** „Was stimmt nicht?“ — not a wish and not a job: the sentence goes to us as a
+ *  finding (the owner never triggers a rebuild of their own dashboard, C10). */
+function ReportBox() {
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const send = async () => {
+    if (!text.trim()) return;
+    setBusy(true); setErr(null);
+    try { await sendOwnerReport(text.trim()); setSent(true); setText(''); } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
+    setBusy(false);
+  };
+  return (
+    <section aria-labelledby="owner-report" className="mt-6 space-y-2 rounded-2xl border border-border bg-card p-4">
+      <label id="owner-report" htmlFor="owner-report-text" className="block text-sm font-semibold">{t('am_report_title')}</label>
+      {sent
+        ? <p role="status" className="text-sm text-muted-foreground">{t('am_report_thanks')}</p>
+        : (
+          <>
+            <textarea id="owner-report-text" value={text} onChange={ev => setText(ev.target.value.slice(0, 500))} rows={2} disabled={busy}
+              placeholder={t('am_report_placeholder')} className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm" />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" size="sm" disabled={busy || !text.trim()} onClick={send} className="min-h-11 sm:min-h-9">{t('am_report_send')}</Button>
+            </div>
+          </>
+        )}
+      {err && <p role="alert" className="text-sm text-destructive">{t('am_report_failed')}</p>}
+    </section>
+  );
+}
 
 function ChangeBox({ about }: { about: ChangeAbout | null }) {
   const c = usePage();

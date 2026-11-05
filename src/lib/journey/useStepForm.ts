@@ -24,7 +24,8 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { t, tp } from '@/i18n';
 import { rangeIsFree } from '@/components/blocks/AvailabilityRangePicker';
 import { formatFieldValue, formatRange, type RangeUnit } from './format';
-import { FIELD_RULES, isEmptyValue, labelOf, optionsOf, type EntityKey, type FieldRule, type RecordFieldKey } from './rules';
+import { isUploadValue } from './upload';
+import { FIELD_RULES, isEmptyValue, isUnfilled, labelOf, optionsOf, type EntityKey, type FieldRule, type RecordFieldKey } from './rules';
 import { requiredMessage } from './messages';
 import { occupancyRuleOf } from './occupancy';
 import { isHiddenByPolicy, policyRequired } from './policy';
@@ -39,6 +40,29 @@ export type FormValues = Record<string, unknown>;
 let activeWizardStep: number | undefined;
 export function setActiveWizardStep(step: number | undefined): void {
   activeWizardStep = step;
+  // mirrored for lib/sentry's `journey_step` tag — no import in either direction
+  if (typeof window !== 'undefined') (window as unknown as { __klarJourneyStep?: number }).__klarJourneyStep = step;
+}
+
+// A flow opened for ONE record (`?record=<id>`, the dashboard's card button) has
+// nothing to ask on the steps that pick it — the flow hook asks the shell to start
+// right after them, without the start screen (Bau 10: „Zusammenführen“ opened the
+// intro and step 1 although the interaction was in the link). One pending request,
+// taken by the first shell that listens.
+let pendingStepRequest: number | undefined;
+const stepRequestListeners = new Set<(step: number) => void>();
+export function requestWizardStep(step: number): void {
+  if (stepRequestListeners.size === 0) { pendingStepRequest = step; return; }
+  for (const l of stepRequestListeners) l(step);
+}
+export function onWizardStepRequest(listener: (step: number) => void): () => void {
+  if (pendingStepRequest !== undefined) {
+    const step = pendingStepRequest;
+    pendingStepRequest = undefined;
+    listener(step);
+  }
+  stepRequestListeners.add(listener);
+  return () => { stepRequestListeners.delete(listener); };
 }
 
 export interface SummaryItem {
@@ -78,8 +102,11 @@ export interface StepFormOptions {
   required?: Record<string, boolean>;
   /** What to say when a required field is empty, per field — when THIS flow
    *  knows more than the entity („Bitte den Einsatzleiter auswählen.").
-   *  Default: the entity's sentence from messages.ts. */
-  messages?: Record<string, string>;
+   *  Default: the entity's sentence from messages.ts. An object overrides per
+   *  error kind: `required`, `format` (e-mail, phone, URL, number), `length`
+   *  (maxLength), `option` (a value outside the lookup) — P-10: every message
+   *  is an instruction („Bitte … eingeben.“), and a page may say it better. */
+  messages?: Record<string, string | FieldMessages>;
   initial?: FormValues;
   /** Prefix for element ids (default: the entity key). */
   id?: string;
@@ -102,6 +129,18 @@ export interface RangeOptions {
 }
 
 type ChangeLike = unknown | { target: { value: unknown; type?: string; checked?: boolean } };
+
+/** Binding for a file field — spread onto <FileField>: the value is a pending
+ *  upload (data URL), a stored file URL, or null. */
+export interface FileProps {
+  id: string;
+  name: string;
+  value: string | null;
+  onChange: (value: string | null) => void;
+  required: boolean;
+  invalid: boolean;
+  describedBy?: string;
+}
 
 export interface FieldProps {
   id: string;
@@ -139,6 +178,14 @@ export interface ChoiceProps {
   required: boolean;
   invalid: boolean;
   'aria-describedby'?: string;
+}
+
+/** Per-kind messages of one field (`messages` option). */
+export interface FieldMessages {
+  required?: string;
+  format?: string;
+  length?: string;
+  option?: string;
 }
 
 export interface CheckboxProps {
@@ -190,8 +237,19 @@ export interface StepForm<E extends EntityKey = EntityKey> {
   readonly labels: Record<string, string>;
   get(key: string): unknown;
   set<K extends string>(key: K, ...rest: SetArgs<E, K>): void;
+  /** A STARTING value the page derives (a compiled text, a default from a pick):
+   *  written only while the field is empty or still holds the last prefill — never
+   *  over what the person typed or a restored draft (J-11, Abnahme 6: a reload kept
+   *  the draft, then the page's effect wrote the compiled text over it). Use this,
+   *  not set(), for any value an effect computes. */
+  prefill(key: string, value: unknown): void;
   /** Teach the form a record's display name (for summaries of multi-record fields). */
   remember(recordId: string, label: string): void;
+  /** The label a <Field label="…"> gave the control — the review and the
+   *  missing list read it back (J-6: the review said „Fragestellung“ where the
+   *  step said „Deine Frage“). */
+  title(key: string, text: string): void;
+  titleOf(key: string): string;
   reset(values?: FormValues, labels?: Record<string, string>): void;
   field(key: string): FieldProps;
   number(key: string): FieldProps;
@@ -199,6 +257,8 @@ export interface StepForm<E extends EntityKey = EntityKey> {
   choice(key: string): ChoiceProps;
   checkbox(key: string): CheckboxProps;
   record(key: string): RecordProps;
+  /** Binding for a file field (`<FileField {...form.file('beleg')} />`); the chosen file travels in the create as a data URL. */
+  file(key: string): FileProps;
   /** Binding for a multipleapplookup: the value is a `string[]` of record ids,
    *  required means "at least one". `labelOf` (the pick's `useRecordSearch`)
    *  teaches the form the display names the summary shows. */
@@ -329,6 +389,9 @@ export function useStepForm<E extends EntityKey>(entity: E, options: StepFormOpt
 
   const [values, setValues] = useState<FormValues>(() => ({ ...(options.initial ?? {}) }));
   const [labels, setLabels] = useState<Record<string, string>>({});
+  // the labels the page's <Field> blocks gave the controls (a ref: a child's
+  // effect registers them, nothing has to re-render for a later review)
+  const titlesRef = useRef<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [attempted, setAttempted] = useState<Record<string, boolean>>({});
   // Ranges register themselves on each render (idempotent) so validation and
@@ -350,11 +413,15 @@ export function useStepForm<E extends EntityKey>(entity: E, options: StepFormOpt
   const messageFor = useCallback(
     (key: string, vals: FormValues): string | undefined => {
       const rule = rules[key];
-      const label = labelOf(entity, key);
+      const label = titleOf(key);
       const v = vals[key];
       const asTo = rangeEndingAt(key);
-      if (isEmptyValue(v)) {
-        const missing = () => messagesOverride[key] ?? requiredMessage(entity, key);
+      const say = (kind: keyof FieldMessages): string | undefined => {
+        const m = messagesOverride[key];
+        return typeof m === 'string' ? (kind === 'required' ? m : undefined) : m?.[kind];
+      };
+      if (isUnfilled(entity, key, v)) {
+        const missing = () => say('required') ?? requiredMessage(entity, key);
         if (isRequired(key)) return missing();
         // A stay with an arrival but no departure is incomplete even when the
         // platform marks neither field required.
@@ -363,26 +430,26 @@ export function useStepForm<E extends EntityKey>(entity: E, options: StepFormOpt
       }
       switch (rule?.kind) {
         case 'email':
-          if (!EMAIL_RE.test(String(v).trim())) return t('v_email', { label });
+          if (!EMAIL_RE.test(String(v).trim())) return say('format') ?? t('v_email', { label });
           break;
         case 'tel':
-          if (!TEL_RE.test(String(v).trim())) return t('v_tel', { label });
+          if (!TEL_RE.test(String(v).trim())) return say('format') ?? t('v_tel', { label });
           break;
         case 'url':
-          if (!isUrl(String(v).trim())) return t('v_url', { label });
+          if (!isUrl(String(v).trim())) return say('format') ?? t('v_url', { label });
           break;
         case 'number': {
           const n = typeof v === 'number' ? v : Number(String(v).trim().replace(',', '.'));
-          if (!Number.isFinite(n)) return t('v_number', { label });
+          if (!Number.isFinite(n)) return say('format') ?? t('v_number', { label });
           break;
         }
         case 'text':
         case 'textarea':
-          if (rule.maxLength && String(v).length > rule.maxLength) return t('v_maxlength', { label, max: rule.maxLength });
+          if (rule.maxLength && String(v).length > rule.maxLength) return say('length') ?? t('v_maxlength', { label, max: rule.maxLength });
           break;
         case 'lookup': {
           const k = typeof v === 'object' && v !== null && 'key' in v ? (v as { key: string }).key : String(v);
-          if (rule.options && rule.options.length && !rule.options.includes(k)) return t('v_option', { label });
+          if (rule.options && rule.options.length && !rule.options.includes(k)) return say('option') ?? t('v_option', { label });
           break;
         }
         default:
@@ -423,6 +490,19 @@ export function useStepForm<E extends EntityKey>(entity: E, options: StepFormOpt
     }
   }, []);
 
+  const lastPrefill = useRef<Record<string, unknown>>({});
+  const prefill = useCallback((key: string, value: unknown) => {
+    setValues(prev => {
+      const now = prev[key];
+      const ours = key in lastPrefill.current && JSON.stringify(now) === JSON.stringify(lastPrefill.current[key]);
+      if (!isEmptyValue(now) && !ours) return prev;          // typed or restored — the person's
+      lastPrefill.current[key] = value;
+      return now === value ? prev : { ...prev, [key]: value };
+    });
+  }, []);
+
+  const title = useCallback((key: string, text: string) => { titlesRef.current[key] = text; }, []);
+  const titleOf = useCallback((key: string) => titlesRef.current[key] ?? labelOf(entity, key), [entity]);
   const remember = useCallback((recordId: string, label: string) => {
     setLabels(prev => (prev[recordId] === label ? prev : { ...prev, [recordId]: label }));
   }, []);
@@ -443,6 +523,20 @@ export function useStepForm<E extends EntityKey>(entity: E, options: StepFormOpt
     } else {
       set(key, next);
     }
+  };
+
+  const file = (key: string): FileProps => {
+    const raw = values[key];
+    const err = visibleError(key);
+    return {
+      id: fieldId(key),
+      name: key,
+      value: typeof raw === 'string' && raw ? raw : null,
+      onChange: next => { set(key, next ?? null); touch(key); },
+      required: isRequired(key),
+      invalid: Boolean(err),
+      describedBy: err ? errorId(key) : undefined,
+    };
   };
 
   const field = (key: string): FieldProps => {
@@ -568,7 +662,7 @@ export function useStepForm<E extends EntityKey>(entity: E, options: StepFormOpt
     .filter((e): e is { key: string; message: string } => Boolean(e.message))
     .map(e => ({ key: e.key, label: labelOf(entity, e.key), message: e.message, fieldId: fieldId(e.key) }));
 
-  const missing = keys.filter(k => bound(k) && isRequired(k) && isEmptyValue(values[k])).map(k => labelOf(entity, k));
+  const missing = keys.filter(k => bound(k) && isRequired(k) && isUnfilled(entity, k, values[k])).map(k => titleOf(k));
 
   const validate = (which?: string[]): boolean => {
     const target = which ?? keys.filter(bound);
@@ -618,7 +712,7 @@ export function useStepForm<E extends EntityKey>(entity: E, options: StepFormOpt
       items.push({
         key,
         keys: [key],
-        label: labelOf(entity, key),
+        label: titleOf(key),
         value: formatFieldValue(entity, key, values[key], labels),
         step: stepFor(key),
         fieldId: fieldId(key),
@@ -630,7 +724,9 @@ export function useStepForm<E extends EntityKey>(entity: E, options: StepFormOpt
   const payload = (): FormValues => {
     const out: FormValues = {};
     for (const key of keys) {
-      if (rules[key] && !rules[key].writable) continue;
+      // a file is not writable as a value — but a file the person CHOSE here
+      // travels as a data URL and the platform stores it (lib/journey/upload)
+      if (rules[key] && !rules[key].writable && !(rules[key].kind === 'file' && isUploadValue(values[key]))) continue;
       if (isEmptyValue(values[key])) continue;
       out[key] = values[key];
     }
@@ -639,6 +735,7 @@ export function useStepForm<E extends EntityKey>(entity: E, options: StepFormOpt
 
   const reset = (next?: FormValues, nextLabels?: Record<string, string>) => {
     setValues({ ...(next ?? options.initial ?? {}) });
+    lastPrefill.current = {};                               // a restored draft is the person's
     setLabels({ ...(nextLabels ?? {}) });
     setTouched({});
     setAttempted({});
@@ -654,9 +751,13 @@ export function useStepForm<E extends EntityKey>(entity: E, options: StepFormOpt
     labels,
     get: key => values[key],
     set: set as unknown as StepForm<E>['set'],
+    prefill,
     remember,
+    title,
+    titleOf,
     reset,
     field,
+    file,
     number,
     date,
     choice,

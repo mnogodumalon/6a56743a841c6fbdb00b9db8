@@ -66,6 +66,87 @@ try {
 } catch {
   // no request on disk
 }
+// The plan (.plan.json, sandbox form) is the owner's order where one exists: a
+// field a public page's create lists as `user`/`picked` is ordered, whatever
+// words the prompt used. Before, 3x/3z matched the prompt TEXT and failed
+// `kuerzel`/`einsendekennung` on a planned page (03.11.2026).
+const planOrdered = new Map();   // `${slug}|${entity}` → Set(keys)
+const planLinkParam = new Map(); // slug → {name, entity, label_field} the plan orders (PV-3)
+const planStatusField = new Map(); // entity → the plan's status field (G-5)
+const planSiblings = new Map(); // slug → other planned pages of the same visitor (one device key, A9)
+const planVisitor = new Map(); // slug → ["entity.field"] filled with the visitor's code
+const planPageSets = new Map(); // slug → ["entity.field"] the page sets from its linked record (must_equal)
+try {
+  const planData = JSON.parse(readFileSync('.plan.json', 'utf8'));
+  for (const pg of planData.public_pages || []) {
+    for (const c of pg.creates || []) {
+      // a `derived:device` field is the page's own silent value (PV-16) — ordered, no control expected
+      const keys = new Set(Object.entries(c.fields || {}).filter(([, src]) => src === 'user' || String(src).startsWith('picked') || String(src).startsWith('derived:device:') || src === 'derived:visitor_key').map(([k]) => k));
+      planOrdered.set(`${pg.slug}|${c.entity}`, keys);
+    }
+    if (pg.link_param && pg.link_param.name && pg.link_param.entity) planLinkParam.set(pg.slug, pg.link_param);
+  }
+  for (const [ent, prof] of Object.entries(planData.entities || {})) {
+    if (prof && prof.status_field) planStatusField.set(ent, prof.status_field);
+  }
+  // the visitor's code: `visitor_fields` (the plan's derived:visitor_key, and a derived:device
+  // field two pages share — Bau 13), else derived:visitor_key for plans from before
+  for (const pg of planData.public_pages || []) {
+    const vf = Array.isArray(pg.visitor_fields) ? pg.visitor_fields
+      : (pg.creates || []).flatMap(c => Object.entries(c.fields || {}).filter(([, s]) => s === 'derived:visitor_key').map(([k]) => `${c.entity}.${k}`));
+    if (vf.length) planVisitor.set(pg.slug, vf);
+    if (Array.isArray(pg.page_sets) && pg.page_sets.length) planPageSets.set(pg.slug, pg.page_sets);
+  }
+  const keyed = [...planVisitor.keys()];
+  for (const s of keyed) planSiblings.set(s, keyed.filter(o => o !== s));
+} catch {
+  // no plan on disk — the prompt's words decide, as before
+}
+// The same visitor's pages link on (A9, Bau 10: the feedback's thank-you had no way to the
+// e-mail page although the brief asked for it): every planned sibling appears as `/public/<slug>`.
+// The visitor's code comes from useVisitorKey ONLY (Bau 13: the feedback page kept its own
+// localStorage code, the e-mail page used useVisitorKey — one visitor, two codes).
+function checkVisitorKey(slug, src, file, sink) {
+  const fields = planVisitor.get(slug) || [];
+  if (!fields.length) return;
+  if (!/\b(?:useVisitorKey|visitorKey)\(/.test(src)) {
+    sink.push(`${file}: page '${slug}' fills ${fields.join(', ')} with the visitor's code — take it from useVisitorKey() ('@/lib/journey'), the one code per device every public page shares; never an own generator`);
+  }
+  const own = /\b(?:window\.)?localStorage\.(?:setItem|getItem)\(/.exec(src);
+  if (own) {
+    const line = src.slice(0, own.index).split('\n').length;
+    sink.push(`${file}:${line}: page '${slug}' reads or writes localStorage itself — the visitor's code lives in useVisitorKey(), drafts in the journey layer; an own key gives the same visitor a second code`);
+  }
+}
+// EF-20 (Bau 14): two lists at intervalMs 3000 on one open form sent 66 requests a minute
+// (each read solves a challenge) and drew 429s; the layer clamps to PUBLIC_MIN_INTERVAL_MS (20 s)
+function checkPollRate(slug, src, file, sink) {
+  for (const m of src.matchAll(/\bintervalMs\s*:\s*([\d_]+)/g)) {
+    const ms = Number(m[1].replace(/_/g, ''));
+    if (ms > 0 && ms < 20000) {
+      const line = src.slice(0, m.index).split('\n').length;
+      sink.push(`${file}:${line}: page '${slug}' polls every ${ms} ms — a public read costs a challenge each time and draws 429 (rate limit) for every visitor behind the same network; poll at most every 20 000 ms (the layer clamps to it), freshRef checks at send`);
+    }
+  }
+}
+// EF-14: a reference the page sets from its linked record's pointer is read fresh at send time
+function checkFreshPointer(slug, src, file, sink) {
+  const sets = planPageSets.get(slug) || [];
+  if (sets.length && !/\bfreshRef\(/.test(src)) {
+    sink.push(`${file}: page '${slug}' sends ${sets.join(', ')}, which must be what the linked record points at WHEN the visitor sends — read it with freshRef(port, …) right before the create and refuse to send when it changed; a value loaded earlier goes to a question that is no longer open`);
+  }
+  // EF-16: the fresh read is an ADDITIONAL check — the shown pointer stays live (useLiveList)
+  if (sets.length && !/\buseLiveList\(/.test(src)) {
+    sink.push(`${file}: page '${slug}' shows what the linked record points at, but polls nothing — keep useLiveList(port, …) on that record so an open form follows the switch within one poll; freshRef only checks again when sending`);
+  }
+}
+function checkSiblingLinks(slug, src, file, sink) {
+  const missing = (planSiblings.get(slug) || []).filter(s => !src.includes(`/public/${s}`));
+  if (missing.length) {
+    sink.push(`${file}: page '${slug}' serves the same visitor as ${missing.map(s => `'${s}'`).join(', ')} (one device key) — after a successful send link on: ${missing.map(s => `#/public/${s}`).join(', ')} (SuccessStep \`actions\` or a link under the thank-you text, carrying the link parameter); never a dead end`);
+  }
+}
+const orderedByPlan = (slug, entity, key) => planOrdered.get(`${slug}|${entity}`)?.has(key) === true;
 
 // ── 1. Import allowlist over agent-written pages ─────────────────────────
 const IMPORT_RE = /^\s*import\s[^;]*?from\s+['"]([^'"]+)['"]/gm;
@@ -85,6 +166,33 @@ const pageFiles = pageOnly
     : [];
 for (const file of pageFiles) {
   const src = readFileSync(file, 'utf8');
+
+  // ONE visitor code per device (A9): a page's own key name split one visitor into two codes
+  // (feedback with one, the e-mail with another). The layer ignores `name` now; the gate says so.
+  {
+    const m = /\b(?:useVisitorKey|visitorKey)\(\s*\{[^}]*\bname\s*:/.exec(src);
+    if (m) {
+      const line = src.slice(0, m.index).split('\n').length;
+      (pageOnly ? errors : warnings).push(`${file}:${line}: visitorKey with its own name — every public page of the dashboard shares ONE code per device; drop the name option (the layer ignores it and takes an old named key over once)`);
+    }
+  }
+  // A date the visitor READS comes from fieldText (formatted: „07.11.2026“); fieldDate is the
+  // ISO value for computing (Abnahme 8: the participant page showed „2026-11-07“).
+  {
+    const m = /\{\s*fieldDate\(/.exec(src);
+    if (m) {
+      const line = src.slice(0, m.index).split('\n').length;
+      warnings.push(`${file}:${line}: fieldDate(…) rendered as text — the visitor reads „2026-11-07“; show fieldText(r, key) (formatted), keep fieldDate for comparing and computing`);
+    }
+  }
+  // K10a/P-14 (Abnahme 7): a visitor's text survives a reload only when the
+  // submit carries a draftKey — the layer keeps the forms under it (with or
+  // without IntentWizardShell). An error for the lane's staged page, a warning
+  // in the tree run, so a page built before the rule is not held back.
+  if (/useJourneySubmit\(/.test(src) && !/\bdraftKey\s*[:=]/.test(src)) {
+    const line = src.slice(0, src.search(/useJourneySubmit\(/)).split('\n').length;
+    (pageOnly ? errors : warnings).push(`${file}:${line}: useJourneySubmit(…) without a draftKey — the visitor's text is lost on a reload; pass { draftKey: '<slug>' } (with a link parameter: \`<slug>-\${id}\`), the layer keeps the forms under it`);
+  }
 
   // fieldText is the DISPLAY text („12.10.2026, 11:00“); new Date()/parseISO
   // read it month-first — salon 05.10.2026 showed Monday 12 Oct as
@@ -356,8 +464,8 @@ for (const file of pageFiles) {
   }
 }
 
-// The agent's occupancy decision (src/config/journey.ts): which applookup is
-// the booked resource of a stay. Missing file or block → no rules.
+// The occupancy rule (src/config/journey.ts, from the plan or the agent):
+// the stay pair, the booked resource and the status that frees a stay. Missing file or block → no rules.
 const JOURNEY_CONFIG = 'src/config/journey.ts';
 const occupancyRules = {};
 if (existsSync(JOURNEY_CONFIG)) {
@@ -366,7 +474,7 @@ if (existsSync(JOURNEY_CONFIG)) {
     for (const m of block[1].matchAll(/^\s*['"]?([a-z0-9_]+)['"]?\s*:\s*\{([^}]*)\}\s*,?\s*$/gm)) {
       const body = m[2];
       const str = key => { const s = new RegExp(`\\b${key}\\s*:\\s*['"]([^'"]+)['"]`).exec(body); return s ? s[1] : undefined; };
-      occupancyRules[m[1]] = { from: str('from'), to: str('to'), resource: str('resource') };
+      occupancyRules[m[1]] = { from: str('from'), to: str('to'), resource: str('resource'), statusField: str('statusField') };
     }
   }
 }
@@ -388,8 +496,27 @@ function checkEndpoint(slug, ep, pageSrc, pageFile, where = SURFACE) {
   if (!['list', 'create'].includes(ep.op)) {
     errors.push(`${where}: page '${slug}' endpoint '${ep.entity}' declares op '${ep.op}' — only 'list' (read) and 'create' (anonymous submit) exist. An anonymous visitor can never MODIFY an existing record: model the action as a create in a registration entity. If this page cannot be built that way, write _public/<slug>.blocked.json instead (see the public-builder skill) — never invent an op.`);
   }
+  // A10 (Bau 13): the plan ordered interaktion + absendekennung for the feedback create, the
+  // surface granted only feedbacktext + teilnehmerkuerzel — every feedback arrived without its
+  // interaction (400 on the field) and the merge found nothing. Every field the plan orders for
+  // a create (typed, picked, made on the device) must be one the grant lets through.
+  if (ep.op === 'create') {
+    const ordered = planOrdered.get(`${slug}|${ep.entity}`);
+    const granted = new Set([...(ep.fields || []), ...Object.keys(ep.preset_fields || {})]);
+    const missing = ordered ? [...ordered].filter(k => !granted.has(k)) : [];
+    if (missing.length) {
+      errors.push(`${where}: page '${slug}' creates '${ep.entity}' without ${missing.map(k => `'${k}'`).join(', ')} in its fields, although the plan orders ${missing.length > 1 ? 'them' : 'it'} — the grant refuses a field it does not list (400) and the record arrives without it. Add ${missing.length > 1 ? 'them' : 'it'} to the endpoint's fields`);
+    }
+  }
   if (ep.scope && !ep.scope_description) {
     errors.push(`${where}: page '${slug}' endpoint '${ep.entity}' has a scope but no scope_description — the owner confirms that text when publishing, never the vSQL`);
+  }
+  // G-5: a public list of an entity the plan gives a STATUS without a scope
+  // hands every record, whatever its state, to anyone with the URL (the
+  // closed event's questions stayed readable, Meet-the-Member).
+  if (ep.op === 'list' && !ep.scope && planStatusField.has(ep.entity)) {
+    const sf = planStatusField.get(ep.entity);
+    errors.push(`${where}: page '${slug}' lists '${ep.entity}' without a scope although the plan calls '${sf}' its status field — every record, whatever its state, would be readable by anyone with the page URL. Scope the list (e.g. r.v_${sf} == '<the open option>') and give it a scope_description`);
   }
   // The entity identifier must EXIST. Guessing it from the app's display
   // name is the classic failure: an app called "Kurse & Workshops" has the
@@ -501,7 +628,7 @@ function checkEndpoint(slug, ep, pageSrc, pageFile, where = SURFACE) {
       // A prefilled control is a value nobody ordered with a visitor who did
       // not object (live: `initial: { status: 'angenommen' }` behind a pill
       // group the visitor never touches). The owner has to name the field.
-      if (prefilled && pageRequest) {
+      if (prefilled && pageRequest && !orderedByPlan(slug, ep.entity, key)) {
         const named = [key, c.label].map(lc).filter(w => w.length >= 3).some(w => pageRequest.includes(w));
         if (!named) {
           errors.push(`${pageFile || where}: page '${slug}' prefills '${ep.entity}.${key}' (useStepForm initial) although the owner never asked for '${c.label || key}' — a prefilled value lands in every record whose visitor does not change it. Drop '${key}' from the page; if the record cannot do without it, ask the visitor without a default`);
@@ -515,7 +642,7 @@ function checkEndpoint(slug, ep, pageSrc, pageFile, where = SURFACE) {
         continue;
       }
       if (!filledByPage) continue;
-      if (!pageRequest) continue;
+      if (!pageRequest || orderedByPlan(slug, ep.entity, key)) continue;
       const words = [key, c.label].map(lc).filter(w => w.length >= 3);
       if (words.some(w => pageRequest.includes(w))) continue;
       errors.push(`${pageFile || where}: page '${slug}' fills '${ep.entity}.${key}' itself (plan values / form.set) although no visitor enters it and the owner never asked for '${c.label || key}' — a value nobody ordered lands in every record. Drop '${key}' from the create endpoint and from the page; if the record cannot do without it, ask the visitor for it`);
@@ -533,6 +660,7 @@ function checkEndpoint(slug, ep, pageSrc, pageFile, where = SURFACE) {
     for (const key of ep.fields || []) {
       if (!STATE.test(key)) continue;
       const c = controls[key] || {};
+      if (orderedByPlan(slug, ep.entity, key)) continue;
       const named = [key, c.label].map(lc).filter(w => w.length >= 3).some(w => pageRequest.includes(w));
       if (named) continue;
       errors.push(`${where}: page '${slug}' lets the visitor set '${ep.entity}.${key}' (${c.label || key}) — internal state belongs to the operator, and the owner never asked for it. Remove '${key}' from the create endpoint and the page; the record gets its state from the operator or a tool afterwards`);
@@ -545,18 +673,24 @@ function checkEndpoint(slug, ep, pageSrc, pageFile, where = SURFACE) {
   if (ep.op === 'list' && !(Array.isArray(ep.fields) && ep.fields.length > 0)) {
     errors.push(`${where}: page '${slug}' endpoint '${ep.entity}' is a list without a "fields" projection — name exactly the columns the page shows`);
   }
-  // file fields: READING is fine — a file URL answers an anonymous GET with
-  // 200 and `cache-control: public` (measured), so a listed logo or hero
-  // image simply renders. UPLOADING is not: /files is not grantable, so a
-  // visitor has nowhere to put the bytes and the service rejects the page.
-  if (ep.op === 'create' && Array.isArray(ep.fields) && appMeta) {
-    const controls = appMeta.apps?.[ep.entity]?.controls || {};
-    for (const key of ep.fields) {
-      if (controls[key]?.fulltype?.startsWith('file')) {
-        errors.push(`${where}: page '${slug}' endpoint '${ep.entity}' asks visitors to submit file field '${key}' — anonymous UPLOAD is impossible (/files is not grantable); drop it from the create endpoint (listing a file field for DISPLAY is fine)`);
-      }
+  // A public list of an entity with an occupancy rule is read for the
+  // calendar — it must carry every field the rule evaluates. Without the
+  // status field a cancelled stay still blocks nights (live 23.10.2026:
+  // the page listed anreise/abreise/platz and left `status` out).
+  if (ep.op === 'list' && occupancyRules[ep.entity]) {
+    const rule = occupancyRules[ep.entity];
+    const have = Array.isArray(ep.fields) ? ep.fields : [];
+    const missing = [rule.from, rule.to, rule.resource, rule.statusField].filter(k => k && !have.includes(k));
+    if (missing.length) {
+      errors.push(`${where}: page '${slug}' lists '${ep.entity}', whose occupancy rule (src/config/journey.ts) evaluates ${missing.map(k => `'${k}'`).join(', ')} — the list projection lacks ${missing.length === 1 ? 'it' : 'them'}, so the calendar cannot tell a free stay from a booked one; add ${missing.map(k => `'${k}'`).join(', ')} to the list endpoint's fields`);
     }
   }
+  // file fields: READING is fine — a file URL answers an anonymous GET with
+  // 200 and `cache-control: public` (measured), so a listed logo or hero
+  // image simply renders. UPLOADING works too (probed 20.10.2026): a file
+  // field in a create endpoint takes the file as a data URL — the page binds
+  // it with <FileField {...form.file(key)} /> (Bound does it by kind), which
+  // limits type and size. /files and attachments stay ungrantable.
   // preset_fields are server-owned — a key listed in fields too would make
   // the visitor's value win, defeating the preset.
   const epFields = ep.fields || [];
@@ -650,7 +784,13 @@ if (pageOnly) {
       continue;
     }
     for (const ep of frag.endpoints) checkEndpoint(slug, ep, stagedSrc, fileArg, f);
+    checkSiblingLinks(slug, stagedSrc, fileArg, errors);
+    checkVisitorKey(slug, stagedSrc, fileArg, errors);
+    checkFreshPointer(slug, stagedSrc, fileArg, errors);
+    checkPollRate(slug, stagedSrc, fileArg, errors);
   }
+  // the lane sees its warnings too — before, file mode printed errors only (Abnahme 8)
+  for (const w of warnings) console.log(`WARN: ${w}`);
   if (errors.length > 0) {
     for (const e of errors) console.error(`ERROR: ${e}`);
     process.exit(1);
@@ -749,6 +889,16 @@ for (const [slug, page] of surfacePages) {
         errors.push(`${SURFACE}: page '${slug}' reads '${key}' of '${ep.entity}' (${page.component}.tsx), but the list projection does not include it — the grant never delivers that field, visitors always see it empty. Add '${key}' to the list endpoint's fields (and mind what that exposes) or remove the read`);
       }
     }
+  }
+  // a warning in the tree run: a page built before the rule must not block an update
+  if (src) checkSiblingLinks(slug, src, `${PAGES_DIR}/${page.component}.tsx`, warnings);
+  if (src) checkVisitorKey(slug, src, `${PAGES_DIR}/${page.component}.tsx`, warnings);
+  if (src) checkFreshPointer(slug, src, `${PAGES_DIR}/${page.component}.tsx`, warnings);
+  if (src) checkPollRate(slug, src, `${PAGES_DIR}/${page.component}.tsx`, warnings);
+  // PV-3: the plan ordered a link parameter — the surface must declare it, same entity
+  const planned = planLinkParam.get(slug);
+  if (planned && (!page.link_param || page.link_param.entity !== planned.entity)) {
+    errors.push(`${SURFACE}: page '${slug}' is planned to open per '${planned.entity}' record (link_param '${planned.name}') but the surface declares ${page.link_param ? `link_param for '${page.link_param.entity}'` : 'no link_param'} — declare link_param: { name: '${planned.name}', entity: '${planned.entity}'${planned.label_field ? `, label_field: '${planned.label_field}'` : ''} } and read ?${planned.name}= in the page`);
   }
   if (readsParam && !page.link_param) {
     errors.push(`${SURFACE}: page '${slug}' reads a query parameter but declares no "link_param" — without it the owner only gets the bare page URL, which shows "link incomplete". Add link_param: { name, entity, label_field } (entity needs a list endpoint on this page).`);

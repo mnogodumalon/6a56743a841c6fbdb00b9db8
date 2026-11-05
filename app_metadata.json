@@ -8,6 +8,8 @@
       "main": false,
       "controls": {
         "name": {
+          "kind": "textcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741a9ef9a79ac692ad70/controls/name",
           "identifier": "name",
           "label": "Name des Ortes",
           "type": "string",
@@ -20,9 +22,12 @@
           "in_text": true,
           "in_structured_search": null,
           "in_fulltext_search": true,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "strasse": {
+          "kind": "textcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741a9ef9a79ac692ad70/controls/strasse",
           "identifier": "strasse",
           "label": "Straße",
           "type": "string",
@@ -35,9 +40,12 @@
           "in_text": true,
           "in_structured_search": null,
           "in_fulltext_search": true,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "hausnummer": {
+          "kind": "textcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741a9ef9a79ac692ad70/controls/hausnummer",
           "identifier": "hausnummer",
           "label": "Hausnummer",
           "type": "string",
@@ -50,9 +58,12 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": true,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "postleitzahl": {
+          "kind": "textcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741a9ef9a79ac692ad70/controls/postleitzahl",
           "identifier": "postleitzahl",
           "label": "Postleitzahl",
           "type": "string",
@@ -65,9 +76,12 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": true,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "stadt": {
+          "kind": "textcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741a9ef9a79ac692ad70/controls/stadt",
           "identifier": "stadt",
           "label": "Stadt",
           "type": "string",
@@ -80,9 +94,12 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": true,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "beschreibung": {
+          "kind": "textareacontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741a9ef9a79ac692ad70/controls/beschreibung",
           "identifier": "beschreibung",
           "label": "Beschreibung",
           "type": "string",
@@ -95,9 +112,12 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": null,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "untergrundtyp": {
+          "kind": "lookupselectcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741a9ef9a79ac692ad70/controls/untergrundtyp",
           "identifier": "untergrundtyp",
           "label": "Untergrundtyp",
           "type": "lookup",
@@ -111,15 +131,50 @@
           "in_structured_search": null,
           "in_fulltext_search": null,
           "in_expert_search": true,
+          "translations": null,
           "lookup_data": {
             "beton": "Beton",
             "asphalt": "Asphalt",
             "holz": "Holz",
             "fliesen": "Fliesen",
             "sonstiges": "Sonstiges"
+          },
+          "lookup_items": {
+            "beton": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Beton",
+              "translations": null
+            },
+            "asphalt": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Asphalt",
+              "translations": null
+            },
+            "holz": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Holz",
+              "translations": null
+            },
+            "fliesen": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Fliesen",
+              "translations": null
+            },
+            "sonstiges": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Sonstiges",
+              "translations": null
+            }
           }
         },
         "standort": {
+          "kind": "geocontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741a9ef9a79ac692ad70/controls/standort",
           "identifier": "standort",
           "label": "Standort auf der Karte",
           "type": "geo",
@@ -132,9 +187,12 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": null,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "website": {
+          "kind": "urlcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741a9ef9a79ac692ad70/controls/website",
           "identifier": "website",
           "label": "Website",
           "type": "string",
@@ -147,7 +205,8 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": null,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         }
       }
     },
@@ -157,6 +216,8 @@
       "main": false,
       "controls": {
         "titel": {
+          "kind": "textcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741f84d8dce105858830/controls/titel",
           "identifier": "titel",
           "label": "Titel des Events",
           "type": "string",
@@ -169,9 +230,12 @@
           "in_text": true,
           "in_structured_search": null,
           "in_fulltext_search": true,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "kategorie": {
+          "kind": "lookupselectcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741f84d8dce105858830/controls/kategorie",
           "identifier": "kategorie",
           "label": "Kategorie",
           "type": "lookup",
@@ -185,15 +249,50 @@
           "in_structured_search": null,
           "in_fulltext_search": true,
           "in_expert_search": true,
+          "translations": null,
           "lookup_data": {
+            "contest": "Contest",
             "jam": "Jam Session",
             "demo": "Demo",
             "workshop": "Workshop",
-            "sonstiges": "Sonstiges",
-            "contest": "Contest"
+            "sonstiges": "Sonstiges"
+          },
+          "lookup_items": {
+            "contest": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Contest",
+              "translations": null
+            },
+            "jam": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Jam Session",
+              "translations": null
+            },
+            "demo": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Demo",
+              "translations": null
+            },
+            "workshop": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Workshop",
+              "translations": null
+            },
+            "sonstiges": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Sonstiges",
+              "translations": null
+            }
           }
         },
         "datum_uhrzeit": {
+          "kind": "datetimeminutecontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741f84d8dce105858830/controls/datum_uhrzeit",
           "identifier": "datum_uhrzeit",
           "label": "Datum und Uhrzeit",
           "type": "date",
@@ -206,9 +305,12 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": true,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "beschreibung": {
+          "kind": "textareacontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741f84d8dce105858830/controls/beschreibung",
           "identifier": "beschreibung",
           "label": "Beschreibung",
           "type": "string",
@@ -221,9 +323,12 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": true,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "skill_level": {
+          "kind": "lookupselectcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741f84d8dce105858830/controls/skill_level",
           "identifier": "skill_level",
           "label": "Skill-Level",
           "type": "lookup",
@@ -237,14 +342,43 @@
           "in_structured_search": null,
           "in_fulltext_search": true,
           "in_expert_search": true,
+          "translations": null,
           "lookup_data": {
             "anfaenger": "Anfänger",
             "fortgeschritten": "Fortgeschritten",
             "profi": "Profi",
             "alle_levels": "Alle Levels"
+          },
+          "lookup_items": {
+            "anfaenger": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Anfänger",
+              "translations": null
+            },
+            "fortgeschritten": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Fortgeschritten",
+              "translations": null
+            },
+            "profi": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Profi",
+              "translations": null
+            },
+            "alle_levels": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Alle Levels",
+              "translations": null
+            }
           }
         },
         "max_teilnehmer": {
+          "kind": "numbercontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741f84d8dce105858830/controls/max_teilnehmer",
           "identifier": "max_teilnehmer",
           "label": "Maximale Teilnehmerzahl",
           "type": "number",
@@ -258,9 +392,12 @@
           "in_structured_search": null,
           "in_fulltext_search": false,
           "in_expert_search": true,
+          "translations": null,
           "precision": null
         },
         "startgebuehr": {
+          "kind": "numbercontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741f84d8dce105858830/controls/startgebuehr",
           "identifier": "startgebuehr",
           "label": "Startgebühr (€)",
           "type": "number",
@@ -274,15 +411,18 @@
           "in_structured_search": null,
           "in_fulltext_search": false,
           "in_expert_search": true,
+          "translations": null,
           "precision": null
         },
         "ort": {
+          "kind": "applookupselectcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741f84d8dce105858830/controls/ort",
           "identifier": "ort",
           "label": "Ort",
           "type": "applookup",
           "subtype": "select",
           "fulltype": "applookup/select",
-          "description": "A reference to a LivingApp record from the target lookup app 'Skateparks & Spots' with the id `6a56741a9ef9a79ac692ad70` (or `null`/`None`).\n\nThe field value will be a valid record URL in the form `https://my.living-apps.de/rest/apps/6a56741a9ef9a79ac692ad70/records/<record-id>` (or `null`/`None`).\n\nWhen writing, either pass a record URL through exactly as this API returned it, or send the portable relative form `/apps/6a56741a9ef9a79ac692ad70/records/<record-id>`. Other equivalent record-URL forms are accepted as well.\n\nDisplayed as single-select field in HTML pages.",
+          "description": "A reference to a LivingApp record from the target lookup app 'Skateparks & Spots' with the id `6a56741a9ef9a79ac692ad70` (or `null`/`None`).\n\nThe field value will be a valid record URL in the form `https://my.living-apps.de/rest/v1/apps/6a56741a9ef9a79ac692ad70/records/<record-id>` (or `null`/`None`).\n\nWhen writing, either pass a record URL through exactly as this API returned it, or send the portable relative form `/apps/6a56741a9ef9a79ac692ad70/records/<record-id>`. Other equivalent record-URL forms are accepted as well.\n\nDisplayed as single-select field in HTML pages.",
           "required": true,
           "in_list": false,
           "in_mobile_list": true,
@@ -290,9 +430,13 @@
           "in_structured_search": null,
           "in_fulltext_search": false,
           "in_expert_search": true,
-          "lookup_app": "https://my.living-apps.de/rest/apps/6a56741a9ef9a79ac692ad70"
+          "translations": null,
+          "lookup_app": "https://my.living-apps.de/rest/v1/apps/6a56741a9ef9a79ac692ad70",
+          "on_delete": null
         },
         "kontakt_email": {
+          "kind": "emailcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741f84d8dce105858830/controls/kontakt_email",
           "identifier": "kontakt_email",
           "label": "Kontakt-E-Mail",
           "type": "string",
@@ -305,9 +449,12 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": false,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "event_website": {
+          "kind": "urlcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741f84d8dce105858830/controls/event_website",
           "identifier": "event_website",
           "label": "Website des Events",
           "type": "string",
@@ -320,9 +467,12 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": false,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "flyer": {
+          "kind": "filecontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741f84d8dce105858830/controls/flyer",
           "identifier": "flyer",
           "label": "Flyer / Bild",
           "type": "file",
@@ -335,9 +485,12 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": false,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "kontakt_telefon": {
+          "kind": "telcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741f84d8dce105858830/controls/kontakt_telefon",
           "identifier": "kontakt_telefon",
           "label": "Kontakt-Telefonnummer",
           "type": "string",
@@ -350,7 +503,8 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": false,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         }
       }
     },
@@ -360,12 +514,14 @@
       "main": false,
       "controls": {
         "event": {
+          "kind": "applookupselectcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a5674227925510842ea49d7/controls/event",
           "identifier": "event",
           "label": "Event",
           "type": "applookup",
           "subtype": "select",
           "fulltype": "applookup/select",
-          "description": "A reference to a LivingApp record from the target lookup app 'Event-Verwaltung' with the id `6a56741f84d8dce105858830` (or `null`/`None`).\n\nThe field value will be a valid record URL in the form `https://my.living-apps.de/rest/apps/6a56741f84d8dce105858830/records/<record-id>` (or `null`/`None`).\n\nWhen writing, either pass a record URL through exactly as this API returned it, or send the portable relative form `/apps/6a56741f84d8dce105858830/records/<record-id>`. Other equivalent record-URL forms are accepted as well.\n\nDisplayed as single-select field in HTML pages.",
+          "description": "A reference to a LivingApp record from the target lookup app 'Event-Verwaltung' with the id `6a56741f84d8dce105858830` (or `null`/`None`).\n\nThe field value will be a valid record URL in the form `https://my.living-apps.de/rest/v1/apps/6a56741f84d8dce105858830/records/<record-id>` (or `null`/`None`).\n\nWhen writing, either pass a record URL through exactly as this API returned it, or send the portable relative form `/apps/6a56741f84d8dce105858830/records/<record-id>`. Other equivalent record-URL forms are accepted as well.\n\nDisplayed as single-select field in HTML pages.",
           "required": true,
           "in_list": false,
           "in_mobile_list": true,
@@ -373,9 +529,13 @@
           "in_structured_search": null,
           "in_fulltext_search": true,
           "in_expert_search": true,
-          "lookup_app": "https://my.living-apps.de/rest/apps/6a56741f84d8dce105858830"
+          "translations": null,
+          "lookup_app": "https://my.living-apps.de/rest/v1/apps/6a56741f84d8dce105858830",
+          "on_delete": null
         },
         "vorname": {
+          "kind": "textcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a5674227925510842ea49d7/controls/vorname",
           "identifier": "vorname",
           "label": "Vorname",
           "type": "string",
@@ -388,9 +548,12 @@
           "in_text": true,
           "in_structured_search": null,
           "in_fulltext_search": true,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "nachname": {
+          "kind": "textcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a5674227925510842ea49d7/controls/nachname",
           "identifier": "nachname",
           "label": "Nachname",
           "type": "string",
@@ -403,9 +566,12 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": true,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "geburtsdatum": {
+          "kind": "datecontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a5674227925510842ea49d7/controls/geburtsdatum",
           "identifier": "geburtsdatum",
           "label": "Geburtsdatum",
           "type": "date",
@@ -418,9 +584,12 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": true,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "email": {
+          "kind": "emailcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a5674227925510842ea49d7/controls/email",
           "identifier": "email",
           "label": "E-Mail-Adresse",
           "type": "string",
@@ -433,9 +602,12 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": true,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "telefon": {
+          "kind": "telcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a5674227925510842ea49d7/controls/telefon",
           "identifier": "telefon",
           "label": "Telefonnummer",
           "type": "string",
@@ -448,9 +620,12 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": null,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "skill_level": {
+          "kind": "lookupselectcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a5674227925510842ea49d7/controls/skill_level",
           "identifier": "skill_level",
           "label": "Skill-Level",
           "type": "lookup",
@@ -464,13 +639,36 @@
           "in_structured_search": null,
           "in_fulltext_search": null,
           "in_expert_search": true,
+          "translations": null,
           "lookup_data": {
             "anfaenger": "Anfänger",
             "fortgeschritten": "Fortgeschritten",
             "profi": "Profi"
+          },
+          "lookup_items": {
+            "anfaenger": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Anfänger",
+              "translations": null
+            },
+            "fortgeschritten": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Fortgeschritten",
+              "translations": null
+            },
+            "profi": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Profi",
+              "translations": null
+            }
           }
         },
         "board_stil": {
+          "kind": "multiplecheckboxlookupcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a5674227925510842ea49d7/controls/board_stil",
           "identifier": "board_stil",
           "label": "Board-Stil",
           "type": "multiplelookup",
@@ -484,15 +682,50 @@
           "in_structured_search": null,
           "in_fulltext_search": null,
           "in_expert_search": true,
+          "translations": null,
           "lookup_data": {
             "street": "Street",
             "park": "Park",
             "vert": "Vert",
             "bowl": "Bowl",
             "freestyle": "Freestyle"
+          },
+          "lookup_items": {
+            "street": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Street",
+              "translations": null
+            },
+            "park": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Park",
+              "translations": null
+            },
+            "vert": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Vert",
+              "translations": null
+            },
+            "bowl": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Bowl",
+              "translations": null
+            },
+            "freestyle": {
+              "kind": "lookupitem",
+              "url": null,
+              "label": "Freestyle",
+              "translations": null
+            }
           }
         },
         "anmerkungen": {
+          "kind": "textareacontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a5674227925510842ea49d7/controls/anmerkungen",
           "identifier": "anmerkungen",
           "label": "Anmerkungen",
           "type": "string",
@@ -505,9 +738,12 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": null,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         },
         "teilnahmebedingungen": {
+          "kind": "boolcontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a5674227925510842ea49d7/controls/teilnahmebedingungen",
           "identifier": "teilnahmebedingungen",
           "label": "Ich stimme den Teilnahmebedingungen zu",
           "type": "bool",
@@ -520,7 +756,8 @@
           "in_text": false,
           "in_structured_search": null,
           "in_fulltext_search": null,
-          "in_expert_search": true
+          "in_expert_search": true,
+          "translations": null
         }
       }
     }

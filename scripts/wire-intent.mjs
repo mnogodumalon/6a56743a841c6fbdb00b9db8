@@ -12,6 +12,8 @@
 //   node scripts/wire-intent.mjs <PageComponent> <slug> <label> <IconName> [description]
 //   node scripts/wire-intent.mjs --no-flows
 //   node scripts/wire-intent.mjs --remove <PageComponent> <slug>   # quarantine: undo exactly one wire
+//   node scripts/wire-intent.mjs <PageComponent> <slug> <label> <IconName> [description] --bare
+//                                                                  # route outside the Layout (beamer, kiosk, print)
 //
 // Examples:
 //   node scripts/wire-intent.mjs NeueBuchungPage neue-buchung 'Neue Buchung' IconCalendarPlus 'Buchung in 3 Schritten anlegen'
@@ -98,7 +100,11 @@ if (args[0] === '--remove') {
   process.exit(0);
 }
 
-const [page, slug, label, icon, description] = args;
+// --bare: the route goes into <custom:bare-routes>, OUTSIDE the dashboard's
+// Layout — a beamer view, a kiosk page, a print sheet (S-2, 03.11.2026). The
+// registry entry is the same, so the flow list links to it.
+const bare = args.includes('--bare');
+const [page, slug, label, icon, description] = args.filter(a => a !== '--bare');
 if (!page || !slug || !label || !icon) {
   fail('usage: node scripts/wire-intent.mjs <PageComponent> <slug> <label> <IconName> [description]\n' +
        '       node scripts/wire-intent.mjs --no-flows');
@@ -164,10 +170,10 @@ if (new RegExp(`<Route\\s+path=["']intents/${slug}["']`).test(app)) {
   same.push(`${APP}: route intents/${slug} already present`);
 } else {
   app = insertBeforeMarker(
-    app, '{/* </custom:routes> */}',
+    app, bare ? '{/* </custom:bare-routes> */}' : '{/* </custom:routes> */}',
     `<Route path="intents/${slug}" element={<Suspense fallback={<DashboardSkeleton />}><${ident} /></Suspense>} />`, APP,
   );
-  done.push(`${APP}: route intents/${slug}`);
+  done.push(`${APP}: route intents/${slug}${bare ? ' (bare, outside the Layout)' : ''}`);
 }
 
 if (app !== appBefore) writeFileSync(APP, app);

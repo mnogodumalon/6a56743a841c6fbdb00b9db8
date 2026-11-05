@@ -7,7 +7,9 @@ import type { StepForm, SummaryItem } from '@/lib/journey/useStepForm';
 import type { JourneyResult, JourneySubmit } from '@/lib/journey/useJourneySubmit';
 import { useWizard } from './IntentWizardShell';
 import { resolveFlowHref } from '@/lib/journey/flowLinks';
+import { withRecordNames } from '@/lib/journey/recordLabels';
 import { INTENTS } from '@/config/intents';
+import { nounOne } from '@/config/plan';
 
 /**
  * SuccessStep — the end of a journey that keeps working.
@@ -58,6 +60,9 @@ export interface SuccessStepProps {
   /** Copy and print are offered by default — an internal status flip may want neither. */
   actions?: { copy?: boolean; print?: boolean };
   printLabel?: string;
+  /** The counter-action of the changed record (PV-15) — `undo={flow.undo}`:
+   *  one button, the record goes back, the page says so. */
+  undo?: { label?: string; run: () => Promise<unknown> };
   children?: ReactNode;
 }
 
@@ -73,9 +78,16 @@ export function SuccessStep({
   restartLabel,
   actions,
   printLabel,
+  undo,
   children,
 }: SuccessStepProps) {
   const showCopy = actions?.copy ?? true;
+  const [undone, setUndone] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
+  const runUndo = async () => {
+    if (!undo || undone === 'busy' || undone === 'done') return;
+    setUndone('busy');
+    try { await undo.run(); setUndone('done'); } catch { setUndone('error'); }
+  };
   const showPrint = actions?.print ?? true;
   const created = verb ? verb === 'created' : result.created !== false;
   const [copied, setCopied] = useState(false);
@@ -92,17 +104,18 @@ export function SuccessStep({
   useEffect(() => suppressHeading?.(), [suppressHeading]);
 
   const heading = title ?? (result.entity && result.primary.id
-    ? t(created ? 'sx_default_title' : 'sx_default_title_updated', { entity: entityLabel(result.entity) })
+    ? t(created ? 'sx_default_title' : 'sx_default_title_updated', { entity: nounOne(result.entity, entityLabel(result.entity)) })
     : t('sx_saved'));
   // Facts: explicit `facts`, else the forms' filled rows, else what the review
   // step showed — an update-only journey keeps its answers in page state, so
   // without this the success screen was a heading over nothing (live: ticket
   // assignment). The review remembers its rows on confirm; the result carries them.
-  const formRows = forms.flatMap(f => f.summary()).filter(r => r.value !== '—');
+  const listRows = (submit?.plan ?? []).flatMap(s => s.review?.() ?? []);
+  const formRows = [...forms.flatMap(f => f.summary()), ...listRows].filter(r => r.value !== '—');
   const rows = (facts ?? (formRows.length > 0 ? formRows : (result.summary ?? []).filter(r => r.value !== '—'))).slice(0, 10);
 
   const copy = async () => {
-    const lines = [heading, ...rows.map(r => `${r.label}: ${r.value}`)];
+    const lines = [heading, ...rows.map(r => `${r.label}: ${withRecordNames(r.value, t('v_record_unnamed'))}`)];
     try {
       await navigator.clipboard.writeText(lines.join('\n'));
       setCopied(true);
@@ -160,7 +173,7 @@ export function SuccessStep({
           {rows.map((r, i) => (
             <div key={`${r.label}-${i}`} className="grid grid-cols-1 @md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)] gap-x-4 px-5 py-2.5 items-baseline">
               <dt className="text-sm text-muted-foreground">{r.label}</dt>
-              <dd className="text-sm font-medium break-words min-w-0">{r.value}</dd>
+              <dd className="text-sm font-medium break-words min-w-0">{withRecordNames(r.value, t('v_record_unnamed'))}</dd>
             </div>
           ))}
         </dl>
@@ -185,6 +198,13 @@ export function SuccessStep({
           </Button>
         ))}
         <span className="flex-1" />
+        {undo && undone !== 'done' && (
+          <Button type="button" variant="outline" onClick={() => void runUndo()} disabled={undone === 'busy'} className="gap-1.5" data-journey-undo="">
+            {undo.label || t('sx_undo')}
+          </Button>
+        )}
+        {undo && undone === 'done' && <span className="text-sm text-muted-foreground" role="status">{t('sx_undone')}</span>}
+        {undo && undone === 'error' && <span className="text-sm text-destructive" role="alert">{t('sx_undo_failed')}</span>}
         {showCopy && (
           <Button type="button" variant="ghost" size="sm" onClick={() => void copy()} className="gap-1.5">
             {copied ? <IconCheck size={16} aria-hidden="true" /> : <IconCopy size={16} aria-hidden="true" />}

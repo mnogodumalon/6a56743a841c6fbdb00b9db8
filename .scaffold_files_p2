@@ -3,7 +3,7 @@ Same rule as .scaffold_context: these files are pre-generated; never Read the so
 
 ## src/hooks/useDashboardData.ts
 ```
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { SkateparksSpots, EventVerwaltung, Anmeldungen } from '@/types/app';
 import { LivingAppsService } from '@/services/livingAppsService';
 import { t } from '@/i18n';
@@ -20,6 +20,13 @@ import { t } from '@/i18n';
  */
 /** Entities this hook can load — the same keys the journey layer uses. */
 export type DashboardEntity = 'skateparks_spots' | 'event_verwaltung' | 'anmeldungen';
+
+/** Silent re-read interval from the plan (generated): visitors or tools add records. */
+const LIVE_MS = 0;
+/** The lists a tick re-reads — ONE request each; the rest waits for an event or the tab's return. */
+const LIVE_ENTITIES: string[] = [];
+/** Marks a list the tick skipped: its rows and its forbidden state stay as they are. */
+const SKIP = Symbol('skip');
 
 export interface DashboardDataOptions {
   /** Entities this page does NOT need (picked through useRecordSearch instead).
@@ -44,13 +51,15 @@ export function useDashboardData(options: DashboardDataOptions = {}) {
   const [forbidden, setForbidden] = useState<DashboardEntity[]>([]);
 
   // Every list on its own: a 403 is „not yours“, any other failure is an error.
+  const forbiddenRef = useRef<DashboardEntity[]>([]);
   const settle = useCallback((settled: PromiseSettledResult<unknown>[]) => {
     const denied: DashboardEntity[] = [];
     let failure: unknown = null;
-    // null = this list failed for another reason: its current data stays
+    // null = this list failed for another reason, or the tick skipped it: its current data stays
     const pick = <T,>(i: number, key: DashboardEntity): T[] | null => {
       const s = settled[i];
       if (s.status === 'fulfilled') return s.value as T[];
+      if (s.reason === SKIP) { if (forbiddenRef.current.includes(key)) denied.push(key); return null; }
       if ((s.reason as { status?: number } | null)?.status === 403) { denied.push(key); return []; }
       failure = failure ?? s.reason;
       return null;
@@ -58,6 +67,7 @@ export function useDashboardData(options: DashboardDataOptions = {}) {
     { const rows = pick<SkateparksSpots>(0, 'skateparks_spots'); if (rows) setSkateparksSpots(rows); }
     { const rows = pick<EventVerwaltung>(1, 'event_verwaltung'); if (rows) setEventVerwaltung(rows); }
     { const rows = pick<Anmeldungen>(2, 'anmeldungen'); if (rows) setAnmeldungen(rows); }
+    forbiddenRef.current = denied;
     setForbidden(prev => (prev.join('|') === denied.join('|') ? prev : denied));
     return failure;
   }, []);
@@ -103,7 +113,31 @@ export function useDashboardData(options: DashboardDataOptions = {}) {
     // dashboard-refresh event for OLD deployed bundles — do NOT subscribe to
     // both here, or every mutation fetches twice.
     window.addEventListener('assistant:data-changed', handleRefresh);
-    return () => window.removeEventListener('assistant:data-changed', handleRefresh);
+    // Records that arrive without the team (a visitor on a public page, a
+    // tool) show up by themselves: a silent re-read every LIVE_MS while the
+    // tab is visible, once on return (S-1/W-19, acceptance 4 — the moderation
+    // saw new contributions only after a reload). 0 = events only.
+    // the tick: only LIVE_ENTITIES, one request each
+    const only = new Set(LIVE_ENTITIES);
+    async function tick() {
+      try {
+        settle(await Promise.allSettled([
+          !only.has('skateparks_spots') ? Promise.reject(SKIP) : omit.has('skateparks_spots') ? Promise.resolve([] as SkateparksSpots[]) : LivingAppsService.getSkateparksSpots(),
+          !only.has('event_verwaltung') ? Promise.reject(SKIP) : omit.has('event_verwaltung') ? Promise.resolve([] as EventVerwaltung[]) : LivingAppsService.getEventVerwaltung(),
+          !only.has('anmeldungen') ? Promise.reject(SKIP) : omit.has('anmeldungen') ? Promise.resolve([] as Anmeldungen[]) : LivingAppsService.getAnmeldungen(),
+        ]));
+      } catch {
+        // silently ignore — stale data is better than no data
+      }
+    }
+    const timer = LIVE_MS > 0 && only.size > 0 ? window.setInterval(() => { if (!document.hidden) void tick(); }, LIVE_MS) : null;
+    const onVisible = () => { if (!document.hidden && LIVE_MS > 0) void silentRefresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('assistant:data-changed', handleRefresh);
+      if (timer !== null) window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [omitKey, settle]);
 
   const skateparksSpotsMap = useMemo(() => {

@@ -14,7 +14,7 @@ index.css is pre-generated with the shared design system. Do NOT edit it.
 src/config/ai-features.ts is editable — set AI_PHOTO_SCAN['Entity'] = true to enable photo scan in dialogs.
 NEVER use Bash cat/echo/heredoc for file operations — always use Read/Write/Edit tools.
 
-Generated 149 scaffold files:
+Generated 164 scaffold files:
   - src/App.tsx
   - src/i18n/index.ts
   - src/i18n/common.ts
@@ -75,6 +75,11 @@ Generated 149 scaffold files:
   - src/components/blocks/Field.tsx
   - src/components/blocks/Bound.tsx
   - src/components/blocks/InlineCreate.tsx
+  - src/components/blocks/FileField.tsx
+  - src/components/blocks/ListEntries.tsx
+  - src/components/blocks/SuggestionPicker.tsx
+  - src/components/blocks/LoadProblem.tsx
+  - src/components/blocks/ViewTextEditor.tsx
   - src/lib/journey/policy.ts
   - src/lib/journey/usePolicy.ts
   - src/lib/journey/intentPolicy.ts
@@ -88,12 +93,17 @@ Generated 149 scaffold files:
   - src/lib/journey/fields.ts
   - src/lib/journey/recordLabels.ts
   - src/lib/journey/flowLinks.ts
+  - src/lib/journey/upload.ts
   - src/lib/journey/useOccupancy.ts
   - src/lib/journey/useRecordCount.ts
+  - src/lib/journey/readFailures.ts
+  - src/lib/journey/useLiveList.ts
+  - src/lib/journey/visitorKey.ts
   - src/lib/journey/useRecordSearch.ts
   - src/lib/journey/useStepForm.ts
   - src/lib/journey/useJourneySubmit.ts
   - src/lib/journey/summary.ts
+  - src/lib/journey/suggestions.ts
   - src/lib/journey/index.ts
   - src/lib/journey/publicPort.ts
   - src/lib/journey/publicColumn.ts
@@ -107,6 +117,7 @@ Generated 149 scaffold files:
   - src/index.css
   - src/lib/origin.ts
   - src/lib/permissions.ts
+  - src/components/ToolButton.tsx
   - src/lib/sentry.ts
   - src/lib/stale-bundle.ts
   - src/lib/ai.ts
@@ -115,6 +126,7 @@ Generated 149 scaffold files:
   - src/lib/formatters.ts
   - src/lib/polish.ts
   - src/hooks/useDashboardData.ts
+  - src/hooks/useLiveRecords.ts
   - src/lib/publicClient.ts
   - src/pages/public/PublicFormPage.tsx
   - src/pages/public/registry.tsx
@@ -154,6 +166,9 @@ Generated 149 scaffold files:
   - src/components/widgets/MapWidget.example.tsx
   - src/components/widgets/ChartWidget.tsx
   - src/components/widgets/ChartWidget.example.tsx
+  - src/components/widgets/QrCode.tsx
+  - src/components/widgets/QrCode.example.tsx
+  - src/components/widgets/PublicPageQr.tsx
   - tsconfig.app.json
   - src/components/dialogs/SkateparksSpotsDialog.tsx
   - src/components/details/SkateparksSpotsDetails.tsx

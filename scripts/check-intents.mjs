@@ -447,6 +447,20 @@ if (pages.length > 0) {
       }
     }
 
+    // 3u-b. A value an effect derives goes in with prefill(), never set() — set()
+    //       runs again after a reload and writes over the restored draft (J-11,
+    //       Abnahme 6: the edited AI prompt lost its introduction on reload).
+    for (const eff of src.matchAll(/\buseEffect\(\s*\(\)\s*=>\s*\{/g)) {
+      let depth = 1, k = eff.index + eff[0].length;
+      for (; k < src.length && depth > 0; k++) { if (src[k] === '{') depth++; else if (src[k] === '}') depth--; }
+      const body = src.slice(eff.index, k);
+      for (const m of body.matchAll(/\b(\w+)\.set\(\s*['"](\w+)['"]/g)) {
+        if (m[1] === 'params' || m[1] === 'searchParams' || m[1] === 'url') continue;
+        const line = src.slice(0, eff.index + m.index).split('\n').length;
+        warnings.push(`${file}:${line}: ${m[1]}.set('${m[2]}', …) inside a useEffect — a derived starting value goes in with ${m[1]}.prefill('${m[2]}', …): it writes only an empty field or its own last prefill, never over what the person typed or a draft restored after a reload`);
+      }
+    }
+
     // 3t. <Field> renders the field's label itself. A heading with the same
     //     text right above it doubles the label (live: "Zusatzleistungen" twice
     //     in a booking step). Compared against the entity's real label.

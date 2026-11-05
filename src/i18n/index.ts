@@ -44,7 +44,7 @@
  */
 import { de as dfDe } from 'date-fns/locale';
 import type { Locale as DateFnsLocale } from 'date-fns';
-import { REST_URL } from '@/lib/origin';
+import { REST_URL, restFetch } from '@/lib/origin';
 
 // Core = baked into the bundle. Locale stays an OPEN string type so overlay
 // languages added later never invalidate today's code (`string & {}` keeps
@@ -332,6 +332,7 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "ppa_origin_agent": "KI-Seite",
     "ppa_status_published": "Öffentlich",
     "ppa_status_draft": "Entwurf",
+    "ppa_republish": "war veröffentlicht — Rechte geändert, bitte erneut freigeben",
     "ppa_publish": "Veröffentlichen",
     "ppa_pause": "Pausieren",
     "ppa_open": "Felder zeigen",
@@ -354,6 +355,20 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "ppa_links_intro": "Diese Seite braucht einen Eintrag im Link. Kopiere den passenden Link und verschicke ihn.",
     "ppa_links_empty": "Noch keine Einträge vorhanden.",
     "ppa_links_hint": "Der Link ohne Eintrag zeigt nur einen Hinweis — verschicke immer einen Link aus dieser Liste.",
+    "ppa_qr": "QR-Code",
+    "sp_take": "Übernehmen",
+    "lp_text": "Die Seite konnte gerade nicht geladen werden. Wir versuchen es gleich noch einmal.",
+    "lp_retry": "Erneut versuchen",
+    "vte_saved": "Gespeichert",
+    "vte_saving": "Speichert …",
+    "vte_failed": "Nicht gespeichert — erneut versuchen",
+    "vte_copy": "Text kopieren",
+    "vte_copied": "Kopiert",
+    "ss_read_failed": "Die Daten für „{what}“ konnten nicht geladen werden — Bestätigen ist gesperrt, damit nichts mit einer leeren Liste gespeichert wird. Bitte die Seite neu laden.",
+    "sp_taken": "Übernommen",
+    "ppa_qr_title": "QR-Code",
+    "ppa_qr_intro": "Scannen öffnet den Link — zum Ausdrucken, für den Beamer oder den Flyer. Der Link steht darunter, falls jemand nicht scannen kann.",
+    "ppa_qr_download": "Als SVG speichern",
     "ppa_fields": "Felder",
     "ppa_fields_title": "Felder auswählen",
     "ppa_fields_intro": "Wähle, welche Felder im öffentlichen Formular erscheinen.",
@@ -450,6 +465,8 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "am_nothing": "Nichts gefunden.",
     "am_as_wish": "Als Wunsch aufschreiben",
     "am_assumed_tag": "angenommen",
+    "am_inferred_tag": "dazu gedacht",
+    "am_inferred_hint": "Stand nicht in deiner Beschreibung — Klar hat es ergänzt. „Nicht nötig“ entfernt es.",
     "am_instant_hint": "Gilt sofort.",
     "am_take": "Übernehmen",
     "am_changed": "Geändert",
@@ -475,6 +492,11 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "am_wish_limits_tool": "Geht hier: wann es läuft, welche Einträge es anfasst und was es daran ändert. Geht hier nicht: neue Felder, Rechte, andere Listen.",
     "am_wish_placeholder": "Schreib es in einem Satz.",
     "am_wish_look": "Ansehen",
+    "am_report_title": "Was stimmt nicht?",
+    "am_report_placeholder": "Ein Satz dazu, was nicht passt.",
+    "am_report_send": "Melden",
+    "am_report_thanks": "Danke, wir schauen es uns an.",
+    "am_report_failed": "Das ging gerade nicht. Bitte noch einmal versuchen.",
     "am_wish_reading": "Wird angesehen … {s} s",
     "am_wish_failed": "Das ging nicht: {error}",
     "am_wish_shape": "So würde es aussehen:",
@@ -503,6 +525,8 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "am_stale": "Die Anwendung wurde am {date} neu gebaut, ohne diesen Plan zu kennen. Was hier steht, kann davon abweichen.",
     "am_readonly": "Hier siehst du, wie die Anwendung arbeitet. Ändern können das nur Administratoren.",
     "am_stale_rollback": "Die Anwendung wurde am {date} auf eine ältere Version zurückgesetzt. Was hier steht, kann die neuere beschreiben.",
+    "am_planning_failed": "Am {date} konnte der Plan für diese Anwendung nicht erstellt werden. Sie wurde ohne Plan gebaut.",
+    "am_planning_failed_adopted": "Am {date} konnte der Plan für diese Anwendung nicht erstellt werden. Sie wurde ohne Plan gebaut. Was hier steht, ist aus der laufenden Anwendung abgelesen.",
     "am_loading": "Lade …",
     "am_saving": "Wird übernommen …",
     "am_upload": "Datei hochladen (PDF, DOCX)",
@@ -525,6 +549,7 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "am_op_empty": "ist leer",
     "am_op_not_empty": "ist gesetzt",
     "am_fits": "Stimmt so",
+    "am_published": "Veröffentlicht.",
     "am_change": "ändern",
     "am_join_all": " und ",
     "am_join_any": " oder ",
@@ -598,12 +623,12 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "data_load_failed": "Fehler beim Laden der Daten",
     "wizard_back_to_dashboard": "Zurück zum Dashboard",
     "v_required": "„{label}\" ist ein Pflichtfeld",
-    "v_email": "„{label}\" ist keine gültige E-Mail-Adresse",
-    "v_tel": "„{label}\" ist keine gültige Telefonnummer",
-    "v_url": "„{label}\" ist keine gültige Web-Adresse",
-    "v_number": "„{label}\" muss eine Zahl sein",
-    "v_maxlength": "„{label}\" darf höchstens {max} Zeichen haben",
-    "v_option": "„{label}\" hat einen ungültigen Wert",
+    "v_email": "Bitte für „{label}\" eine gültige E-Mail-Adresse eingeben.",
+    "v_tel": "Bitte für „{label}\" eine gültige Telefonnummer eingeben.",
+    "v_url": "Bitte für „{label}\" eine gültige Web-Adresse eingeben.",
+    "v_number": "Bitte für „{label}\" eine Zahl eingeben.",
+    "v_maxlength": "Bitte „{label}\" auf höchstens {max} Zeichen kürzen.",
+    "v_option": "Bitte für „{label}\" einen der angebotenen Werte wählen.",
     "v_range_order": "„{to}\" muss nach „{from}\" liegen",
     "v_range_blocked": "Dieser Zeitraum ist nicht frei — bitte andere Tage wählen",
     "v_min_nights_one": "Mindestaufenthalt: eine Nacht",
@@ -629,10 +654,17 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "nf_back": "Zurück zum Dashboard",
     "ss_change_selection": "Auswahl ändern",
     "ss_missing": "Noch offen:",
+    "le_add": "Hinzufügen",
+    "le_edit": "Ändern",
+    "le_remove": "Entfernen",
+    "le_list": "{entity}: Einträge",
+    "le_empty": "Noch kein Eintrag. Ausfüllen und „Hinzufügen“ drücken, oder mit „Weiter“ den ersten übernehmen.",
     "ss_confirm": "Bestätigen",
     "ss_submitting": "Wird gespeichert …",
     "ss_error_title": "Das hat nicht geklappt — deine Eingaben sind noch da.",
     "ss_retry": "Erneut versuchen",
+    "ss_offline_title": "Keine Verbindung — deine Eingaben sind gesichert.",
+    "ss_offline_text": "Sobald das Netz wieder da ist, senden wir sie automatisch. Du kannst die Seite offen lassen.",
     "ss_step_done": "angelegt",
     "ss_step_done_updated": "aktualisiert",
     "ss_step_running_updated": "wird aktualisiert …",
@@ -644,6 +676,11 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "sx_reference": "Referenz",
     "sx_copy": "Kopieren",
     "sx_restart": "Noch einmal",
+    "wl_more": "+{n} weitere anzeigen",
+    "wl_less": "Weniger anzeigen",
+    "sx_undo": "Zurücknehmen",
+    "sx_undone": "Zurückgenommen.",
+    "sx_undo_failed": "Das Zurücknehmen hat nicht geklappt — bitte noch einmal versuchen.",
     "wz_needs": "Dieser Schritt braucht zuerst: {fields}.",
     "wz_needs_back": "Zu Schritt {step}",
     "sx_copied": "Kopiert",
@@ -660,6 +697,15 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "wz_progress": "Schritt {n} von {total}",
     "wz_progress_label": "Schritt {n} von {total}: {label}",
     "wz_steps_nav": "Fortschritt",
+    "up_choose": "Datei auswählen",
+    "up_replace": "Andere Datei",
+    "up_remove": "Datei entfernen",
+    "up_reading": "Datei wird gelesen …",
+    "up_hint": "PDF, Bild, Word oder Excel, höchstens {mb} MB.",
+    "up_too_big": "Die Datei ist größer als {mb} MB.",
+    "up_bad_type": "Diese Dateiart geht hier nicht — bitte PDF, Bild, Word oder Excel.",
+    "up_empty": "Die Datei ist leer.",
+    "up_read_failed": "Die Datei ließ sich nicht lesen. Bitte noch einmal auswählen.",
     "wz_step_done": "erledigt",
     "wz_completed": "Abgeschlossen",
     "wz_answers": "Bisherige Angaben",
@@ -1091,6 +1137,7 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "ppa_origin_agent": "AI page",
     "ppa_status_published": "Public",
     "ppa_status_draft": "Draft",
+    "ppa_republish": "was published — rights changed, please approve again",
     "ppa_publish": "Publish",
     "ppa_pause": "Pause",
     "ppa_open": "Show fields",
@@ -1113,6 +1160,20 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "ppa_links_intro": "This page needs a record in the link. Copy the matching link and send it out.",
     "ppa_links_empty": "No records yet.",
     "ppa_links_hint": "The link without a record only shows a notice — always send a link from this list.",
+    "ppa_qr": "QR code",
+    "sp_take": "Use this",
+    "lp_text": "The page could not be loaded just now. We will try again in a moment.",
+    "lp_retry": "Try again",
+    "vte_saved": "Saved",
+    "vte_saving": "Saving …",
+    "vte_failed": "Not saved — try again",
+    "vte_copy": "Copy text",
+    "vte_copied": "Copied",
+    "ss_read_failed": "The data for “{what}” could not be loaded — confirming is locked so nothing is saved from an empty list. Please reload the page.",
+    "sp_taken": "Taken",
+    "ppa_qr_title": "QR code",
+    "ppa_qr_intro": "Scanning opens the link — for a poster, a projector or a flyer. The link is printed below it for anyone who cannot scan.",
+    "ppa_qr_download": "Save as SVG",
     "ppa_fields": "Fields",
     "ppa_fields_title": "Choose fields",
     "ppa_fields_intro": "Choose which fields appear in the public form.",
@@ -1209,6 +1270,8 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "am_nothing": "Nothing found.",
     "am_as_wish": "Write it down as a wish",
     "am_assumed_tag": "assumed",
+    "am_inferred_tag": "added for you",
+    "am_inferred_hint": "Not in your description — Klar added it. “Not needed” removes it.",
     "am_instant_hint": "Applies at once.",
     "am_take": "Apply",
     "am_changed": "Changed",
@@ -1234,6 +1297,11 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "am_wish_limits_tool": "Possible here: when it runs, which entries it touches and what it changes about them. Not possible here: new fields, permissions, other lists.",
     "am_wish_placeholder": "Say it in one sentence.",
     "am_wish_look": "Show me",
+    "am_report_title": "What is wrong?",
+    "am_report_placeholder": "One sentence about what is not right.",
+    "am_report_send": "Report",
+    "am_report_thanks": "Thank you, we will look into it.",
+    "am_report_failed": "That did not work just now. Please try again.",
     "am_wish_reading": "Looking at it … {s} s",
     "am_wish_failed": "That did not work: {error}",
     "am_wish_shape": "This is how it would look:",
@@ -1262,6 +1330,8 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "am_stale": "The application was rebuilt on {date} without this plan. What you read here may differ from it.",
     "am_readonly": "This shows how the application works. Only administrators can change it.",
     "am_stale_rollback": "The application was set back to an older version on {date}. What you read here may describe the newer one.",
+    "am_planning_failed": "On {date} the plan for this application could not be made. It was built without a plan.",
+    "am_planning_failed_adopted": "On {date} the plan for this application could not be made. It was built without a plan. What you read here was read off the running application.",
     "am_loading": "Loading …",
     "am_saving": "Applying …",
     "am_upload": "Upload a file (PDF, DOCX)",
@@ -1284,6 +1354,7 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "am_op_empty": "is empty",
     "am_op_not_empty": "is set",
     "am_fits": "Keep it",
+    "am_published": "Published.",
     "am_change": "change",
     "am_join_all": " and ",
     "am_join_any": " or ",
@@ -1357,12 +1428,12 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "data_load_failed": "Failed to load data",
     "wizard_back_to_dashboard": "Back to Dashboard",
     "v_required": "“{label}” is required",
-    "v_email": "“{label}” is not a valid email address",
-    "v_tel": "“{label}” is not a valid phone number",
-    "v_url": "“{label}” is not a valid web address",
-    "v_number": "“{label}” must be a number",
-    "v_maxlength": "“{label}” may have at most {max} characters",
-    "v_option": "“{label}” has an invalid value",
+    "v_email": "Please enter a valid email address for “{label}”.",
+    "v_tel": "Please enter a valid phone number for “{label}”.",
+    "v_url": "Please enter a valid web address for “{label}”.",
+    "v_number": "Please enter a number for “{label}”.",
+    "v_maxlength": "Please shorten “{label}” to at most {max} characters.",
+    "v_option": "Please choose one of the offered values for “{label}”.",
     "v_range_order": "“{to}” must be after “{from}”",
     "v_range_blocked": "This period is not available — please choose other days",
     "v_min_nights_one": "Minimum stay: one night",
@@ -1388,10 +1459,17 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "nf_back": "Back to the dashboard",
     "ss_change_selection": "Change selection",
     "ss_missing": "Still missing:",
+    "le_add": "Add",
+    "le_edit": "Change",
+    "le_remove": "Remove",
+    "le_list": "{entity}: entries",
+    "le_empty": "No entry yet. Fill in and press “Add”, or take the first one with “Next”.",
     "ss_confirm": "Confirm",
     "ss_submitting": "Saving …",
     "ss_error_title": "That did not work — your entries are still here.",
     "ss_retry": "Try again",
+    "ss_offline_title": "No connection — your entries are saved.",
+    "ss_offline_text": "We send them automatically as soon as the network is back. You can leave the page open.",
     "ss_step_done": "created",
     "ss_step_done_updated": "updated",
     "ss_step_running_updated": "updating …",
@@ -1403,6 +1481,11 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "sx_reference": "Reference",
     "sx_copy": "Copy",
     "sx_restart": "Once more",
+    "wl_more": "Show {n} more",
+    "wl_less": "Show less",
+    "sx_undo": "Undo",
+    "sx_undone": "Undone.",
+    "sx_undo_failed": "Undo did not work — please try again.",
     "wz_needs": "This step first needs: {fields}.",
     "wz_needs_back": "Go to step {step}",
     "sx_copied": "Copied",
@@ -1419,6 +1502,15 @@ export const UI_CATALOG: Record<CoreLocale, Record<string, string>> = {
     "wz_progress": "Step {n} of {total}",
     "wz_progress_label": "Step {n} of {total}: {label}",
     "wz_steps_nav": "Progress",
+    "up_choose": "Choose file",
+    "up_replace": "Other file",
+    "up_remove": "Remove file",
+    "up_reading": "Reading file …",
+    "up_hint": "PDF, image, Word or Excel, at most {mb} MB.",
+    "up_too_big": "The file is larger than {mb} MB.",
+    "up_bad_type": "This file type is not accepted here — please PDF, image, Word or Excel.",
+    "up_empty": "The file is empty.",
+    "up_read_failed": "The file could not be read. Please choose it again.",
     "wz_step_done": "done",
     "wz_completed": "Completed",
     "wz_answers": "Your answers so far",
@@ -1641,11 +1733,11 @@ export const LABELS: Record<CoreLocale, LabelBundle> = {
         },
         "lookups": {
           "kategorie": {
+            "contest": "Contest",
             "jam": "Jam Session",
             "demo": "Demo",
             "workshop": "Workshop",
-            "sonstiges": "Sonstiges",
-            "contest": "Contest"
+            "sonstiges": "Sonstiges"
           },
           "skill_level": {
             "anfaenger": "Anfänger",
@@ -1723,9 +1815,9 @@ export const LABELS: Record<CoreLocale, LabelBundle> = {
           "datum_uhrzeit": "Date and Time",
           "beschreibung": "Description",
           "skill_level": "Skill Level",
-          "max_teilnehmer": "Maximum Number of Participants",
+          "max_teilnehmer": "Maximum Participants",
           "startgebuehr": "Entry Fee (€)",
-          "ort": "Location",
+          "ort": "Venue",
           "kontakt_email": "Contact Email",
           "event_website": "Event Website",
           "flyer": "Flyer / Image",
@@ -1733,15 +1825,15 @@ export const LABELS: Record<CoreLocale, LabelBundle> = {
         },
         "lookups": {
           "kategorie": {
+            "contest": "Contest",
             "jam": "Jam Session",
             "demo": "Demo",
             "workshop": "Workshop",
-            "sonstiges": "Other",
-            "contest": "Contest"
+            "sonstiges": "Other"
           },
           "skill_level": {
             "anfaenger": "Beginner",
-            "fortgeschritten": "Advanced",
+            "fortgeschritten": "Intermediate",
             "profi": "Pro",
             "alle_levels": "All Levels"
           }
@@ -1765,7 +1857,7 @@ export const LABELS: Record<CoreLocale, LabelBundle> = {
         "lookups": {
           "skill_level": {
             "anfaenger": "Beginner",
-            "fortgeschritten": "Advanced",
+            "fortgeschritten": "Intermediate",
             "profi": "Pro"
           },
           "board_stil": {
@@ -1860,7 +1952,12 @@ function htmlLang(): string | null {
 // The PLATFORM header owns the language switcher for the core languages. Its
 // contract is <html lang> (the la-widget library resolves and observes the
 // same attribute): adopt it at load when present, keep it in sync otherwise.
-export let locale: Locale = htmlLang() ?? readStored() ?? BUILD_LOCALE;
+// A lang the served shell carries for the build language is no platform choice
+// (data-lang-source="build", S-14) — read past it once; from here on every
+// change of <html lang> that is not our own comes from the platform header.
+const shellLang = document.documentElement.getAttribute('data-lang-source') === 'build';
+document.documentElement.removeAttribute('data-lang-source');
+export let locale: Locale = (shellLang ? null : htmlLang()) ?? readStored() ?? BUILD_LOCALE;
 // Baked chrome (widget dictionaries) exists only in the core languages —
 // non-core locales read their chrome via the overlay/en fallback chains.
 export let coreLocale: CoreLocale = isCore(locale) ? locale : 'en';
@@ -1959,7 +2056,7 @@ export async function syncProfileLocale(): Promise<void> {
   profileSyncDone = true;
   const before = locale;
   try {
-    const r = await fetch(`${LA_API_URL}/user`, { credentials: 'include' });
+    const r = await restFetch(`${LA_API_URL}/user`, { credentials: 'include' });
     if (!r.ok) return;
     const raw = (await r.json()) as { lang?: unknown; firstname?: unknown };
     if (typeof raw?.firstname === 'string' && raw.firstname.trim()) {
@@ -1982,7 +2079,7 @@ export async function syncProfileLocale(): Promise<void> {
 // the local switch already happened; localStorage carries it meanwhile.
 async function persistProfileLanguage(next: Locale): Promise<void> {
   try {
-    await fetch(`${LA_API_URL}/user`, {
+    await restFetch(`${LA_API_URL}/user`, {
       method: 'PATCH',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },

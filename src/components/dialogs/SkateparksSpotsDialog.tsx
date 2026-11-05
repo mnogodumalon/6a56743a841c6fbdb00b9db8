@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ComputedContext } from '@/config/form-enhancements/types';
-import { applyFieldOrder, flattenFieldOrder, applyDefaults, evalComputed, numberInputProps, clampNumberValue, classifyComputed, extractApplookupRefs, mergeApplookupRefs, resolveApplookupRef } from '@/config/form-enhancements/types';
+import { applyFieldOrder, flattenFieldOrder, applyDefaults, evalComputed, numberInputProps, clampNumberValue, classifyComputed, extractApplookupRefs, mergeApplookupRefs, resolveApplookupRef, dialogLabel, dropHidden } from '@/config/form-enhancements/types';
 import { formEnhancements, computedDeps, computedApplookupRefs } from '@/config/form-enhancements/SkateparksSpots';
 import { AttachmentsSection } from '@/components/AttachmentsSection';
 import { requiredMessage } from '@/lib/journey/messages';
@@ -92,6 +92,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
   }, [fields, normalizedDefaults]);
   // Fields the plan assigns to a tool (empty without a plan).
   const SYSTEM_ASSIGNED: string[] = [];
+  const PLAN_CREATE_PRESETS: Record<string, unknown> = {};
   const [showErrors, setShowErrors] = useState(false);
   const REQUIRED_FIELDS = ['name', 'strasse', 'hausnummer', 'postleitzahl', 'stadt'] as const;
   const missingRequired = REQUIRED_FIELDS.filter(k => {
@@ -147,7 +148,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
 
   useEffect(() => {
     if (open) {
-      setFields(applyDefaults(normalizedDefaults ?? {}, formEnhancements.defaults) as Partial<SkateparksSpots['fields']>);
+      setFields(applyDefaults({ ...(recordId ? {} : normalizeDefaults(PLAN_CREATE_PRESETS)), ...(normalizedDefaults ?? {}) }, formEnhancements.defaults) as Partial<SkateparksSpots['fields']>);
       setPreview(null);
       setScanSuccess(false);
       setAiText('');
@@ -395,14 +396,18 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
     }
   }, []);
 
-  const DIALOG_INTENT = defaultValues
-    ? t('edit_entity', { entity: appLabel('skateparks_spots') })
-    : t('new_entity', { entity: appLabel('skateparks_spots') });
+  // EDIT is a record, not a prefill: openCreate(defaults) used to read „bearbeiten“
+  // (acceptance 4, L-42) because the title keyed on defaultValues
+  const DIALOG_INTENT = recordId
+    ? (formEnhancements.title?.edit ?? t('edit_entity', { entity: appLabel('skateparks_spots') }))
+    : (formEnhancements.title?.create ?? t('new_entity', { entity: appLabel('skateparks_spots') }));
+  // the dialog's word for a field — the config may rename it (S-3)
+  const labelFor = (k: string) => dialogLabel(formEnhancements, k, fieldLabel('skateparks_spots', k));
 
   const fieldBlocks: Record<string, React.ReactNode> = {
     'name': (
       <div key="name" className="space-y-1.5">
-        <Label htmlFor="name">{fieldLabel('skateparks_spots', 'name')} <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="name">{labelFor('name')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="name"
           placeholder=""
@@ -417,7 +422,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'strasse': (
       <div key="strasse" className="space-y-1.5">
-        <Label htmlFor="strasse">{fieldLabel('skateparks_spots', 'strasse')} <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="strasse">{labelFor('strasse')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="strasse"
           placeholder=""
@@ -432,7 +437,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'hausnummer': (
       <div key="hausnummer" className="space-y-1.5">
-        <Label htmlFor="hausnummer">{fieldLabel('skateparks_spots', 'hausnummer')} <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="hausnummer">{labelFor('hausnummer')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="hausnummer"
           placeholder=""
@@ -447,7 +452,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'postleitzahl': (
       <div key="postleitzahl" className="space-y-1.5">
-        <Label htmlFor="postleitzahl">{fieldLabel('skateparks_spots', 'postleitzahl')} <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="postleitzahl">{labelFor('postleitzahl')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="postleitzahl"
           placeholder=""
@@ -462,7 +467,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'stadt': (
       <div key="stadt" className="space-y-1.5">
-        <Label htmlFor="stadt">{fieldLabel('skateparks_spots', 'stadt')} <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="stadt">{labelFor('stadt')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="stadt"
           placeholder=""
@@ -477,7 +482,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'beschreibung': (
       <div key="beschreibung" className="space-y-1.5">
-        <Label htmlFor="beschreibung">{fieldLabel('skateparks_spots', 'beschreibung')}</Label>
+        <Label htmlFor="beschreibung">{labelFor('beschreibung')}</Label>
         <Textarea
           id="beschreibung"
           placeholder=""
@@ -489,7 +494,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'untergrundtyp': (
       <div key="untergrundtyp" className="space-y-1.5">
-        <Label htmlFor="untergrundtyp">{fieldLabel('skateparks_spots', 'untergrundtyp')}</Label>
+        <Label htmlFor="untergrundtyp">{labelFor('untergrundtyp')}</Label>
         <div role="radiogroup" className="flex flex-wrap gap-1.5">
           <button
             type="button"
@@ -561,7 +566,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'standort': (
       <div key="standort" className="space-y-1.5">
-        <Label htmlFor="standort">{fieldLabel('skateparks_spots', 'standort')}</Label>
+        <Label htmlFor="standort">{labelFor('standort')}</Label>
         <div className="space-y-3">
           <Button type="button" variant="outline" className="w-full max-sm:h-11" disabled={locating} onClick={() => geoLocate("standort")}>
             {locating ? <IconLoader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <IconCrosshair className="h-4 w-4 mr-1.5" />}
@@ -619,7 +624,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
     ),
     'website': (
       <div key="website" className="space-y-1.5">
-        <Label htmlFor="website">{fieldLabel('skateparks_spots', 'website')}</Label>
+        <Label htmlFor="website">{labelFor('website')}</Label>
         <Input
           id="website"
           type="url"
@@ -631,7 +636,15 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
       </div>
     ),
   };
-  const orderedFields = applyFieldOrder(Object.keys(fieldBlocks), formEnhancements.fieldOrder);
+  // Fields this dialog never shows: the config's `hidden` and the fields the
+  // OVERVIEW changes with its own button (plan.dashboard.writes, how: button —
+  // a control, not a form value; S-3). A required field stays visible.
+  const DASHBOARD_BUTTON_FIELDS: string[] = [];
+  const ALWAYS_SHOWN: string[] = ['name', 'strasse', 'hausnummer', 'postleitzahl', 'stadt'];
+  // the values the plan's create flow sets itself (fixed:…): preset on create and
+  // not asked — the dialog is the record's door, the flow's rule still holds (S-12)
+  const HIDDEN = new Set<string>([...(formEnhancements.hidden ?? []), ...DASHBOARD_BUTTON_FIELDS, ...(recordId ? [] : Object.keys(PLAN_CREATE_PRESETS))].filter(k => !ALWAYS_SHOWN.includes(k)));
+  const orderedFields = dropHidden(applyFieldOrder(Object.keys(fieldBlocks), formEnhancements.fieldOrder), HIDDEN);
   const orderedFieldsKey = orderedFields.map((it) => typeof it === 'string' ? it : it.row.join('+')).join(',');
 
   // Render-Modell für Computed-Felder:
@@ -912,7 +925,7 @@ export function SkateparksSpotsDialog({ open, onClose, onSubmit, defaultValues, 
                 if (SYSTEM_ASSIGNED.includes(k) && !recordId) {
                   return (
                     <div key={k} className="space-y-1.5 min-w-0">
-                      <Label>{fieldLabel('skateparks_spots', k)}</Label>
+                      <Label>{labelFor(k)}</Label>
                       <p className="text-sm text-muted-foreground">{t('assigned_by_system')}</p>
                     </div>
                   );

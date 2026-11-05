@@ -77,7 +77,7 @@ export function PublicShell({ title, description, wide, fullBleed, plain, loadin
         {title && !fullBleed ? (
           <header className="mb-6">
             <h1 className="text-2xl font-normal">{title}</h1>
-            {description ? <p className="text-base text-muted-foreground mt-1">{description}</p> : null}
+            {description ? <p className="text-base text-[var(--text-subtle)] mt-1">{description}</p> : null}
           </header>
         ) : null}
         {children}
@@ -95,7 +95,7 @@ export function PublicShell({ title, description, wide, fullBleed, plain, loadin
           {title ? (
             <header className="mb-6 pb-5 border-b border-border">
               <h1 className="text-2xl font-semibold">{title}</h1>
-              {description ? <p className="text-base text-muted-foreground mt-1">{description}</p> : null}
+              {description ? <p className="text-base text-[var(--text-subtle)] mt-1">{description}</p> : null}
             </header>
           ) : null}
           {children}

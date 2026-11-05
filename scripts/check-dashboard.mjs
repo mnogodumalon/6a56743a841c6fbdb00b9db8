@@ -8,6 +8,7 @@
  */
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const FILE = 'src/pages/DashboardOverview.tsx';
 let src;
@@ -208,6 +209,9 @@ if (gridIdx >= 0) {
   const h1Idx = code.indexOf('<h1');
   if (h1Idx === -1 || h1Idx > gridIdx) {
     errors.push('No <h1> page header before <DashboardGrid> — EVERY dashboard starts with the greeting h1 (gruss()), context line and primary action ABOVE the grid; KPIs are never the first element.');
+  } else if (!/\bgruss\s*\(/.test(code)) {
+    // G-7 (04.11.2026): the prompt promises a GREETING, the gate checked only an <h1>
+    warnings.push('The page header exists, but the greeting does not come from gruss() (src/lib/polish) — the h1 should read „Guten Morgen!“ from the clock, not a static title.');
   }
 }
 
@@ -404,6 +408,137 @@ if (gridIdx >= 0) {
   }
 }
 
+// 25. A change an update flow owns is never written from this page. The flow
+// records who and when (a review, a decision); a dashboard button that sets
+// the state itself bypasses that control (live 20.10.2026: „Freigeben“ set a
+// proposal to approved without reviewer or date, next to the very flow the
+// owner's prompt asked for). The page opens the flow for the record:
+// flowActionFor(entity, field, id, value) from '@/config/plan'.
+{
+  const OWNED = {};
+  const callRe = /\b(update\w+Entry)\s*\(/g;
+  let m;
+  const hits = [];
+  while ((m = callRe.exec(code))) {
+    const own = OWNED[m[1]];
+    if (!own) continue;
+    let depth = 0, j = m.index + m[0].length - 1;
+    for (; j < code.length; j++) {
+      if (code[j] === '(') depth++;
+      else if (code[j] === ')' && --depth === 0) break;
+    }
+    const args = code.slice(m.index + m[0].length, j);
+    const keys = new Set();
+    for (const k of args.matchAll(/[{,]\s*(\w+)\s*(?::|(?=[,}]))/g)) keys.add(k[1]);
+    for (const field of Object.keys(own.fields)) {
+      if (!keys.has(field)) continue;
+      const line = code.slice(0, m.index).split('\n').length;
+      const flows = own.fields[field].map(o => `„${o.slug}“${o.value !== undefined ? ` (sets '${o.value}')` : ''}`).join(', ');
+      hits.push(`${own.entity}.${field} — owned by ${flows}\n    line ${line}: ${dashLines[line - 1]}`);
+    }
+  }
+  if (hits.length) {
+    errors.push(`This page writes a field an update flow owns — the flow records who and when, a direct write bypasses it. Replace the write with the flow: \`const go = flowActionFor('<entity>', '<field>', r.record_id, '<target key>')\` (import from '@/config/plan'; null while the flow is not live) and \`action: go ? { label, onClick: go } : undefined\`; a drag calls go?.() and returns a short notice:\n  ` + hits.join('\n  '));
+  }
+}
+
+// 25b. Every flowActionFor(entity, field, …) names a change a flow of the plan
+// owns — otherwise it is null forever and a board move or card button only
+// says „not available“ (Abnahme 5, 04.11.2026: the moderation board's move to
+// FREIGEGEBEN never reached the built flow).
+{
+  const OWNED = {};
+  const owned = new Set();
+  for (const own of Object.values(OWNED)) for (const f of Object.keys(own.fields)) owned.add(`${own.entity}.${f}`);
+  const dead = [];
+  for (const m of code.matchAll(/\bflowActionFor\(\s*['"](\w+)['"]\s*,\s*['"](\w+)['"]/g)) {
+    if (owned.has(`${m[1]}.${m[2]}`)) continue;
+    const line = code.slice(0, m.index).split('\n').length;
+    dead.push(`${m[1]}.${m[2]} — line ${line}: ${dashLines[line - 1]}`);
+  }
+  if (dead.length) {
+    const known = [...owned].join(', ') || 'none';
+    errors.push(`flowActionFor names a change no flow of the plan owns — it is always null, the control can never act. Flows own: ${known}. Use one of them, or write the field directly only if the plan lets the overview write it (plan.dashboard.writes):\n  ` + dead.join('\n  '));
+  }
+}
+
+// 26. The overview writes only what the plan lets it write itself
+// (plan.dashboard.writes — a drag that moves a stay, a button that flips a
+// flag). Audit 23.10.2026: the overview moved bookings and set „An Besitzer
+// gesendet“ with no plan and no line on „Deine Anwendung“. A plan from
+// before that date has no list (null): warn, never fail.
+// G-4 (04.11.2026): every file under src/pages (not the flows' and public
+// pages — their gates hold them) and under src/components/custom and
+// src/components/overview, and a payload kept in a variable
+// (`const patch = { status: 'x' }; updateXEntry(id, patch)`) is read too.
+{
+  const ALLOWED = null;
+  const callRe = /\b((?:update|create|delete)\w+Entry)\s*\(/g;
+  const walk = (dir) => {
+    let out = [];
+    if (!existsSync(dir)) return out;
+    for (const n of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, n.name);
+      if (n.isDirectory()) { if (!['intents', 'public', 'ui'].includes(n.name)) out = out.concat(walk(full)); }
+      else if (/\.tsx?$/.test(n.name) && !n.name.endsWith('.example.tsx')) out.push(full);
+    }
+    return out;
+  };
+  const files = [...new Set([FILE, ...walk('src/pages'), ...walk('src/components/custom'), ...walk('src/components/overview')])]
+    .filter(f => f === FILE || existsSync(f));
+  const bad = [];
+  for (const file of files) {
+    const raw = file === FILE ? src : readFileSync(file, 'utf8');
+    const text = file === FILE ? code : stripCommentsKeepLayout(raw);
+    const rawLines = raw.split('\n');
+    const where = file === FILE ? '' : `${file} `;
+    // a payload kept in a variable: const patch = { … } / const patch: X = { … }
+    const literalOf = (ident) => {
+      const decl = new RegExp(`\\b(?:const|let|var)\\s+${ident}\\s*(?::[^=]+)?=\\s*\\{`).exec(text);
+      if (!decl) return null;
+      let depth = 0, j = decl.index + decl[0].length - 1;
+      for (; j < text.length; j++) {
+        if (text[j] === '{') depth++;
+        else if (text[j] === '}' && --depth === 0) break;
+      }
+      return text.slice(decl.index + decl[0].length - 1, j + 1);
+    };
+    let m;
+    callRe.lastIndex = 0;
+    while ((m = callRe.exec(text))) {
+      const name = m[1];
+      const line = text.slice(0, m.index).split('\n').length;
+      if (!name.startsWith('update')) {
+        bad.push(`${where}${name} — the overview never creates or deletes records itself (open crud.<entity>.openCreate / the record overlay)\n    line ${line}: ${rawLines[line - 1]}`);
+        continue;
+      }
+      let depth = 0, j = m.index + m[0].length - 1;
+      for (; j < text.length; j++) {
+        if (text[j] === '(') depth++;
+        else if (text[j] === ')' && --depth === 0) break;
+      }
+      const args = text.slice(m.index + m[0].length, j);
+      let payload = args;
+      // second argument an identifier → its object literal in this file
+      const second = /^[^,]*,\s*([A-Za-z_$][\w$]*)\s*(?:,|$)/.exec(args.trim());
+      if (second && !/[{]/.test(args)) payload = literalOf(second[1]) ?? '';
+      const keys = [];
+      for (const k of payload.matchAll(/[{,]\s*(\w+)\s*(?::|(?=[,}]))/g)) keys.push(k[1]);
+      const allowed = ALLOWED === null ? { entity: name, fields: [] } : (ALLOWED[name] || { entity: name, fields: [] });
+      const extra = keys.filter(k => !allowed.fields.includes(k));
+      if (extra.length) {
+        const only = ALLOWED === null ? 'no plan decided this yet' : `the plan lets this page write only: ${allowed.fields.length ? allowed.fields.join(', ') : 'nothing'}`;
+        bad.push(`${where}${allowed.entity}: ${extra.join(', ')} — ${only}\n    line ${line}: ${rawLines[line - 1]}`);
+      }
+    }
+  }
+  if (bad.length) {
+    const msg = `This page writes fields the plan does not give it (plan.dashboard.writes). A direct write that the plan does not name is invisible on „Deine Anwendung“. Remove the write (use the record dialog: crud.<entity>.openEdit(record)) or ask the owner to change the plan:\n  ` + bad.join('\n  ');
+    if (ALLOWED === null) warnings.push(msg + '\n  (plan from before 23.10.2026 — warning only)');
+    else errors.push(msg);
+  }
+}
+
 // 21. Runtime i18n: the dashboard ships its UI languages with a live
 // switcher — hardcoded UI strings stay frozen in one language. Every string
 // the agent writes is tx-marked (`{tx('…')}` — the pipeline translates) or
@@ -545,6 +680,113 @@ if (gridIdx >= 0) {
     const missing = [...wanted].filter(n => !new RegExp(`export\\s+(?:type\\s+|interface\\s+|const\\s+|function\\s+)?${n}\\b`).test(typesSrc));
     if (missing.length) {
       errors.push(`${TYPES} no longer exports ${missing.join(', ')} — the file is GENERATOR-owned; restore it (run Update) instead of re-implementing it in place. The dialogs import these by name.`);
+    }
+  }
+}
+
+// 27. A QR code to a public page is BUILT, never read from a record (Abnahme 5,
+// 04.11.2026: the beamer and the overview encoded a link field's seed value
+// „https://veranstaltung.example.com/…“ instead of the join page). The block
+// <PublicPageQr entity=… recordId=… /> (or usePublicPageLink) finds the
+// published page by its link_param. An error when the plan has such a page,
+// a warning otherwise (a QR of some other link may be meant).
+{
+  const LINK_ENTITIES = [];
+  const walkQr = (dir) => {
+    let out = [];
+    if (!existsSync(dir)) return out;
+    for (const n of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, n.name);
+      if (n.isDirectory()) { if (!['intents', 'public', 'ui'].includes(n.name)) out = out.concat(walkQr(full)); }
+      else if (/\.tsx?$/.test(n.name) && !n.name.endsWith('.example.tsx')) out.push(full);
+    }
+    return out;
+  };
+  const files = [...new Set([FILE, ...walkQr('src/pages'), ...walkQr('src/components/custom'), ...walkQr('src/components/overview')])]
+    .filter(f => f === FILE || existsSync(f));
+  const DATA = /\.fields\b|\bfields\s*\[|\bfield(?:Text|Lookup|Ref)\s*\(/;
+  const hits = [];
+  for (const file of files) {
+    const text = file === FILE ? code : stripCommentsKeepLayout(readFileSync(file, 'utf8'));
+    const exprs = [];
+    for (const m of text.matchAll(/<QrCode\b[^>]*?\bvalue=\{/g)) {
+      let depth = 1, j = m.index + m[0].length;
+      for (; j < text.length && depth > 0; j++) { if (text[j] === '{') depth++; else if (text[j] === '}') depth--; }
+      exprs.push([m.index, text.slice(m.index + m[0].length, j - 1)]);
+    }
+    for (const m of text.matchAll(/\bqrSvgString\(([^,)]*)/g)) exprs.push([m.index, m[1]]);
+    for (const [at, expr] of exprs) {
+      if (!DATA.test(expr)) continue;
+      const line = text.slice(0, at).split('\n').length;
+      hits.push(`${file}:${line}: ${expr.trim().slice(0, 120)}`);
+    }
+  }
+  if (hits.length) {
+    const msg = `A QR code encodes a value read from a record — a record's link field is not where visitors go (a seed holds a placeholder address). Use <PublicPageQr entity="<entity>" recordId={r.record_id} /> or usePublicPageLink(entity, id) from '@/components/widgets/PublicPageQr': it builds the join link of the published page whose link_param names the entity${LINK_ENTITIES.length ? ` (this plan: ${LINK_ENTITIES.join(', ')})` : ''}:\n  ` + hits.join('\n  ');
+    (LINK_ENTITIES.length ? errors : warnings).push(msg);
+  }
+}
+
+// 28. Every MANUAL tool of the plan that works on a record has a start on the
+// overview — a <ToolButton tool="<id>"> on that record's card or overlay (S-21,
+// Abnahme 6: the manual AI tool was only in „Alle Aktionen“; nobody found it).
+{
+  const MANUAL = {};
+  const walkTools = (dir) => {
+    let out = [];
+    if (!existsSync(dir)) return out;
+    for (const n of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, n.name);
+      if (n.isDirectory()) { if (!['intents', 'public', 'ui'].includes(n.name)) out = out.concat(walkTools(full)); }
+      else if (/\.tsx?$/.test(n.name) && !n.name.endsWith('.example.tsx')) out.push(full);
+    }
+    return out;
+  };
+  const all = [code, ...[...walkTools('src/pages'), ...walkTools('src/components/custom'), ...walkTools('src/components/overview')]
+    .filter(f => f !== FILE).map(f => stripCommentsKeepLayout(readFileSync(f, 'utf8')))].join('\n');
+  const missing = [];
+  for (const [entity, tools] of Object.entries(MANUAL)) {
+    for (const t of tools) {
+      if (!new RegExp(`<ToolButton\\b[^>]*\\btool=["'{\\s]*${t.id}["'}]`).test(all)) missing.push(`${t.id} (on ${entity}: <ToolButton tool="${t.id}" recordId={r.record_id} label={tx('${t.label}')} />)`);
+    }
+  }
+  if (missing.length) {
+    errors.push(`A manual tool of the plan has no start on the overview — put its button on the card or overlay footer of the record it works on (import { ToolButton } from '@/components/ToolButton'):\n  ` + missing.join('\n  '));
+  }
+}
+
+// Display views (src/pages/views, dashboard.views): every live read's filter is vSQL
+// the real server parses (check-vsql), and a read that fails is SAID on screen —
+// 0.0.502's beamer sent the plan's words as a filter, got 400 on every poll and
+// showed „Pause“ for good, because nothing read the hook's `error`.
+{
+  const VIEWS = 'src/pages/views';
+  const VIEW_EDITS = {};
+  if (existsSync(VIEWS)) {
+    for (const n of readdirSync(VIEWS).filter(f => f.endsWith('.tsx'))) {
+      const file = join(VIEWS, n);
+      const vsrc = readFileSync(file, 'utf8');
+      const lives = [...vsrc.matchAll(/(?:const|let)\s+(\w+)\s*=\s*useLiveRecords\(/g)].map(m => m[1]);
+      for (const v of lives) {
+        if (!new RegExp(`\\b${v}\\.error\\b`).test(vsrc)) {
+          // a warning: a view built before this rule must not block an update; the filter below is an error
+          warnings.push(`${file}: the live read \`${v}\` never shows \`${v}.error\` — when it fails and there are no rows, say so on screen (e.g. {${v}.error && ${v}.records.length === 0 && <p role="alert" data-live-error>…</p>}), never the empty state.`);
+        }
+      }
+      // 29. a text the plan lets the person edit ON this view (dashboard.views[].edits, Bau 10:
+      // the merged text was read-only behind an „Bearbeiten“ dialog) keeps its generated editor
+      for (const f of (VIEW_EDITS[file] || [])) {
+        if (!new RegExp(`<ViewTextEditor\\b[\\s\\S]{0,1500}?\\bfield=["'{\\s]*${f}["'}]`).test(vsrc)) {
+          errors.push(`${file}: the plan lets the person edit '${f}' on this view — render <ViewTextEditor field="${f}" recordId={…} value={…} save={…} /> (import { ViewTextEditor } from '@/components/blocks/ViewTextEditor') on the record the view shows; never a read-only text with an edit dialog.`);
+        }
+      }
+      if (/useLiveRecords\(/.test(vsrc) && existsSync('scripts/check-vsql.mjs')) {
+        const r = spawnSync('node', ['scripts/check-vsql.mjs', file], { encoding: 'utf8', env: process.env });
+        if (r.status !== 0) {
+          const lines = `${r.stdout || ''}${r.stderr || ''}`.split('\n').filter(l => l.startsWith('ERROR:')).map(l => l.slice(6).trim());
+          for (const l of lines.length ? lines : [`check-vsql red for ${file}`]) errors.push(l);
+        }
+      }
     }
   }
 }

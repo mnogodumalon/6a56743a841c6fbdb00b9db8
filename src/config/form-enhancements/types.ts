@@ -158,7 +158,33 @@ export type FormEnhancements = {
   computed: Record<string, Computed>;
   /** Per-field number rules (min/max/allowNegative). Optional. */
   numberFields?: Record<string, NumberFieldConfig>;
+  /** Fields the dialog does not show at all (S-3, 04.11.2026: the dialog
+   *  showed every field and read like the database). A required field is
+   *  never hidden — the dialog ignores it here. */
+  hidden?: string[];
+  /** The dialog's title per mode — default „Neu: <Entität>“ / „<Entität> bearbeiten“. */
+  title?: { create?: string; edit?: string };
+  /** A field's label in this dialog, where the app's label is not the word
+   *  people use here („Fragestellung“ → „Deine Frage“). */
+  labels?: Record<string, string>;
 };
+
+/** The dialog's label for a field: the config's word, else the app's label. */
+export function dialogLabel(fe: FormEnhancements, key: string, fallback: string): string {
+  return fe.labels?.[key] ?? fallback;
+}
+
+/** Drops hidden keys out of an ordered field list; a row that loses every key goes too. */
+export function dropHidden(items: FieldOrderItem[], hidden: ReadonlySet<string>): FieldOrderItem[] {
+  const out: FieldOrderItem[] = [];
+  for (const it of items) {
+    if (typeof it === 'string') { if (!hidden.has(it)) out.push(it); continue; }
+    const row = it.row.filter(k => !hidden.has(k));
+    if (row.length === 1) out.push(row[0]);
+    else if (row.length > 1) out.push({ ...it, row });
+  }
+  return out;
+}
 
 /**
  * Returns HTML input props (min, max) for a number field. Default is min=0

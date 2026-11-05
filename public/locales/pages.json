@@ -19,10 +19,10 @@
       "Nächstes: {0}": "Next: {0}",
       "Ohne Anmeldung": "No registrations",
       "Ort anlegen": "Create Venue",
-      "Plätze belegt": "Spots filled",
+      "Plätze belegt": "Spots taken",
       "heute": "today",
       "kommende Events": "upcoming events",
-      "{0} verschoben": "{0} postponed",
+      "{0} verschoben": "{0} rescheduled",
       "{0} von {1} Plätzen": "{0} of {1} spots",
       "{0} überbucht — mehr Anmeldungen als Plätze.": "{0} overbooked — more registrations than spots."
     }

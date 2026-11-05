@@ -1,5 +1,9 @@
 <!doctype html>
-<html lang="en">
+<!-- lang = the BUILD language (the sandbox fills it; screen readers need a
+     lang from the first byte). data-lang-source="build" tells i18n that this
+     is NOT the platform header's choice (S-14, acceptance 4: a static "en"
+     made every visitor without a login read „You are not logged in“). -->
+<html lang="de" data-lang-source="build">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
@@ -36,6 +40,11 @@
     <script src="/react-webcomponents/current/drawer.placeholder.js"></script>
     <link rel="stylesheet" href="/react-webcomponents/current/drawer.placeholder.css">
     <script>
+      // A public page (#/public/<slug>) renders no header, drawer or assistant:
+      // the web-components loader and the Klar embed stay out of a visitor's
+      // load (P-2, 03.11.2026 — 3,8 s → 1,5 s on a slow phone). The dashboard
+      // routes load them as before.
+      if (!/^#\/public(\/|$)/.test(location.hash)) {
       var laLoader = document.createElement('script');
       laLoader.type = 'module';
       laLoader.src = '/react-webcomponents/current/loader.js';
@@ -48,6 +57,7 @@
       klarEmbed.type = 'module';
       klarEmbed.src = '/actions-agent/embed/embed.js';
       document.head.appendChild(klarEmbed);
+      }
     </script>
   </head>
   <body>

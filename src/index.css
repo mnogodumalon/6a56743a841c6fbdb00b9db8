@@ -182,6 +182,9 @@
   /* neutral/200 + neutral/500 — muted backgrounds and text */
   --muted: #e5e7eb;
   --muted-foreground: #9b9b9b;
+  /* readable secondary text (5.7:1 on white) — the brand's muted token stays as it is (Abnahme 7: the
+     public page's subtitle read too faint); use for text people must read, not for decoration */
+  --text-subtle: #666666;
 
   /* orange/50 + orange/900 — accent (active nav, hover states) */
   --accent: #fff4ee;

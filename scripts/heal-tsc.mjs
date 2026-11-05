@@ -148,6 +148,11 @@ const HOME_LOCAL_RE = /^(.+?)\((\d+),(\d+)\): error TS2459: Module '"(.+?)"' dec
 
 /** name → the '@/…' module that really exports it (generated from the scaffold). */
 const EXPORT_HOME = {
+  "QrCode": "@/components/widgets/QrCode",
+  "qrSvgString": "@/components/widgets/QrCode",
+  "encodeQr": "@/components/widgets/QrCode",
+  "PublicPageQr": "@/components/widgets/PublicPageQr",
+  "usePublicPageLink": "@/components/widgets/PublicPageQr",
   "lookupOption": "@/types/app",
   "APP_IDS": "@/types/app",
   "LOOKUP_OPTIONS": "@/types/app",
@@ -167,6 +172,8 @@ const EXPORT_HOME = {
   "localeTag": "@/i18n",
   "dateFnsLocale": "@/i18n",
   "useDashboardData": "@/hooks/useDashboardData",
+  "useLiveRecords": "@/hooks/useLiveRecords",
+  "useLiveRecord": "@/hooks/useLiveRecords",
   "LivingAppsService": "@/services/livingAppsService",
   "createRecordUrl": "@/services/livingAppsService",
   "extractRecordId": "@/services/livingAppsService",
@@ -606,7 +613,7 @@ function healFile(filePath, errors, nullErrors, cmpErrors, jsxErrors, mixErrors,
       end: found.node.getEnd(),
       text: `${quote}${found.target}${quote}`,
     });
-    fixed.push(`${filePath}:${err.line} discriminant '${found.node.text}' → '${found.target}'`);
+    fixed.push({ file: filePath, line: err.line, kind: 'discriminant', from: found.node.text, to: found.target });
   }
 
   // Class C: `?? null` where the payload type wants undefined.

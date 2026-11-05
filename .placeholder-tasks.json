@@ -184,6 +184,10 @@
             "required": true,
             "options": [
               {
+                "key": "contest",
+                "label": "Contest"
+              },
+              {
                 "key": "jam",
                 "label": "Jam Session"
               },
@@ -198,10 +202,6 @@
               {
                 "key": "sonstiges",
                 "label": "Sonstiges"
-              },
-              {
-                "key": "contest",
-                "label": "Contest"
               }
             ]
           },

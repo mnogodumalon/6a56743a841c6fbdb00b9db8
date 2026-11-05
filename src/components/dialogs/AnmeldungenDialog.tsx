@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { ComputedContext } from '@/config/form-enhancements/types';
-import { applyFieldOrder, flattenFieldOrder, applyDefaults, evalComputed, numberInputProps, clampNumberValue, classifyComputed, extractApplookupRefs, mergeApplookupRefs, resolveApplookupRef } from '@/config/form-enhancements/types';
+import { applyFieldOrder, flattenFieldOrder, applyDefaults, evalComputed, numberInputProps, clampNumberValue, classifyComputed, extractApplookupRefs, mergeApplookupRefs, resolveApplookupRef, dialogLabel, dropHidden } from '@/config/form-enhancements/types';
 import { formEnhancements, computedDeps, computedApplookupRefs } from '@/config/form-enhancements/Anmeldungen';
 import { AttachmentsSection } from '@/components/AttachmentsSection';
 import { requiredMessage } from '@/lib/journey/messages';
@@ -122,6 +122,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
   }
   // Fields the plan assigns to a tool (empty without a plan).
   const SYSTEM_ASSIGNED: string[] = [];
+  const PLAN_CREATE_PRESETS: Record<string, unknown> = {};
   const [showErrors, setShowErrors] = useState(false);
   const REQUIRED_FIELDS = ['event', 'vorname', 'nachname', 'email', 'skill_level', 'teilnahmebedingungen'] as const;
   const missingRequired = REQUIRED_FIELDS.filter(k => {
@@ -178,7 +179,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
 
   useEffect(() => {
     if (open) {
-      setFields(applyDefaults(normalizedDefaults ?? {}, formEnhancements.defaults) as Partial<Anmeldungen['fields']>);
+      setFields(applyDefaults({ ...(recordId ? {} : normalizeDefaults(PLAN_CREATE_PRESETS)), ...(normalizedDefaults ?? {}) }, formEnhancements.defaults) as Partial<Anmeldungen['fields']>);
       setPreview(null);
       setScanSuccess(false);
       setAiText('');
@@ -342,14 +343,18 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
     }
   }, []);
 
-  const DIALOG_INTENT = defaultValues
-    ? t('edit_entity', { entity: appLabel('anmeldungen') })
-    : t('new_entity', { entity: appLabel('anmeldungen') });
+  // EDIT is a record, not a prefill: openCreate(defaults) used to read „bearbeiten“
+  // (acceptance 4, L-42) because the title keyed on defaultValues
+  const DIALOG_INTENT = recordId
+    ? (formEnhancements.title?.edit ?? t('edit_entity', { entity: appLabel('anmeldungen') }))
+    : (formEnhancements.title?.create ?? t('new_entity', { entity: appLabel('anmeldungen') }));
+  // the dialog's word for a field — the config may rename it (S-3)
+  const labelFor = (k: string) => dialogLabel(formEnhancements, k, fieldLabel('anmeldungen', k));
 
   const fieldBlocks: Record<string, React.ReactNode> = {
     'event': (
       <div key="event" className="space-y-1.5">
-        <Label htmlFor="event">{fieldLabel('anmeldungen', 'event')} <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="event">{labelFor('event')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Combobox
           id="event"
           placeholder=""
@@ -369,7 +374,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
     ),
     'vorname': (
       <div key="vorname" className="space-y-1.5">
-        <Label htmlFor="vorname">{fieldLabel('anmeldungen', 'vorname')} <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="vorname">{labelFor('vorname')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="vorname"
           placeholder=""
@@ -384,7 +389,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
     ),
     'nachname': (
       <div key="nachname" className="space-y-1.5">
-        <Label htmlFor="nachname">{fieldLabel('anmeldungen', 'nachname')} <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="nachname">{labelFor('nachname')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="nachname"
           placeholder=""
@@ -399,7 +404,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
     ),
     'geburtsdatum': (
       <div key="geburtsdatum" className="space-y-1.5">
-        <Label htmlFor="geburtsdatum">{fieldLabel('anmeldungen', 'geburtsdatum')}</Label>
+        <Label htmlFor="geburtsdatum">{labelFor('geburtsdatum')}</Label>
         <DatePicker
           id="geburtsdatum"
           placeholder=""
@@ -411,7 +416,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
     ),
     'email': (
       <div key="email" className="space-y-1.5">
-        <Label htmlFor="email">{fieldLabel('anmeldungen', 'email')} <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="email">{labelFor('email')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <Input
           id="email"
           type="email"
@@ -428,7 +433,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
     ),
     'telefon': (
       <div key="telefon" className="space-y-1.5">
-        <Label htmlFor="telefon">{fieldLabel('anmeldungen', 'telefon')}</Label>
+        <Label htmlFor="telefon">{labelFor('telefon')}</Label>
         <Input
           id="telefon"
           type="tel"
@@ -441,7 +446,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
     ),
     'skill_level': (
       <div key="skill_level" className="space-y-1.5">
-        <Label htmlFor="skill_level">{fieldLabel('anmeldungen', 'skill_level')} <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="skill_level">{labelFor('skill_level')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <div role="radiogroup" className="flex flex-wrap gap-1.5">
           <button
             type="button"
@@ -490,7 +495,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
     ),
     'board_stil': (
       <div key="board_stil" className="space-y-1.5">
-        <Label htmlFor="board_stil">{fieldLabel('anmeldungen', 'board_stil')}</Label>
+        <Label htmlFor="board_stil">{labelFor('board_stil')}</Label>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Checkbox
@@ -567,7 +572,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
     ),
     'anmerkungen': (
       <div key="anmerkungen" className="space-y-1.5">
-        <Label htmlFor="anmerkungen">{fieldLabel('anmeldungen', 'anmerkungen')}</Label>
+        <Label htmlFor="anmerkungen">{labelFor('anmerkungen')}</Label>
         <Textarea
           id="anmerkungen"
           placeholder=""
@@ -579,14 +584,14 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
     ),
     'teilnahmebedingungen': (
       <div key="teilnahmebedingungen" className="space-y-1.5">
-        <Label htmlFor="teilnahmebedingungen">{fieldLabel('anmeldungen', 'teilnahmebedingungen')} <span className="text-destructive" aria-hidden="true">*</span></Label>
+        <Label htmlFor="teilnahmebedingungen">{labelFor('teilnahmebedingungen')} <span className="text-destructive" aria-hidden="true">*</span></Label>
         <div className="flex items-center gap-2 pt-1">
           <Checkbox
             id="teilnahmebedingungen"
             checked={!!fields.teilnahmebedingungen}
             onCheckedChange={(v) => setFields(f => ({ ...f, teilnahmebedingungen: !!v }))}
           />
-          <Label htmlFor="teilnahmebedingungen" className="font-normal">{fieldLabel('anmeldungen', 'teilnahmebedingungen')}</Label>
+          <Label htmlFor="teilnahmebedingungen" className="font-normal">{labelFor('teilnahmebedingungen')}</Label>
         </div>
         {showErrors && !fields.teilnahmebedingungen && (
           <p className="text-xs text-destructive mt-1" role="alert">{requiredMessage('anmeldungen', 'teilnahmebedingungen')}</p>
@@ -594,7 +599,15 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
       </div>
     ),
   };
-  const orderedFields = applyFieldOrder(Object.keys(fieldBlocks), formEnhancements.fieldOrder);
+  // Fields this dialog never shows: the config's `hidden` and the fields the
+  // OVERVIEW changes with its own button (plan.dashboard.writes, how: button —
+  // a control, not a form value; S-3). A required field stays visible.
+  const DASHBOARD_BUTTON_FIELDS: string[] = [];
+  const ALWAYS_SHOWN: string[] = ['event', 'vorname', 'nachname', 'email', 'skill_level', 'teilnahmebedingungen'];
+  // the values the plan's create flow sets itself (fixed:…): preset on create and
+  // not asked — the dialog is the record's door, the flow's rule still holds (S-12)
+  const HIDDEN = new Set<string>([...(formEnhancements.hidden ?? []), ...DASHBOARD_BUTTON_FIELDS, ...(recordId ? [] : Object.keys(PLAN_CREATE_PRESETS))].filter(k => !ALWAYS_SHOWN.includes(k)));
+  const orderedFields = dropHidden(applyFieldOrder(Object.keys(fieldBlocks), formEnhancements.fieldOrder), HIDDEN);
   const orderedFieldsKey = orderedFields.map((it) => typeof it === 'string' ? it : it.row.join('+')).join(',');
 
   // Render-Modell für Computed-Felder:
@@ -875,7 +888,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
                 if (SYSTEM_ASSIGNED.includes(k) && !recordId) {
                   return (
                     <div key={k} className="space-y-1.5 min-w-0">
-                      <Label>{fieldLabel('anmeldungen', k)}</Label>
+                      <Label>{labelFor(k)}</Label>
                       <p className="text-sm text-muted-foreground">{t('assigned_by_system')}</p>
                     </div>
                   );

@@ -613,11 +613,39 @@ type RecordOverlayProps = {
 };
 
 /** The family action object (WorkList/HeroBanner idiom) — accepted by `footer`. */
-export type RecordOverlayAction = { label: ReactNode; onClick: () => void };
+/** The footer's action. `onClick` may RETURN a sentence — the reason the step was
+ *  not taken; the footer shows it under the button (S-10, acceptance 4). */
+export type RecordOverlayAction = { label: ReactNode; onClick: () => void | string | Promise<void | string> };
 export type RecordOverlayFooter = ReactNode | RecordOverlayAction;
 
 // ReactElements and arrays ARE ReactNodes — only a plain object carrying
 // label+onClick is the action shape.
+/** The footer's button. A helper that REFUSES the step returns its reason as a
+ *  string („Es ist schon „Ideen 1“ geöffnet — bitte erst schließen.“); the
+ *  Kanban shows such a text as its banner, the footer used to swallow it
+ *  (acceptance 4, L-17…21). Now it stands under the button until the next click. */
+function FooterAction({ action }: { action: RecordOverlayAction }) {
+  const [hint, setHint] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    setHint(null); setBusy(true);
+    try {
+      const r = await action.onClick();
+      if (typeof r === 'string' && r.trim()) setHint(r);
+    } catch (e) {
+      setHint(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="space-y-2">
+      <Button className="w-full" onClick={() => void run()} disabled={busy}>{action.label}</Button>
+      {hint && <p role="alert" className="text-sm text-destructive" data-overlay-hint="">{hint}</p>}
+    </div>
+  );
+}
+
 function isFooterAction(f: RecordOverlayFooter): f is RecordOverlayAction {
   return (
     typeof f === 'object' && f !== null && !Array.isArray(f) &&
@@ -718,7 +746,7 @@ export function RecordOverlay({
 
   // footer is shape-tolerant — normalize the action object ONCE, here.
   const footerNode: ReactNode = footer != null && isFooterAction(footer)
-    ? <Button className="w-full" onClick={footer.onClick}>{footer.label}</Button>
+    ? <FooterAction action={footer} />
     : (footer as ReactNode);
 
   // Scroll-reset on stack navigation: the Host keeps ONE shell mounted while

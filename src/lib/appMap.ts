@@ -42,7 +42,7 @@ export interface LineEditable {
   entity?: string;
 }
 
-export type GroupKind = 'setup' | 'gaps' | 'create' | 'update' | 'schedule' | 'manual' | 'roles' | 'limits' | 'platform';
+export type GroupKind = 'understanding' | 'setup' | 'gaps' | 'create' | 'update' | 'schedule' | 'manual' | 'dashboard' | 'pages' | 'roles' | 'limits' | 'platform';
 
 /** A block of the page, in display order. Empty groups are not sent. */
 export interface MapGroup {
@@ -56,7 +56,8 @@ export interface MapGroup {
   intent_label?: string;
 }
 
-export type LineAction = { id: 'confirm' | 'file' | string; label: string };
+/** request: `text` is the wish sent through the change door instead of the line's text, `gap` its gap/question id */
+export type LineAction = { id: 'confirm' | 'file' | 'publish' | string; label: string; text?: string; gap?: string; slug?: string };
 
 export interface MapLine {
   id: string;
@@ -76,7 +77,7 @@ export interface MapLine {
   /** policy / trigger / plan act at once, tool / page take minutes */
   speed?: 'instant' | 'minutes';
   /** a question the owner has neither answered nor confirmed nor seen */
-  tag?: 'assumed' | null;
+  tag?: 'assumed' | 'inferred' | null;
   /** setup lines: the short sentence for the dashboard's notice */
   notice?: string | null;
   /** the bold opening of the sentence without its stars — unused by the page, which renders `**…**` */
@@ -179,11 +180,13 @@ export interface AppMapState {
   jobs: Record<string, LineJob>;
   /** a full build without this plan happened after it — the page says so */
   stale: { at: string; reason: string } | null;
+  /** the last planning gave no plan — the application was built without one (adopted = this page was read off it) */
+  planningFailed: { at: string; adopted: boolean } | null;
   /** false for a viewer without admin rights: the page is read-only (an older server sends nothing = true) */
   canChange: boolean;
 }
 
-const EMPTY: AppMapState = { map: null, status: null, createdAt: null, planVersion: 0, changes: [], proposal: null, jobs: {}, stale: null, canChange: false };
+const EMPTY: AppMapState = { map: null, status: null, createdAt: null, planVersion: 0, changes: [], proposal: null, jobs: {}, stale: null, planningFailed: null, canChange: false };
 
 /** The newest job on a line, running first. */
 export function jobFor(jobs: Record<string, LineJob>, lineId: string): LineJob | undefined {
@@ -231,6 +234,7 @@ function stateOf(data: Record<string, unknown>): AppMapState {
     proposal: (data.proposal as Proposal | null | undefined) ?? null,
     jobs: (data.jobs as Record<string, LineJob> | undefined) ?? {},
     stale: (data.stale as { at: string; reason: string } | null | undefined) ?? null,
+    planningFailed: (data.planning_failed as { at: string; adopted: boolean } | null | undefined) ?? null,
     canChange: data.can_change !== false,
   };
 }
@@ -279,6 +283,18 @@ export interface AnswerResult {
 
 /** The owner's sentence, bound to a flow or an automation when it has one; the proposal arrives on the next reads.
  *  `gap`: the id of a line under „Fehlt noch“ whose „Einrichten“ wrote the sentence — accepting the proposal removes the gap. */
+/** „Was stimmt nicht?“ — a sentence from the owner about something that is
+ *  wrong. No page job, no proposal: it becomes a finding for us (Sentry, area
+ *  owner_report) and a note in the application's state. */
+export async function sendOwnerReport(text: string): Promise<void> {
+  const hash = typeof window !== 'undefined' ? window.location.hash : '';
+  const res = await fetch(`${BASE}/${encodeURIComponent(APPGROUP_ID)}/reports`, {
+    method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: text.slice(0, 500), route: hash.slice(0, 200) }),
+  });
+  if (!res.ok) throw new Error(await readError(res));
+}
+
 export async function proposeChange(text: string, about?: ChangeAbout | null, gap?: string | null): Promise<Proposal> {
   const res = await fetch(`${BASE}/${encodeURIComponent(APPGROUP_ID)}/changes`, {
     method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },

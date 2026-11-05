@@ -102,6 +102,72 @@ if (pages.length === 0 && !prepareOnly) {
 const appMeta = readJson('app_metadata.json');
 const apps = (appMeta && appMeta.apps) || {};
 
+// ── The plan's Soll (.plan.json, sandbox form) ───────────────────────────
+// Without a plan the walk only says what it SEES (a step without controls, a
+// Weiter that leads nowhere). With one it also knows what the page MUST ask —
+// the create fields the plan lists as `user`/`picked` — and which records the
+// pick steps need to find (a public list's `eq` conditions). A page that
+// reaches its summary without asking an ordered field is red; a page that
+// blocks the example input is red too, not a warning, because the Soll says
+// the input belongs there (G-3, 03.11.2026; before: a repair without a Soll
+// weakened the Soll, B5).
+const planData = readJson('.plan.json');
+function plannedFields(page) {
+  if (!planData) return [];
+  const out = [];
+  if (page.internal) {
+    const flow = (planData.flows || []).find(f => f && f.slug === page.slug);
+    for (const w of (flow && flow.writes) || []) {
+      for (const [k, src] of Object.entries(w.fields || {})) if (String(src).startsWith('user') || src === 'picked') out.push({ entity: w.entity, key: k });
+    }
+  } else {
+    const pg = (planData.public_pages || []).find(p => p && p.slug === page.slug);
+    // a reference the visitor never picks: to the record the page's LINK names
+    // (link_param) and to a record this page creates in the same submit (the
+    // participant a contribution links to) — P-16, Bau 4: both read „no control“
+    const lpSurface = page.link_param && typeof page.link_param === 'object' ? page.link_param : null;
+    const linkEntity = (lpSurface && lpSurface.entity) || (pg && pg.link_param && pg.link_param.name ? pg.link_param.entity : null);
+    const created = new Set(((pg && pg.creates) || []).map(c => c.entity));
+    // a reference the page sets itself from its linked record (the active interaction — a
+    // `must_equal` check of the page; Bau 11 read „no control“ for exactly that)
+    const pageSets = new Set((pg && pg.page_sets) || []);
+    for (const c of (pg && pg.creates) || []) {
+      for (const [k, src] of Object.entries(c.fields || {})) {
+        if (!(String(src).startsWith('user') || src === 'picked')) continue;
+        if (pageSets.has(`${c.entity}.${k}`)) continue;
+        if (src === 'picked') {
+          const target = entityOfAppId(targetAppId(control(c.entity, k)));
+          if (target && (target === linkEntity || (created.has(target) && target !== c.entity))) continue;
+        }
+        out.push({ entity: c.entity, key: k });
+      }
+    }
+  }
+  return out;
+}
+// The plan's restrictions on a pick of this entity — a public list's filter AND a
+// flow's `reads[].filter` (scaffold, 03.11.2026: the flow's precondition „KI-Ergebnis
+// leer“ lived only in the reads, so the smoke picked a record the page rightly
+// refused). `eq` sets the value, `empty` clears the field; `value: null` = clear.
+function plannedConditions(entity) {
+  if (!planData) return [];
+  const out = [];
+  const take = (flt) => {
+    for (const c of ((flt && flt.conditions) || [])) {
+      if (!c || !c.field) continue;
+      if ((c.op === 'eq' || c.op === '==' || c.op === 'is') && typeof c.value === 'string') out.push({ field: c.field, value: c.value });
+      else if (c.op === 'empty') out.push({ field: c.field, value: null });
+    }
+  };
+  for (const pg of planData.public_pages || []) for (const l of (pg && pg.lists) || []) if (l && l.entity === entity) take(l.filter);
+  for (const fl of planData.flows || []) for (const r of (fl && fl.reads) || []) if (r && r.entity === entity) take(r.filter);
+  return out;
+}
+function labelOfField(entity, key) {
+  const c = apps[entity] && apps[entity].controls && apps[entity].controls[key];
+  return (c && c.label) || key;
+}
+
 // ── 2. Dependencies: esbuild ships with vite; jsdom is fetched on demand ──────
 // jsdom is NOT in the template. It is installed into its own tiny tree under
 // .smoke/deps (36 packages, seconds) — never into the app's node_modules: an
@@ -257,17 +323,31 @@ function isoDate(offsetDays) {
   return d.toISOString().slice(0, 10);
 }
 
+// A reference must point at a record the mock serves: the target's provided
+// ids, else its synthetic ids (hex24(<entity>:k) — before, refs used the APP id
+// as seed and matched no record, so a page that shows the questions of the
+// linked event never found one and its fields never appeared; P-16, Bau 4).
+function entityOfAppId(appId) {
+  return Object.keys(apps).find(k => apps[k] && apps[k].app_id === appId);
+}
+function refIdsOf(targetAppIdValue) {
+  const ent = entityOfAppId(targetAppIdValue);
+  const provided = ent ? providedRecords[ent] : null;
+  if (Array.isArray(provided) && provided.length) return provided.map((r, k) => String((r && (r.id || r.record_id)) || hex24(ent + ':' + k)));
+  return [0, 1, 2].map(k => hex24((ent || targetAppIdValue) + ':' + k));
+}
+
 function fakeValue(entity, key, i, recordsByEntity) {
   const c = control(entity, key) || {};
   const ft = String(c.fulltype || 'string/text');
   const label = c.label || key;
   if (ft.startsWith('multipleapplookup')) {
     const t = targetAppId(c);
-    return t ? [`${PUBLIC_API_BASE}/grants/${GRANT_ID}/apps/${t}/records/${hex24(t + ':' + (i % 3))}`] : [];
+    return t ? [`${PUBLIC_API_BASE}/grants/${GRANT_ID}/apps/${t}/records/${refIdsOf(t)[i % refIdsOf(t).length]}`] : [];
   }
   if (ft.startsWith('applookup')) {
     const t = targetAppId(c);
-    return t ? `${PUBLIC_API_BASE}/grants/${GRANT_ID}/apps/${t}/records/${hex24(t + ':' + (i % 3))}` : null;
+    return t ? `${PUBLIC_API_BASE}/grants/${GRANT_ID}/apps/${t}/records/${refIdsOf(t)[i % refIdsOf(t).length]}` : null;
   }
   if (ft.startsWith('multiplelookup')) {
     const keys = Object.keys(c.lookup_data || {});
@@ -296,6 +376,15 @@ function syntheticRecords(entity, n) {
     const id = hex24(entity + ':' + i);
     const fields = {};
     for (const k of keys) fields[k] = fakeValue(entity, k, i);
+    // the plan's pick steps must find a record: the first one satisfies every
+    // `eq` condition a public list puts on this entity (a status the page scopes to)
+    if (i === 0) {
+      for (const { field, value } of plannedConditions(entity)) {
+        if (!(field in fields)) continue;
+        const ft = String((controls[field] && controls[field].fulltype) || '');
+        fields[field] = value === null ? null : ft.startsWith('multiplelookup') ? [value] : value;
+      }
+    }
     out[id] = { id, fields, created_at: `${isoDate(-i - 1)}T08:00:00`, updated_at: null };
   }
   return out;
@@ -462,12 +551,12 @@ function makeFetch(cfg, log) {
       // The internal door (livingAppsService via servicePort): the same
       // synthetic records, the app's REST shapes — a list is a map keyed by
       // id, one record carries `id`, aggregate_records answers [[n]].
-      m = /\/rest\/apps\/([^/?]+)\/aggregate_records/.exec(url);
+      m = /\/rest(?:\/v1)?\/apps\/([^/?]+)\/aggregate_records/.exec(url);
       if (m) {
         const entity = entityByAppId(m[1]);
         return json([[entity ? Object.keys(recordsFor(entity)).length : 0]]);
       }
-      m = /\/rest\/apps\/([^/?]+)\/records\/([^/?]+)(\?|$)/.exec(url);
+      m = /\/rest(?:\/v1)?\/apps\/([^/?]+)\/records\/([^/?]+)(\?|$)/.exec(url);
       if (m && method === 'GET') {
         const entity = entityByAppId(m[1]);
         const rec = entity ? recordsFor(entity)[m[2]] : null;
@@ -485,7 +574,7 @@ function makeFetch(cfg, log) {
         return json(rec);
       }
       if (m && method === 'DELETE') return new Response('', { status: 204 });
-      m = /\/rest\/apps\/([^/?]+)\/records(\?|$)/.exec(url);
+      m = /\/rest(?:\/v1)?\/apps\/([^/?]+)\/records(\?|$)/.exec(url);
       if (m && method === 'GET') {
         const entity = entityByAppId(m[1]);
         return json(entity ? recordsFor(entity) : {});
@@ -500,7 +589,7 @@ function makeFetch(cfg, log) {
         log.created.push({ app_id: m[1], fields });
         return json(rec, 201);
       }
-      if (/\/rest\/user(\?|$)/.test(url)) return json({ id: 'smoke-user', name: 'Smoke' });
+      if (/\/rest(?:\/v1)?\/user(\?|$)/.test(url)) return json({ id: 'smoke-user', name: 'Smoke' });
       if (/sentry|\/rest\/|\/litellm\//.test(url)) return new Response('', { status: 204 });
       log.unexpected.push(`${method} ${url}`);
       return new Response('{}', { status: 404, headers: { 'content-type': 'application/json' } });
@@ -515,12 +604,12 @@ function makeFetch(cfg, log) {
 // ── 5. A browser-shaped global scope ──────────────────────────────────────────
 const installedGlobals = new Set();
 
-function installDom(slug, onJsdomError, internal = false) {
+function installDom(slug, onJsdomError, internal = false, query = '') {
   const virtualConsole = new jsdomMod.VirtualConsole();
   virtualConsole.sendTo(console, { omitJSDOMErrors: true });
   virtualConsole.on('jsdomError', (e) => onJsdomError(e));
   const dom = new JSDOM('<!doctype html><html lang="de"><head></head><body><div id="root"></div></body></html>', {
-    url: `http://smoke.invalid/objects/smoke/#/${internal ? 'intents' : 'public'}/${slug}`,
+    url: `http://smoke.invalid/objects/smoke/#/${internal ? 'intents' : 'public'}/${slug}${query}`,
     pretendToBeVisual: true,
     virtualConsole,
   });
@@ -684,18 +773,51 @@ function currentStep(doc) {
 }
 
 function stepRegion(doc) {
-  return doc.querySelector('[role="region"]') || doc.getElementById('root');
+  return doc.querySelector('[role="region"]') || doc.body;   // the body: a portal renders outside #root
 }
 
 const CONTROL_SELECTOR = [
   '[data-field]', 'input:not([type="hidden"])', 'textarea', 'select',
-  '[role="radio"]', '[role="option"]', '[role="checkbox"]', '[role="combobox"]',
+  '[role="radio"]', '[role="option"]', '[role="checkbox"]', '[role="switch"]', '[role="combobox"]',
   'button[aria-pressed]', '[data-key]', '[data-journey-range]',
-  '[data-journey-summary]', '[data-journey-success]',
+  '[data-journey-summary]', '[data-journey-success]', '[data-journey-file]',
 ].join(', ');
 
 function hasControls(region) {
   return Array.from(region.querySelectorAll(CONTROL_SELECTOR)).some(visible);
+}
+
+// A step that SHOWS something instead of asking („Vorschlag ansehen“, the
+// decision's preparation before the verdict) has no control — and is not
+// empty: below its heading it renders values of a record the door served.
+// A hint sentence alone („Bitte unten fortfahren.“) still is an empty step.
+// Live 20.10.2026 two lanes failed here and added a meaningless
+// data-key/data-field to a div just to pass; a gate that punishes a
+// legitimate step trains the agents to game it.
+function readContent(region) {
+  const clone = region.cloneNode(true);
+  for (const el of clone.querySelectorAll('[data-journey-step-heading], button, nav, [role="alert"]')) el.remove();
+  return text(clone);
+}
+function showsRecord(region) {
+  const content = readContent(region);
+  if (!content) return false;
+  for (const map of recordsCache.values()) {
+    for (const rec of Object.values(map)) {
+      for (const v of Object.values(rec.fields || {})) {
+        const s = v && typeof v === 'object' && 'label' in v ? v.label : v;
+        if (typeof s !== 'string' || s.trim().length < 4 || /^https?:|^\d{4}-\d{2}-\d{2}/.test(s)) continue;
+        if (content.includes(s.trim().slice(0, 20))) return true;
+      }
+    }
+  }
+  return false;
+}
+
+let askedKeys = new Set();   // control names the walk met on this page (the Soll check reads it)
+function noteAsked(el) {
+  const name = el && (el.getAttribute('name') || el.getAttribute('data-key') || el.id);
+  if (name) askedKeys.add(String(name).replace(/^[^-]*-/, '').toLowerCase()), askedKeys.add(String(name).toLowerCase());
 }
 
 function fillStep(region, doc) {
@@ -703,9 +825,20 @@ function fillStep(region, doc) {
   // Cards / pills (EntitySelectStep, ChoiceGroup): pick the first one when nothing is picked.
   for (const group of region.querySelectorAll('[role="radiogroup"], [role="group"]')) {
     const options = Array.from(group.querySelectorAll('[role="radio"], [role="checkbox"]')).filter(visible);
+    noteAsked(group);
     if (options.length === 0) continue;
     if (options.some(o => o.getAttribute('aria-checked') === 'true')) continue;
     click(options[0]); actions.push(`pick ${text(options[0]).slice(0, 30) || 'option'}`);
+  }
+  // A single checkbox or switch (shadcn: `button role="checkbox"`, outside any
+  // group) IS the control for a bool field — the walk notes it and leaves its
+  // default alone (gold-18, 03.11.2026: every unticked bool of the Schreibliste
+  // counted as „no step asked for it“).
+  for (const el of region.querySelectorAll('[role="checkbox"], [role="switch"]')) {
+    if (!visible(el) || el.closest('[role="radiogroup"], [role="group"]')) continue;
+    noteAsked(el);
+    const lbl = el.id && region.querySelector(`label[for="${el.id}"]`);
+    if (lbl) actions.push(`bool ${text(lbl).slice(0, 30)}`);
   }
   const cards = Array.from(region.querySelectorAll('button[aria-pressed]')).filter(v => visible(v) && !v.hasAttribute('data-day'));
   if (cards.length > 0 && !cards.some(c => c.getAttribute('aria-pressed') === 'true')) {
@@ -729,9 +862,20 @@ function fillStep(region, doc) {
     setNativeValue(box, 'a');
     actions.push('combobox open');
   }
+  // A file field (FileField): choose a small PDF once — it travels as a data URL.
+  for (const el of region.querySelectorAll('input[type="file"]')) {
+    if (el.disabled || !el.parentElement || !el.parentElement.querySelector('[data-journey-file]')) continue;
+    const win = el.ownerDocument.defaultView;
+    const file = new win.File(['%PDF-1.4\n%%EOF\n'], 'smoke.pdf', { type: 'application/pdf' });
+    Object.defineProperty(el, 'files', { value: [file], configurable: true });
+    el.dispatchEvent(new win.Event('change', { bubbles: true }));
+    actions.push('file smoke.pdf');
+  }
   // Plain controls.
   for (const el of region.querySelectorAll('input:not([type="hidden"]), textarea, select')) {
-    if (!visible(el) || el.disabled || el.readOnly) continue;
+    if (!visible(el)) continue;
+    noteAsked(el);
+    if (el.disabled || el.readOnly) continue;
     if (el.getAttribute('role') === 'combobox') continue;
     const type = (el.getAttribute('type') || (el.tagName === 'TEXTAREA' ? 'textarea' : el.tagName === 'SELECT' ? 'select' : 'text')).toLowerCase();
     if (type === 'checkbox' || type === 'radio' || type === 'file' || type === 'submit' || type === 'button') continue;
@@ -779,6 +923,7 @@ function alertsIn(doc) {
 async function smokePage(page) {
   const file = page.file;
   const pageReport = { slug: page.slug, file, internal: Boolean(page.internal), steps: [], result: 'unknown', errors: [], warnings: [], requests: [] };
+  askedKeys = new Set();
   const fail = (msg) => { pageReport.errors.push(msg); errors.push(`${file}: render-smoke '${page.slug}': ${msg}`); };
   const warn = (msg) => { pageReport.warnings.push(msg); warnings.push(`${file}: render-smoke '${page.slug}': ${msg}`); };
 
@@ -820,7 +965,18 @@ async function smokePage(page) {
     if (looksLikeError(line)) runtimeErrors.push(short); else consoleNoise.push(short);
   };
   const onWindowError = (ev) => { runtimeErrors.push(String(ev && (ev.error && ev.error.stack || ev.message) || ev).slice(0, 500)); };
-  const dom = installDom(page.slug, (e) => { runtimeErrors.push(`uncaught: ${String(e && (e.detail && e.detail.stack || e.message) || e).slice(0, 400)}`); }, page.internal);
+  // A page that declares a link_param is opened the way its link opens it —
+  // with `?<name>=<id>` of a smoke record of that entity. Without it the walk
+  // saw only the entry screen („laufende Veranstaltungen … Öffnen“) and the
+  // Soll check called every ordered field „no control“ (scaffold, 03.11.2026).
+  let linkQuery = '';
+  const lpDecl = page.link_param && typeof page.link_param === 'object' ? page.link_param : null;
+  if (lpDecl && lpDecl.entity) {
+    const first = Object.keys(recordsFor(lpDecl.entity))[0];
+    if (first) linkQuery = `?${encodeURIComponent(lpDecl.name || 'id')}=${encodeURIComponent(first)}`;
+  }
+  const dom = installDom(page.slug, (e) => { runtimeErrors.push(`uncaught: ${String(e && (e.detail && e.detail.stack || e.message) || e).slice(0, 400)}`); }, page.internal, linkQuery);
+  if (linkQuery) pageReport.opened_with = linkQuery;
   const doc = dom.window.document;
   const fetchImpl = makeFetch(cfg, log);
   dom.window.fetch = fetchImpl;
@@ -881,8 +1037,24 @@ async function smokePage(page) {
     if (!isWizard) {
       // A landing page or a one-screen form: rendered without a crash, with
       // content — that is the whole test for it.
-      const body = text(doc.getElementById('root'));
+      const body = text(doc.body);   // the whole document: dialogs and sheets render through portals outside #root
       if (body.length < 20) fail(`renders almost nothing (${JSON.stringify(body)})`);
+      // The Soll holds here too: a one-screen page must show a control for every
+      // field the plan orders (scaffold, 03.11.2026: the check ran only in the
+      // wizard branch, so a planned one-screen page was „green“ by rendering).
+      const planned = plannedFields(page);
+      if (planned.length) {
+        const lowered = body.toLowerCase();
+        const asked = key => Boolean(doc.querySelector(`[name="${key}"], [data-key="${key}"], [id="${key}"], [id$="-${key}"]`)) || askedKeys.has(key.toLowerCase());
+        const never = planned.filter(({ entity, key }) => !asked(key) && !lowered.includes(String(labelOfField(entity, key)).toLowerCase()));
+        pageReport.soll = { planned: planned.length, missing: never.map(f => `${f.entity}.${f.key}`) };
+        if (never.length) {
+          fail(`the plan orders ${never.map(f => `»${labelOfField(f.entity, f.key)}« (${f.entity}.${f.key})`).join(', ')} and the page shows no control for it`);
+          pageReport.result = 'soll-missing';
+          pageReport.steps.push({ step: 0, label: 'page', text: body.slice(0, 300) });
+          return pageReport;
+        }
+      }
       pageReport.result = pageReport.errors.length ? 'empty' : 'rendered';
       pageReport.steps.push({ step: 0, label: 'page', text: body.slice(0, 300) });
       return pageReport;
@@ -909,6 +1081,17 @@ async function smokePage(page) {
         const confirm = summary.querySelector('[data-journey-confirm]');
         pageReport.steps.push({ step: 'summary', text: text(summary).slice(0, 400) });
         if (!confirm) { fail('summary without a confirm button'); pageReport.result = 'summary-no-confirm'; return pageReport; }
+        {
+          const planned = plannedFields(page);
+          const summaryText = text(summary).toLowerCase();
+          const never = planned.filter(({ entity, key }) => !askedKeys.has(key.toLowerCase()) && !summaryText.includes(String(labelOfField(entity, key)).toLowerCase()));
+          if (planData) pageReport.soll = { planned: planned.length, missing: never.map(f => `${f.entity}.${f.key}`) };
+          if (never.length) {
+            fail(`the plan orders ${never.map(f => `»${labelOfField(f.entity, f.key)}« (${f.entity}.${f.key})`).join(', ')} and no step asked for it — the page reaches its review without the ordered input`);
+            pageReport.result = 'soll-missing';
+            return pageReport;
+          }
+        }
         if (confirm.disabled) {
           const missing = Array.from(summary.querySelectorAll('button, a')).filter(b => b !== confirm && visible(b)).map(text).filter(t => t && !/ändern|change|zurück|back/i.test(t));
           fail(`summary blocks the confirm — required fields no step asked for: ${missing.slice(0, 6).join(', ') || text(summary).slice(0, 200)}`);
@@ -931,12 +1114,13 @@ async function smokePage(page) {
       const region = stepRegion(doc);
       const label = region.getAttribute('aria-label') || `step ${step}`;
       const stepText = text(region);
-      if (!hasControls(region)) {
-        fail(`step ${step} "${label}" shows a heading and no control, card or summary — visible: ${JSON.stringify(stepText.slice(0, 200))}`);
+      const reading = !hasControls(region) && showsRecord(region);
+      if (!hasControls(region) && !reading) {
+        fail(`step ${step} "${label}" shows a heading and nothing else — no control, card, summary or content (a step that only SHOWS the picked record passes when it renders that record) — visible: ${JSON.stringify(stepText.slice(0, 200))}`);
         pageReport.result = 'empty-step';
         return pageReport;
       }
-      const actions = fillStep(region, doc);
+      const actions = reading ? ['read'] : fillStep(region, doc);
       await settle(doc, fetchImpl, 2500);
       // A combobox opened above: take its first option now that it rendered.
       const option = Array.from(doc.querySelectorAll('[role="option"]')).find(visible);
@@ -986,6 +1170,12 @@ async function smokePage(page) {
       // Blocked with a reason: the page told the visitor what is missing — fill once more, then stop.
       stuckRounds++;
       if (stuckRounds >= 2 || lastStep === step) {
+        if (plannedFields(page).length) {
+          // the plan says which input belongs here — a block is a failure, not a note
+          fail(`step ${step} "${label}" blocks the example input although the plan orders this page's fields: ${problems.join(' / ').slice(0, 200)}`);
+          pageReport.result = 'blocked';
+          return pageReport;
+        }
         warn(`step ${step} "${label}" blocks the example input: ${problems.join(' / ').slice(0, 200)}`);
         pageReport.result = 'blocked';
         return pageReport;

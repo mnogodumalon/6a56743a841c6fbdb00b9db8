@@ -1,10 +1,10 @@
 /**
- * Occupancy semantics — DECIDED BY THE BUILD AGENT, never by a heuristic.
- *
- * The Phase-2 orchestrator writes its decision to `.intents-staging/occupancy.json`
- * (stay pair, booked resource, statuses that do not occupy); the integration
- * step validates it against the app metadata and renders it into the block
- * below. Scaffold updates keep the block. Do not edit outside the markers.
+ * Occupancy semantics — DECIDED BY THE PLAN when it has a no_overlap check
+ * (rendered below, generator-owned), else by the build agent, never by a
+ * heuristic. Without a plan the Phase-2 orchestrator writes its decision to
+ * `.intents-staging/occupancy.json` (stay pair, booked resource, statuses
+ * that do not occupy); the integration step validates it against the app
+ * metadata and renders it into the block below. Do not edit outside the markers.
  *
  * Both doors read this and nothing else: `occupancyFor` (internal flows AND
  * public pages) and the owner service (the public grant's occupancy read).
@@ -13,7 +13,7 @@
  *
  * Facts from the metadata — candidates, NOT decisions:
  *   - skateparks_spots: lookups untergrundtyp[beton|asphalt|holz|fliesen|sonstiges]
- *   - event_verwaltung: applookups ort→skateparks_spots · lookups kategorie[jam|demo|workshop|sonstiges|contest], skill_level[anfaenger|fortgeschritten|profi|alle_levels]
+ *   - event_verwaltung: applookups ort→skateparks_spots · lookups kategorie[contest|jam|demo|workshop|sonstiges], skill_level[anfaenger|fortgeschritten|profi|alle_levels]
  *   - anmeldungen: applookups event→event_verwaltung · lookups skill_level[anfaenger|fortgeschritten|profi]
  */
 import type { EntityKey } from '@/lib/journey/rules';
