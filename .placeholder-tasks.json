@@ -166,6 +166,11 @@
           "key": "event_website",
           "label": "Website des Events",
           "type": "string/url"
+        },
+        {
+          "key": "notiz",
+          "label": "Notiz",
+          "type": "string/textarea"
         }
       ],
       "formEnhancements": {
@@ -276,6 +281,12 @@
             "key": "kontakt_telefon",
             "label": "Kontakt-Telefonnummer",
             "type": "string/tel",
+            "required": false
+          },
+          {
+            "key": "notiz",
+            "label": "Notiz",
+            "type": "string/textarea",
             "required": false
           }
         ]

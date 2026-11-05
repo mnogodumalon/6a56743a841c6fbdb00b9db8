@@ -19,7 +19,7 @@ export type EntityKey = 'skateparks_spots' | 'event_verwaltung' | 'anmeldungen';
  *  `never` for an entity without text of its own, e.g. a link table). */
 export interface StringFields {
   "skateparks_spots": "name" | "strasse" | "hausnummer" | "postleitzahl" | "stadt" | "beschreibung" | "website";
-  "event_verwaltung": "titel" | "beschreibung" | "kontakt_email" | "event_website" | "kontakt_telefon";
+  "event_verwaltung": "titel" | "beschreibung" | "kontakt_email" | "event_website" | "kontakt_telefon" | "notiz";
   "anmeldungen": "vorname" | "nachname" | "email" | "telefon" | "anmerkungen";
 }
 export type StringFieldKey<E extends EntityKey> = E extends keyof StringFields ? StringFields[E] : never;
@@ -326,6 +326,14 @@ export const FIELD_RULES: Record<EntityKey, Record<string, FieldRule>> = {
       "label": "Kontakt-Telefonnummer",
       "writable": true,
       "autoComplete": "tel"
+    },
+    "notiz": {
+      "key": "notiz",
+      "fulltype": "string/textarea",
+      "kind": "textarea",
+      "required": false,
+      "label": "Notiz",
+      "writable": true
     }
   },
   "anmeldungen": {

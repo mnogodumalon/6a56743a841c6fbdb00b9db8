@@ -1729,7 +1729,8 @@ export const LABELS: Record<CoreLocale, LabelBundle> = {
           "kontakt_email": "Kontakt-E-Mail",
           "event_website": "Website des Events",
           "flyer": "Flyer / Bild",
-          "kontakt_telefon": "Kontakt-Telefonnummer"
+          "kontakt_telefon": "Kontakt-Telefonnummer",
+          "notiz": "Notiz"
         },
         "lookups": {
           "kategorie": {
@@ -1786,7 +1787,7 @@ export const LABELS: Record<CoreLocale, LabelBundle> = {
         "name": "Skateparks & Spots",
         "app_id": "6a56741a9ef9a79ac692ad70",
         "fields": {
-          "name": "Venue Name",
+          "name": "Name of Location",
           "strasse": "Street",
           "hausnummer": "House Number",
           "postleitzahl": "Postal Code",
@@ -1815,13 +1816,14 @@ export const LABELS: Record<CoreLocale, LabelBundle> = {
           "datum_uhrzeit": "Date and Time",
           "beschreibung": "Description",
           "skill_level": "Skill Level",
-          "max_teilnehmer": "Maximum Participants",
+          "max_teilnehmer": "Maximum Number of Participants",
           "startgebuehr": "Entry Fee (€)",
-          "ort": "Venue",
+          "ort": "Location",
           "kontakt_email": "Contact Email",
           "event_website": "Event Website",
           "flyer": "Flyer / Image",
-          "kontakt_telefon": "Contact Phone Number"
+          "kontakt_telefon": "Contact Phone Number",
+          "notiz": "Note"
         },
         "lookups": {
           "kategorie": {
@@ -1833,7 +1835,7 @@ export const LABELS: Record<CoreLocale, LabelBundle> = {
           },
           "skill_level": {
             "anfaenger": "Beginner",
-            "fortgeschritten": "Intermediate",
+            "fortgeschritten": "Advanced",
             "profi": "Pro",
             "alle_levels": "All Levels"
           }
@@ -1857,7 +1859,7 @@ export const LABELS: Record<CoreLocale, LabelBundle> = {
         "lookups": {
           "skill_level": {
             "anfaenger": "Beginner",
-            "fortgeschritten": "Intermediate",
+            "fortgeschritten": "Advanced",
             "profi": "Pro"
           },
           "board_stil": {

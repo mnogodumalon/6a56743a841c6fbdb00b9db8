@@ -626,7 +626,7 @@ export function AnmeldungenDialog({ open, onClose, onSubmit, defaultValues, reco
   // eine Map { lookupKey: label } für ALLE Felder des Target-Schemas. Wird
   // beim Render-Walk gefiltert auf die in der computed-Formel tatsächlich
   // referenzierten lookupKeys (siehe applookupRefs unten).
-  const APPLOOKUP_LABELS: Record<string, Record<string, string>> = {"event": {"titel": "Titel des Events", "kategorie": "Kategorie", "datum_uhrzeit": "Datum und Uhrzeit", "beschreibung": "Beschreibung", "skill_level": "Skill-Level", "max_teilnehmer": "Maximale Teilnehmerzahl", "startgebuehr": "Startgebühr (€)", "ort": "Ort", "kontakt_email": "Kontakt-E-Mail", "event_website": "Website des Events", "flyer": "Flyer / Bild", "kontakt_telefon": "Kontakt-Telefonnummer"}};
+  const APPLOOKUP_LABELS: Record<string, Record<string, string>> = {"event": {"titel": "Titel des Events", "kategorie": "Kategorie", "datum_uhrzeit": "Datum und Uhrzeit", "beschreibung": "Beschreibung", "skill_level": "Skill-Level", "max_teilnehmer": "Maximale Teilnehmerzahl", "startgebuehr": "Startgebühr (€)", "ort": "Ort", "kontakt_email": "Kontakt-E-Mail", "event_website": "Website des Events", "flyer": "Flyer / Bild", "kontakt_telefon": "Kontakt-Telefonnummer", "notiz": "Notiz"}};
   const inputFields = useMemo(() => flattenFieldOrder(orderedFields), [orderedFieldsKey]);
   const backendFieldSet = useMemo(() => new Set(inputFields), [inputFields.join(',')]);
   const virtualComputed = useMemo(

@@ -505,6 +505,24 @@
           "in_fulltext_search": false,
           "in_expert_search": true,
           "translations": null
+        },
+        "notiz": {
+          "kind": "textareacontrol",
+          "url": "https://my.living-apps.de/rest/v1/apps/6a56741f84d8dce105858830/controls/notiz",
+          "identifier": "notiz",
+          "label": "Notiz",
+          "type": "string",
+          "subtype": "textarea",
+          "fulltype": "string/textarea",
+          "description": "A string value that can contain multiple lines of text (or `null`/`None`).",
+          "required": false,
+          "in_list": false,
+          "in_mobile_list": false,
+          "in_text": false,
+          "in_structured_search": null,
+          "in_fulltext_search": null,
+          "in_expert_search": true,
+          "translations": null
         }
       }
     },

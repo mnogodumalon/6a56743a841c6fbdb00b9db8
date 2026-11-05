@@ -26,7 +26,7 @@ import { labelOf, type EntityKey } from './rules';
 /** The writable fields of each entity — the keys a message may address (generated). */
 export interface MessageFields {
   "skateparks_spots": "name" | "strasse" | "hausnummer" | "postleitzahl" | "stadt" | "beschreibung" | "untergrundtyp" | "standort" | "website";
-  "event_verwaltung": "titel" | "kategorie" | "datum_uhrzeit" | "beschreibung" | "skill_level" | "max_teilnehmer" | "startgebuehr" | "ort" | "kontakt_email" | "event_website" | "kontakt_telefon";
+  "event_verwaltung": "titel" | "kategorie" | "datum_uhrzeit" | "beschreibung" | "skill_level" | "max_teilnehmer" | "startgebuehr" | "ort" | "kontakt_email" | "event_website" | "kontakt_telefon" | "notiz";
   "anmeldungen": "event" | "vorname" | "nachname" | "geburtsdatum" | "email" | "telefon" | "skill_level" | "board_stil" | "anmerkungen" | "teilnahmebedingungen";
 }
 export type MessageFieldKey<E extends EntityKey> = E extends keyof MessageFields ? MessageFields[E] : never;

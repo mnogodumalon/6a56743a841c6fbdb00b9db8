@@ -75,6 +75,7 @@ export interface EventVerwaltung {
     event_website?: string;
     flyer?: string;
     kontakt_telefon?: string;
+    notiz?: string;
   };
 }
 
@@ -156,6 +157,7 @@ export const FIELD_TYPES: Record<string, Record<string, string>> = {
     'event_website': 'string/url',
     'flyer': 'file',
     'kontakt_telefon': 'string/tel',
+    'notiz': 'string/textarea',
   },
   'anmeldungen': {
     'event': 'applookup/select',

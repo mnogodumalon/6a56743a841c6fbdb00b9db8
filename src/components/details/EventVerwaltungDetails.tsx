@@ -53,6 +53,7 @@ export function EventVerwaltungDetails({
           ) : '—'}
         </RecordField>
         <RecordField label={fieldLabel('event_verwaltung', 'kontakt_telefon')} value={record.fields.kontakt_telefon} format="text" />
+        <RecordField label={fieldLabel('event_verwaltung', 'notiz')} value={record.fields.notiz} format="longtext" className="md:col-span-2" />
       </RecordSection>
 
       {/* N:1 — verknüpfte Records: IMMER klickbar, nie eine Text-Sackgasse. */}

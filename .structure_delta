@@ -1,6 +1,16 @@
 {
   "version": 1,
-  "changes": [],
-  "counts": {},
-  "harmless_only": true
+  "changes": [
+    {
+      "kind": "field_added",
+      "entity": "event_verwaltung",
+      "field": "notiz",
+      "fulltype": "string/textarea",
+      "label": "Notiz"
+    }
+  ],
+  "counts": {
+    "field_added": 1
+  },
+  "harmless_only": false
 }

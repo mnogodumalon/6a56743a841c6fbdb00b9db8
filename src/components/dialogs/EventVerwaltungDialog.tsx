@@ -279,7 +279,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         }
       }
       const photoContext = contextParts.length ? contextParts.join('\n') : undefined;
-      const schema = `{\n  "titel": string | null, // Titel des Events\n  "kategorie": LookupValue | null, // Kategorie (select one key: "contest" | "jam" | "demo" | "workshop" | "sonstiges") mapping: contest=Contest, jam=Jam Session, demo=Demo, workshop=Workshop, sonstiges=Sonstiges\n  "datum_uhrzeit": string | null, // YYYY-MM-DDTHH:MM\n  "beschreibung": string | null, // Beschreibung\n  "skill_level": LookupValue | null, // Skill-Level (select one key: "anfaenger" | "fortgeschritten" | "profi" | "alle_levels") mapping: anfaenger=Anfänger, fortgeschritten=Fortgeschritten, profi=Profi, alle_levels=Alle Levels\n  "max_teilnehmer": number | null, // Maximale Teilnehmerzahl\n  "startgebuehr": number | null, // Startgebühr (€)\n  "ort": string | null, // Display name from Skateparks & Spots (see <available-records>)\n  "kontakt_email": string | null, // Kontakt-E-Mail\n  "event_website": string | null, // Website des Events\n  "kontakt_telefon": string | null, // Kontakt-Telefonnummer\n}`;
+      const schema = `{\n  "titel": string | null, // Titel des Events\n  "kategorie": LookupValue | null, // Kategorie (select one key: "contest" | "jam" | "demo" | "workshop" | "sonstiges") mapping: contest=Contest, jam=Jam Session, demo=Demo, workshop=Workshop, sonstiges=Sonstiges\n  "datum_uhrzeit": string | null, // YYYY-MM-DDTHH:MM\n  "beschreibung": string | null, // Beschreibung\n  "skill_level": LookupValue | null, // Skill-Level (select one key: "anfaenger" | "fortgeschritten" | "profi" | "alle_levels") mapping: anfaenger=Anfänger, fortgeschritten=Fortgeschritten, profi=Profi, alle_levels=Alle Levels\n  "max_teilnehmer": number | null, // Maximale Teilnehmerzahl\n  "startgebuehr": number | null, // Startgebühr (€)\n  "ort": string | null, // Display name from Skateparks & Spots (see <available-records>)\n  "kontakt_email": string | null, // Kontakt-E-Mail\n  "event_website": string | null, // Website des Events\n  "kontakt_telefon": string | null, // Kontakt-Telefonnummer\n  "notiz": string | null, // Notiz\n}`;
       const raw = await extractFromInput<Record<string, unknown>>(schema, {
         dataUri: uri,
         userText: aiText.trim() || undefined,
@@ -698,6 +698,18 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
         />
       </div>
     ),
+    'notiz': (
+      <div key="notiz" className="space-y-1.5">
+        <Label htmlFor="notiz">{labelFor('notiz')}</Label>
+        <Textarea
+          id="notiz"
+          placeholder=""
+          value={fields.notiz ?? ''}
+          onChange={e => setFields(f => ({ ...f, notiz: e.target.value }))}
+          rows={3}
+        />
+      </div>
+    ),
   };
   // Fields this dialog never shows: the config's `hidden` and the fields the
   // OVERVIEW changes with its own button (plan.dashboard.writes, how: button —
@@ -720,7 +732,7 @@ export function EventVerwaltungDialog({ open, onClose, onSubmit, defaultValues, 
   //     kein passendes Backend-Feld in orderedFields) erscheinen NICHT als
   //     Input, sondern unten als kompakte 'Berechnungen'-Übersicht oder als
   //     Inline-Hint unter dem letzten beitragenden Input.
-  const FIELD_LABELS: Record<string, string> = {"titel": "Titel des Events", "kategorie": "Kategorie", "datum_uhrzeit": "Datum und Uhrzeit", "beschreibung": "Beschreibung", "skill_level": "Skill-Level", "max_teilnehmer": "Maximale Teilnehmerzahl", "startgebuehr": "Startgebühr (€)", "ort": "Ort", "kontakt_email": "Kontakt-E-Mail", "event_website": "Website des Events", "flyer": "Flyer / Bild", "kontakt_telefon": "Kontakt-Telefonnummer"};
+  const FIELD_LABELS: Record<string, string> = {"titel": "Titel des Events", "kategorie": "Kategorie", "datum_uhrzeit": "Datum und Uhrzeit", "beschreibung": "Beschreibung", "skill_level": "Skill-Level", "max_teilnehmer": "Maximale Teilnehmerzahl", "startgebuehr": "Startgebühr (€)", "ort": "Ort", "kontakt_email": "Kontakt-E-Mail", "event_website": "Website des Events", "flyer": "Flyer / Bild", "kontakt_telefon": "Kontakt-Telefonnummer", "notiz": "Notiz"};
   const CURRENCY_KEYS = new Set<string>(["startgebuehr"]);
   // Applookup-Referenz-Labels: pro applookup-Feld in dieser Form (ownKey)
   // eine Map { lookupKey: label } für ALLE Felder des Target-Schemas. Wird
